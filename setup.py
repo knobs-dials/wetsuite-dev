@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='wetsuite',
+    name='wstest',
     version='0.0.10',
     url='https://github.com/scarfboy/wet-test.git',
     author='scarfboy',
