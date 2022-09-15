@@ -39,17 +39,7 @@ class Collocation:
         for gramlen in gramlens:
             for i in range(len(token_list)-(gramlen-1)):
                 gram = tuple(token_list[i:i+gramlen])
-                #print( '%d-gram at i=%s: %r'%(gramlen, i, gram ) )
                 self.add_gram( gram )
-
-        #for i in range(len(token_list)-1):
-        #    self.add_gram( (token_list[i], token_list[i+1]) )
-        #for i in range(len(token_list)-2):
-        #    self.add_gram( (token_list[i], token_list[i+1], token_list[i+2]) )
-        #for i in range(len(token_list)-3):
-        #    self.add_gram( (token_list[i], token_list[i+1], token_list[i+2], token_list[i+3]) )
-        #for i in range(len(token_list)-4):
-        #    self.add_gram( (token_list[i], token_list[i+1], token_list[i+2], token_list[i+3], token_list[i+4]) )
 
 
     def add_uni(self, s, cnt=1):
@@ -101,9 +91,6 @@ class Collocation:
             uni_counts = list( self.uni[s]  for s in strtup)
             muc = product(uni_counts) 
             
-            #tup_count = tup_count / len(self.uni)
-            #print( tup_count )  
-
             if method=='mik':
                 score = (float(tup_count)) / muc
             elif method=='mik2':
@@ -113,7 +100,7 @@ class Collocation:
             else:
                 raise ValueError('%r not a known scoring method'%method)
 
-            score *= 30.**len(strtup)  # fudge factor to get larger-n n-grams on roughly the same scale. TODO: remove, or think about this more. More related more to vocab size?
+            score *= 35.**len(strtup)  # fudge factor to get larger-n n-grams on roughly the same scale. TODO: remove, or think about this more. More related more to vocab size?
 
             ret.append(  ( strtup, score, tup_count, uni_counts )  )
 
