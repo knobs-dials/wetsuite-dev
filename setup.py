@@ -8,7 +8,7 @@ setup(
     author='scarfboy',
     author_email='scarfboy@gmail.com',
     description='Install test',
-    packages=find_packages(where="src"),
+    packages=['wetsuite.datasets', 'wetsuite.helpers'],
     package_dir={"": "src"},
     python_requires=">=3",
     install_requires=['numpy >= 1.11.1', 'matplotlib >= 1.5.1', 'spacy', 'spacy-transformers', 'requests'], # merely suggested: 'easyocr', 
