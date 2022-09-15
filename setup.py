@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='wetsuite',
+    name='wstest',
     version='0.0.10',
     classifiers=['Development Status :: 2 - Pre-Alpha', 'Programming Language :: Python :: 3', 'Topic :: Text Processing :: Linguistic'],
     url='https://github.com/scarfboy/wetsuite.git',
