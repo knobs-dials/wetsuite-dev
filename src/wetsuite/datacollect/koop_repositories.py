@@ -264,7 +264,8 @@ def cvdr_sourcerefs(tree):
     ''' Given the XML content document as an etree object, looks for the <source> tags, which are references to laws and other regulations (VERIFY)
     
         The references seem to be more convention-based than standardized.
-        This exists in part to normalize it a bit.
+
+        This exists in part to normalize it a bit - yet this is more creative than a helper function probably should be.
     '''
     ret = []
     tree = wetsuite.helpers.etree.strip_namespace(tree)
@@ -318,18 +319,13 @@ def cvdr_sourcerefs(tree):
                 #print("http-wetten: %r %r"%(bwb, params))
                 ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
 
-
-            # http://wetten.overheid.nl/cgi-bin/deeplink/law1/bwbid=BWBR0006622/article=20a
-
-
             #else:
             #    print("http-UNKNOWN: %r"%(resourceIdentifier), file=sys.stderr)
-
-
-
-            # though also includes things that might become more specific, e.g. 
+            #
+            #
+            # though also includes things that are specific but don't look like it, e.g.
             #   http://wetten.overheid.nl/cgi-bin/deeplink/law1/title=Gemeentewet/article=255
-            # resolves to 
+            # actually redirects to 
             #   https://wetten.overheid.nl/BWBR0005416/2022-08-01/#TiteldeelIV_HoofdstukXV_Paragraaf4_Artikel255
             #
             # or completely free-form, like the following (which is a broken link)
@@ -353,10 +349,6 @@ def cvdr_sourcerefs(tree):
     return ret
 
 
-# aanhef
-
-# regeling-sluiting
-
 # def cvdr_toelichting(tree):
 #     ''' Annoyingly, toelichting can be either in regeling/nota-toelichting
 #         or just be bijlage content 
@@ -379,7 +371,6 @@ def cvdr_text(tree):
     ret = []
 
     body           = tree.find('body')
-    #intitule       = body.find('intitule').text
     regeling       = body.find('regeling')
     regeling_tekst = regeling.find('regeling-tekst')
 
@@ -887,35 +878,3 @@ def bwb_toestand_text(tree):
     #    print(' POA: %s '%parents_of_artikel)
     #    print(' RET: %s '%ret)
 
-
-# https://wetten.overheid.nl/BWBR0044888/2021-03-04/0/txt
-# https://wetten.overheid.nl/BWBR0044888/2021-03-04/0/rtf
-
-
-# according to Basiswettenbestand Gebruikersdocumentatie SRU.pdf, soort is one of
-    # AMvB
-    # AMvB-BES
-    # beleidsregel
-    # beleidsregel-BES
-    # circulaire
-    # circulaire-BES
-    # KB
-    # ministeriele-regeling
-    # ministeriele-regeling-archiefselectielijst
-    # ministeriele-regeling-BES
-    # pbo
-    # reglement
-    # rijksKB
-    # rijkswet
-    # verdrag
-    # wet
-    # wet-BES
-    # zbo
-    
-#soort_longer = {
-#    'AMvB':'Algemene Maatregel van Bestuur',
-#    'KB':'Koninklijk Besluit',
-#    'zbo':'Zelfstandige bestuursorganen',
-#    'pbo':'Publiekrechtelijke bedrijfsorganisatie',
-#    # -BES is Bonaire, Saba en Sint Eustatius 
-#}
