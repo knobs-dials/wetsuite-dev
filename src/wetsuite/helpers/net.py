@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+' network/fetch related helper functions '
 import sys
 import wetsuite.helpers.format
 import urllib, requests
