@@ -11,10 +11,13 @@ setup(
     packages=['wetsuite.datasets', 'wetsuite.helpers', 'wetsuite.phrases'],
     package_dir={"": "src"},
     python_requires=">=3",
-    install_requires=['numpy >= 1.11.1', 'matplotlib >= 1.5.1', 'spacy', 'spacy-transformers', 'requests'], # merely suggested: 'easyocr', 
+    install_requires=['requests', 'numpy >= 1.11.1', 'matplotlib >= 1.5.1', 'spacy', 'spacy-transformers' ],
     extras_require={
-        'spacy-cpu': 'spacy',
-        'spacy-cuda110': 'spacy[cuda110]',
+        'spacy-cpu':'spacy',
+        'spacy-cuda80':'spacy[cuda80]',
+        'spacy-cuda90':'spacy[cuda90]','spacy-cuda91':'spacy[cuda91]','spacy-cuda92':'spacy[cuda92]',
+        'spacy-cuda100':'spacy[cuda100]','spacy-cuda101':'spacy[cuda101]','spacy-cuda102':'spacy[cuda102]','spacy-cuda110':'spacy[cuda110]',
+        'spacy-cuda111':'spacy[cuda111]','spacy-cuda112':'spacy[cuda112]','spacy-cuda113':'spacy[cuda113]','spacy-cuda114':'spacy[cuda114]','spacy-cuda115':'spacy[cuda115]','spacy-cuda116':'spacy[cuda116]','spacy-cuda117':'spacy[cuda117]',
         'fastlang': ['spacy_fastlang','fasttext'],
         'ocr':'easyocr',
         # all?
