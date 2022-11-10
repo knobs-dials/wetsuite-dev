@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-''' Fetching and loading an existing dataset we provide.
+''' Fetch and load already-created datasets that we provide.
 
     As this is often structured data, each dataset may work a little differently, 
     so there is an describe() to get you started, that each dataset should fill out.
@@ -43,7 +43,7 @@ def hash(data):
 
 
 
-def load(dataset_name):
+def load(dataset_name, show_progress=True):
     ''' Loads a dataset into memory, by name.   
 
         Which may involve fetching it first. Fetched datasets are cached in your home directory.
@@ -77,19 +77,25 @@ def load(dataset_name):
         tmp_handle, tmp_path = tempfile.mkstemp(prefix='download', dir=data_dir)
         os.close(tmp_handle) # open file handle is sorta secure, but that's not really our goal here
 
-        wetsuite.helpers.net.download( data_url, tofile_path=tmp_path, show_progress=True)
+        wetsuite.helpers.net.download( data_url, tofile_path=tmp_path, show_progress=show_progress)
 
         ### THINK: it may be preferable to store it compressed, and decompress every load. Or at least make this a parameter
         # if it was compressed, decompress it in the cache
         if data_url.endswith('.bz2'):
-            print('Decompressing', file=sys.stderr)
+            #print('Decompressing...', file=sys.stderr)
+            uncompressed_data_bytes = 0
             with bz2.BZ2File(tmp_path, 'rb') as compressed_file_object:
                 with open(data_path,'wb') as write_file_object:
                     while True:
-                        data = compressed_file_object.read( 524288 )
+                        data = compressed_file_object.read( 1048576 )
                         if len(data)==0:
                             break
                         write_file_object.write(data)
+                        uncompressed_data_bytes += len(data)
+                        if show_progress:
+                            print( "\rDecompressing... %3sB"%(wetsuite.helpers.format.kmgtp( uncompressed_data_bytes, kilo=1024 ), ), end='' )
+
+            print('  done.', file=sys.stderr)
             os.unlink( tmp_path )
         # CONSIDER: add gz, zip, because they're standard library anyway
         else: # assume it was uncompressed
@@ -106,8 +112,12 @@ def load(dataset_name):
 ### Index of current datasets
 # this needs to become a remotely stored thing.  Right now it's hardcoded because I'm figuring out the loading API to be in general,
 
-#_index_url = 'https://'
-#_index = None
+_index_url = 'https://'
+
+_index = {
+    'kamervragen':{  'url':'https://beep.knobs-dials.com/datasets/kamervragen.json.bz2',   'description':'',   'version':'preliminary'  }
+}
+
 
 def list_datasets():
     if _index==None:
@@ -115,17 +125,13 @@ def list_datasets():
     return _index.keys()
 
 
-_index = {
-    'kamervragen':{  'url':'https://beep.knobs-dials.com/datasets/kamervragen.json.bz2',   'description':'',   'version':'preliminary'  }
-}
-
 def fetch_index():
     ''' Index is expected to be
           {'datasetname':{url:'http://example.com/dataset.tgz', 'description':'Blah'}}
 
         Current hosting is on github. TODO: keep it generic so that any hoster will do?
     '''
-    index_data = wetsuite.helpers.net.download( index_url )
+    index_data = wetsuite.helpers.net.download( _index_url )
 
     try:
         index_dict = json.loads( index_data )

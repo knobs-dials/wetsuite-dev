@@ -1,17 +1,18 @@
-""" Eases production of colors in the terminal,
-    and only doing so when it is capable of showing it.
-    (whether we are in a tty, and whether the TERM suggests we are color-capable.
+""" Eases production of colors in the terminal, for a few CLI tools.
+
+    Tries to only produce color escapes when the terminal supports it: 
+    whether we detect we aree in a tty, and TERM suggests we are color-capable.
     You can override that in manual checks with the arguments on guess_color_support(),
     You can override that in the automatic checks (necessary for the convenience function)
     by setting the globals default_forceifnoterm and/or default_forceifnotty)
 
-    
-    Currently provides some convenience functions for a single foreground color,
-    meant to be used like
-    import helpers_shellcolor as sc
-    print sc.red('shown as red')
-    Without the check and for more control:
-    print sc.BRIGHT+sc.BLUE+sc.UNDERLINE+'shown bright blue'+sc.RESET
+   
+    Currently provides some convenience functions for a single foreground color, meant to be used like:
+
+      import helpers_shellcolor as sc
+      print sc.red('shown as red')
+      Without the check and for more control:
+      print sc.BRIGHT+sc.BLUE+sc.UNDERLINE+'shown bright blue'+sc.RESET
 
     Tries to only add the control codes when the context seems capable of it.
     (TODO: this needs some tuning)
@@ -643,83 +644,4 @@ def hash_color(s, rgb=False, append=RESET, hash_instead=None):
                        BRIGHTMAGENTA, CYAN, BRIGHTCYAN, GREY, WHITE     ]
         choice = choosefrom[ sum(ch for ch in dig)%len(choosefrom) ]
         return '%s%s%s'%(choice,s,append)
-
-
-    
-def test():
-    #print( CLEARSCREEN )
-
-    if 0:
-        print( '\n-- color_degree test --' )
-        for i in range(0,100,5):
-            print( color_degree('foo', i,0,100) )
-
-    if 1:
-        teststrs = 'dfgadfg','23434','foo','var','bar','bla','more','quu','dfdfgdgdf'
-        print( '\n-- hash_color test, standard color set --' )
-        for s in teststrs:
-            print( hash_color(s) )
-
-        print( '\n-- hash_color test, true color --' )
-        for s in teststrs:
-            #print( repr(hash_color(s,rgb=True)) )
-            print( hash_color(s,rgb=True) )
-            
-    if 0:
-        print( '\n-- explicit color codes --' )
-        try:
-            print( UNDERLINE+'underline'+RESET )
-
-            print( BRIGHTBLACK   +'BRIGHTBLACK'+RESET )         #actually only makes sense with a different background
-            print( BLACK         +'BLACK'+RESET )          #actually only makes sense with a different background
-            print( RED           +'RED'+RESET )
-            print( BRIGHTRED     +'BRIGHTRED'+RESET )
-            print( GREEN         +'GREEN'+RESET )
-            print( BRIGHTGREEN   +'BRIGHTGREEN'+RESET )
-            print( YELLOW        +'YELLOW / ORANGE'+RESET )
-            print( BRIGHTYELLOW  +'BRIGHTYELLOW'+RESET )
-            print( BLUE          +'BLUE' +RESET )
-            print( BRIGHTBLUE    +'BRIGHTBLUE'+RESET )
-            print( MAGENTA       +'MAGENTA'+RESET )
-            print( BRIGHTMAGENTA +'BRIGHTMAGENTA'+RESET )
-            print( CYAN          +'CYAN'+RESET )
-            print( BRIGHTCYAN    +'BRIGHTCYAN'+RESET )
-            print( GREY          +'GREY'+RESET )
-            print( BRIGHTGREY    +'BRIGHTGREY / WHITE'+RESET )
-
-            print( RESET+'default'         )
-
-        except:
-            print( RESET )
-
-
-    if 1:
-        print( '\n-- Testing percent-string parser --' )
-        s = ' a  %%  qq  %.5d %30s  % -31.7f '
-        print( s )
-        print( "plus 0 0 5 9" )
-        print( _percent_parse(s, [0,0,5,9]) )
-
-    if 1:
-        print( '\n-- Testing control-code awareness in cformat() --' )
-
-        for test in (  BLACK+'fork',
-                       BRIGHTBLACK+'fork',
-                    ):
-            print( 'test string: %r'%test )
-            fs='%35s'
-            print( 'format string: %r'%fs )
-            newfs= cformat(fs, (test,), True )
-            print( 'rewritten format string: %r'%newfs )
-            print( cformat('%35s', (test,) )  )
-            #print cformat('%35r', test )
-            print( RESET )
-
-
-
-
-
-
-if __name__=='__main__':
-    test()
 

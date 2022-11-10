@@ -6,14 +6,20 @@
     * look at different scoring methods, e.g. NLTK's association.py
 '''
 
-from functools import reduce  
 import operator, re
+from functools import reduce  
 from collections import defaultdict
 
 
 def product(l):
     ' product of all numbers in a list '
     return reduce(operator.mul, l, 1)
+
+
+def simple_tokenize(text):
+    ' quick and dirty splitting text into what are probably words.  This is provided only for a quick test, it is suggested you use a more serious tokenizer to deal with real text '
+    l = re.split('[\s!@#$%^&*()"\':;/.,?\xab\xbb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a\u2358\u275b\u275c\u275d\u275e\u275f\u2760\u276e\u276f\u2e42\u301d\u301e\u301f\uff02\U0001f676\U0001f677\U0001f678-]+', text)
+    return list(e   for e in l  if len(e)>0)
 
 
 class Collocation:
@@ -28,7 +34,7 @@ class Collocation:
         self.saw_tokens = 0
 
 
-    def consume_text(self, token_list, gramlens=(2,3,4)): 
+    def consume_tokens(self, token_list, gramlens=(2,3,4)): 
         """ count unigram and bigram counts. 
             Takes a list of string tokens.
         """
@@ -113,8 +119,8 @@ class Collocation:
     def counts(self):
         return {
     'from_tokens':self.saw_tokens,
-            'uni':len(self.uni),
-          'grams':len(self.grams),
+       'unigrams':len(self.uni),
+         'ngrams':len(self.grams),
         }
         
 
@@ -124,12 +130,6 @@ class Collocation:
 if __name__ == '__main__':
     ''' when run as a script, it will tak arguments it expects to be text files.    You probably want moderately large files ''' 
     import time, sys
-
-    def simple_tokenize(s):
-        ' split into words ' 
-        l = re.split('[\s!@#$%^&*()"\':;/.,?\xab\xbb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a\u2358\u275b\u275c\u275d\u275e\u275f\u2760\u276e\u276f\u2e42\u301d\u301e\u301f\uff02\U0001f676\U0001f677\U0001f678-]+', s)
-        return list(e   for e in l  if len(e)>0)
-
 
     for filename in sys.argv[1:]:
         coll = Collocation( 

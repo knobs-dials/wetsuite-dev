@@ -1,36 +1,24 @@
-
-
-
-
+' Formatting values into text '
 
 
 import os
 import urllib
 
 
-def url_basename(url):
-    ''' Give the base filename in an URL - os.path.basename( urllib.parse.urlparse(url).path )
-
-        Mostly meant to show a shorter-but-not-necessarily-unique name
-
-        Yes, basename(url) will often work - except if there's query parameters.
-    '''
-    return os.path.basename( urllib.parse.urlparse(url).path )
-
 
 def kmgtp(amount,kilo=1000, append='',thresh=15, nextup=0.9, rstrip0=True, extradigits=0, i_for_1024=True):
     """ For more easily skimmable sizes
 
         e.g.
-             kmg(3429873278462) == '3.4T'
-             kmg(342987327)     == '343M'
-             kmg(34298)         == '34K'
+             kmgtp(3429873278462) == '3.4T'
+             kmgtp(342987327)     == '343M'
+             kmgtp(34298)         == '34K'
 
-             '%sB'%kmg(2342342324)                           == '2.3GB'
-             '%sB'%kmg(2342342324, kilo=1024)                == '2.2GiB'
-             '%sB'%kmg(2342342324, kilo=1024, extradigits=1) == '2.18GiB'
-             '%sB'%kmg(19342342324, kilo=1024)                == '18GiB'
-             '%sB'%kmg(19342342324, kilo=1024, extradigits=1) == '18GiB'  (because of rstrip0)
+             '%sB'%kmgtp(2342342324)                           == '2.3GB'
+             '%sB'%kmgtp(2342342324, kilo=1024)                == '2.2GiB'
+             '%sB'%kmgtp(2342342324, kilo=1024, extradigits=1) == '2.18GiB'
+             '%sB'%kmgtp(19342342324, kilo=1024)                == '18GiB'
+             '%sB'%kmgtp(19342342324, kilo=1024, extradigits=1) == '18GiB'  (because of rstrip0)
 
         Decimal/SI kilos by default, so useful beyond bytes.
         Specify kilo=1024 if you want binary kilos. By default this also adds the i.
@@ -52,9 +40,9 @@ def kmgtp(amount,kilo=1000, append='',thresh=15, nextup=0.9, rstrip0=True, extra
     giga  = mega*kilo
     tera  = giga*kilo
     peta  = tera*kilo
-    exa   = peta*kilo
-    zetta = exa*kilo
-    yotta = zetta*kilo
+    #exa   = peta*kilo
+    #zetta = exa*kilo
+    #yotta = zetta*kilo
     if nextup is None:
         nextup = 1.0
     if thresh is None:
@@ -90,3 +78,14 @@ def kmgtp(amount,kilo=1000, append='',thresh=15, nextup=0.9, rstrip0=True, extra
             ret=ret.rstrip('0').rstrip('.')
     ret += append
     return ret
+
+
+def url_basename(url):
+    ''' Give the base filename in an URL - os.path.basename( urllib.parse.urlparse(url).path )
+
+        Mostly meant to show a shorter-but-not-necessarily-unique name
+
+        Yes, basename(url) will often work - except if there's query parameters.
+    '''
+    return os.path.basename( urllib.parse.urlparse(url).path )
+

@@ -1,5 +1,7 @@
 #!/usr/bin/python3
-""" Escaping for different contexts, so that code doing these is more obvious (than combinations of cgi.escape(), urllib.quote(), ''.encode() and such)
+""" Escaping text for different contexts, mostly HTML/XML.
+
+    Should make code more readable (than combinations of cgi.escape(), urllib.quote(), ''.encode() and such)
 
     Note that in HTML, & should always be encoded (in node text, attributes and elsehwere),
     so it is a good idea to structurally use nodetext() and/or attr(). 
@@ -14,7 +16,7 @@ __all__ = ['nodetext','attr', 'uri','uri_component','uri_dict']
 
 
 
-def nodetext(s):
+def nodetext(s, if_none=None):
     ''' Escapes for HTML/XML text nodes:
         Replaces <, >, and & with entities
         
@@ -23,6 +25,9 @@ def nodetext(s):
 
         (is actually html.escape (previously known as cgi.escape)
     '''
+    if s is None:
+        s = if_none
+
     if type(s) is bytes:
         ret = s.replace(  b"&",  b"&amp;")   
         ret = ret.replace(b"<",  b"&lt;")
@@ -143,34 +148,4 @@ def uri_dict(d, join='&', astype=str):
     if astype is bytes:
         return bytes( join.join(parts), encoding='ascii' )
     return astype( join.join(parts) )
-
-
-
-
-
-class Tests(object):
-    ' tests for pytest to pick up' 
-
-    def test_nodetext(self):
-        assert nodetext(      'a < b "'                          ) ==   'a &lt; b "'
-        assert nodetext(     b'a < b "'                          ) ==  b'a &lt; b "' 
-
-    def test_attr(self):
-        assert attr(          'a < b "'                          ) ==  'a &lt; b &#x22;'
-        assert attr(         b'a < b "'                          ) == b'a &lt; b &#x22;'
-
-    def test_uri(self):
-        assert uri(          b'http://example.com:8080/foo#bar') ==  b'http://example.com:8080/foo%23bar'
-        assert uri(           'http://example.com:8080/foo#bar') ==  'http://example.com:8080/foo%23bar'
-        
-    def test_uri_component(self):
-        assert uri_component(b'http://example.com:8080/foo#bar') == b'http%3A%2F%2Fexample.com%3A8080%2Ffoo%23bar'
-        assert uri_component( 'http://example.com:8080/foo#bar') == 'http%3A%2F%2Fexample.com%3A8080%2Ffoo%23bar'
-
-    def test_uri_dict(self):
-        assert uri_dict({'name':'Zim', 'chr':u'\u2222'}, astype=str)              ==  'chr=%E2%88%A2&name=Zim'
-        assert uri_dict({'name':'Zim', 'chr':u'\u2222'}, astype=bytes)            == b'chr=%E2%88%A2&name=Zim'
-        assert uri_dict({'name':'Zim', 'chr':u'\u2222'}, join=b';', astype=str)   ==  'chr=%E2%88%A2;name=Zim'
-        assert uri_dict({'name':'Zim', 'chr':u'\u2222'}, join=';',  astype=str)   ==  'chr=%E2%88%A2;name=Zim'
-
 
