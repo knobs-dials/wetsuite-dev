@@ -878,3 +878,19 @@ def bwb_toestand_text(tree):
     #    print(' POA: %s '%parents_of_artikel)
     #    print(' RET: %s '%ret)
 
+
+def cvdr_versions_for_work( cvdrid ) -> list:
+    """ takes a CVDR id (with or without _version, i.e. expression id or work id),
+        searches KOOP's CVDR repo, 
+        Returns: a list of all version expression id 
+    """ 
+    sru_cvdr = CVDR() # TODO: see if doing this here stays valid
+    work_id, expression_id = wetsuite.datacollect.koop_repositories.cvdr_parse_identifier(cvdrid)
+    results = sru_cvdr.search_retrieve_many("workid = CVDR%s"%work_id, up_to=10000)   # only fetches as many as needed, usually a single page of results. TODO: maybe think about injection?
+    print(f"amt results: {len(results)}")
+    ret=[]
+    for record in results:
+        meta = wetsuite.datacollect.koop_repositories.cvdr_meta(record)
+        result_expression_id = meta['identifier'][0]['text']
+        ret.append( result_expression_id )
+    return sorted( ret )
