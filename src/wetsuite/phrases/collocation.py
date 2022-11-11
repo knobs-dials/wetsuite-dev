@@ -28,7 +28,7 @@ class Collocation:
         self.saw_tokens = 0
 
 
-    def consume_text(self, token_list, gramlens=(2,3,4)): 
+    def consume_tokens(self, token_list, gramlens=(2,3,4)): 
         """ count unigram and bigram counts. 
             Takes a list of string tokens.
         """
