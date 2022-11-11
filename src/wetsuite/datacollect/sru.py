@@ -4,6 +4,7 @@
      Not meant to be a generic implementation, written because existing python SRU libraries I tried didn't seem to like the apparently-custom URL component (x-connection) that these repos use, 
      so until we figure out a clean solution, here's a just-enough-to-work implementation for our specific use case.
 '''
+# https://www.loc.gov/standards/sru/sru-1-1.html
 
 import time, sys
 
@@ -146,7 +147,6 @@ class SRUBase(object):
             CONSIDER:
             - option to returning URL instead of searching
         ''' 
-        # https://www.loc.gov/standards/sru/sru-1-1.html
 
         if self.extra_query:
             query = '%s and %s'%(self.extra_query, query)
@@ -172,6 +172,7 @@ class SRUBase(object):
         tree = wetsuite.helpers.etree.fromstring( r.content )
 
         # easier without namespaces, they serve no disambiguating function in most of these cases anyway
+        # TODO: think about that, user code may not expact that
         wetsuite.helpers.etree.strip_namespace_inplace(tree) 
 
         if tree.tag=='diagnostics':
@@ -180,11 +181,6 @@ class SRUBase(object):
         elif tree.tag=='explainResponse':
             wetsuite.helpers.etree.strip_namespace_inplace(tree) # bit lazy
             raise RuntimeError( 'search returned explain response instead' )
-            
-        #if 0:
-        ##    wetsuite.helpers.etree.indent_inplace(tree) # only for debug
-        #   #print( r.content.decode('utf-8'))
-        #    print( wetsuite.helpers.etree.ElementTree.tostring(tree, encoding='unicode') )
 
         self.numberOfRecords = int(tree.find('numberOfRecords').text)
         if verbose:
@@ -196,8 +192,7 @@ class SRUBase(object):
         for record in tree.findall('records/record'):  
             ret.append(record)
             if callback is not None:
-                callback( record )
-                # CONSIDER: callback( record, query )
+                callback( record )    # CONSIDER: callback( record, query )  and possibly pas other things
         return ret # maybe return list, like _many does?
 
 
@@ -213,7 +208,7 @@ class SRUBase(object):
             Notes:
             - up_to is the absolute offset, e.g. start_offset=200, up_to=250 givs you records 200..250, not 200..450
 
-            - since we fetch in chunks, we may return more records than you asked for, by up to at_a_time amount of entries
+            - since we fetch in chunks, we may fetch more records than you asked for, by up to at_a_time amount of entries. We could be slightly nicer about that.
 
             - wait_between_sec is a backoff sleeps between each search chunk, to avoid hammering a server too much. 
               you can lower this where you know this is overly cautious
@@ -229,10 +224,15 @@ class SRUBase(object):
             records = self.search_retrieve(query=query, start_record=offset, maximum_records=at_a_time, callback=None, verbose=verbose)
             if len(records)==0:
                 break
-            for record in records:
+
+            for chunk_offset, record in enumerate(records):
                 ret.append( record )
                 if callback is not None:
                     callback( record )
+                
+                if offset+chunk_offset >= up_to: # we fetched more than was needed
+                    break
+
             offset += at_a_time
             
             if offset >= up_to: # crossed beyond what was asked for
@@ -240,8 +240,7 @@ class SRUBase(object):
             if self.numberOfRecords is not None and offset > self.numberOfRecords: # crossed beyond what exists in the search result
                 break
 
-            time.sleep( wait_between_sec ) # this is avoided if a single fetch was enough
+            time.sleep( wait_between_sec ) # note that this is avoided if a single fetch was enough
 
         return ret
-
 

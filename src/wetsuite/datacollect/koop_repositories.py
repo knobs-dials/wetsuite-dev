@@ -10,9 +10,9 @@
 
 import re, urllib
 
-import wetsuite.helpers.etree
-import wetsuite.datacollect.meta
 import wetsuite.datacollect.sru
+import wetsuite.datacollect.meta
+import wetsuite.helpers.etree
 
 
 class BWB(wetsuite.datacollect.sru.SRUBase):
