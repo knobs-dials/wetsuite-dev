@@ -177,24 +177,23 @@ def cvdr_meta(tree, flatten=False):
                 ret[enriched_key] = []
             ret[enriched_key].append( {'text':enriched_val, 'attr':{}} ) # imitate the structure the below use
 
-
     owmskern   = meta_under.find('meta/owmskern')
     for child in owmskern:
         tagname = child.tag
-        tagtext = child.text
-        if tagname not in ret:
-            ret[tagname]=[]
-        ret[tagname].append( {'text':tagtext, 'attr':child.attrib} )
-
+        if child.text is not None:
+            tagtext = child.text
+            if tagname not in ret:
+                ret[tagname]=[]
+            ret[tagname].append( {'text':tagtext, 'attr':child.attrib} )
 
     owmsmantel = meta_under.find('meta/owmsmantel')
     for child in owmsmantel:
         tagname = child.tag
         tagtext = child.text
-        if tagname not in ret:
-            ret[tagname]=[]
-        ret[tagname].append( {'text':tagtext, 'attr':child.attrib} )
-
+        if child.text is not None:
+            if tagname not in ret:
+                ret[tagname]=[]
+            ret[tagname].append( {'text':tagtext, 'attr':child.attrib} )
 
     cvdripm = meta_under.find('meta/cvdripm')
     for child in cvdripm:
@@ -203,7 +202,6 @@ def cvdr_meta(tree, flatten=False):
         if tagname not in ret:
             ret[tagname]=[]
         ret[tagname].append( {'text':text, 'attr':child.attrib} )
-
 
     if flatten:
         simpler = {}
