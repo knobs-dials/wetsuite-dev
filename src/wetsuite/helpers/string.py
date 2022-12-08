@@ -32,10 +32,15 @@ re_combining = re.compile(u'[\u0300-\u036f\u1dc0-\u1dff\u20d0-\u20ff\ufe20-\ufe2
 def remove_diacritics(s: str):
     """ Decomposes, removes combining characters, composes.
 
-        example: 
-        - remove_diacritics(u'ol\xe9') == 'ole'
-        - 
+        Example:   remove_diacritics(u'ol\xe9') == 'ole'
     """
     #TODO: Figure out what the compose is doing, and whether it is necessary at all.
     return unicodedata.normalize('NFC', re_combining.sub('', unicodedata.normalize('NFD', s)) )
+
+
+
+def is_numeric(string: str):
+    ''' Does this string contain only a number (and optional whitespace around it) '''
+    return  ( re.match(r'^\s*[0-9,.]+\s*$', string) is not None )
+
 

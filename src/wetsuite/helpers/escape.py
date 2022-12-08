@@ -26,7 +26,7 @@ def nodetext(s, if_none=None):
         (is actually html.escape (previously known as cgi.escape)
     '''
     if s is None:
-        s = if_none
+        return if_none
 
     if type(s) is bytes:
         ret = s.replace(  b"&",  b"&amp;")   
@@ -139,10 +139,12 @@ def uri_dict(d, join='&', astype=str):
     parts=[]
     for var in sorted( d.keys() ): #sorting is purely a debug thing
         val=d[var]
-        if type(var) is not str: # TODO: rethink
-            var = str(var)
-        if type(val) is not str:
-            val = str(val)      
+        if type(var) is not str: # TODO: rethink   (this is _mostly_ intended for a bytes, but this code is too broad)
+            raise ValueError("uri_dict doesn't deal with type %r"%str(type(var)))
+            #var = str(var)
+        if type(val) is not str: # TODO: rethink: this may make sense for numbers, byte not e.g. bytes objects
+            raise ValueError("uri_dict doesn't deal with type %r"%str(type(val)))
+            #val = str(val)      
         parts.append( '%s=%s'%(uri_component(var),
                                uri_component(val)) )
     if astype is bytes:

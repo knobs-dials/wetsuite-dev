@@ -13,3 +13,9 @@ def test_percent_parse():
 
 def test_cformat():
     assert cformat('%20s', (WHITE+'fork'+RESET,) ) == '                \x1b[1;37mfork\x1b[0m\x1b[39m'
+
+
+def test_real_len():
+    assert real_len( '\x1b[1;30mfoo\x1b[0m\x1b[39m')[0] == 3
+    assert real_len( '\x1b[37mbar\x1b[0m\x1b[39m')[0]   == 3
+

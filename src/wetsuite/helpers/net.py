@@ -5,7 +5,7 @@ import wetsuite.helpers.format
 import urllib, requests
 
 
-def download( url, tofile_path = None, show_progress=False):
+def download( url:str, tofile_path:str = None, show_progress:bool=False):
     ''' if tofile is not None, we stream to that file path, by name 
            tofile is None      we return the data (which means we kept it in RAM, which may not be wise for huge downloads)
 
@@ -58,12 +58,3 @@ def download( url, tofile_path = None, show_progress=False):
     if tofile_path is None:
         return b''.join( ret )
 
-
-
-
-if __name__ == '__main__':
-    download( "https://www.rechtspraak.nl/SiteCollectionDocuments/Technische-documentatie-Open-Data-van-de-Rechtspraak.pdf", tofile_path='test.dl', show_progress=True )
-    #data = download( "https://www.rechtspraak.nl/SiteCollectionDocuments/Technische-documentatie-Open-Data-van-de-Rechtspraak.pdf", show_progress=True )
-    #print( len(data))
-
-    #download( "https://static.rechtspraak.nl/PI/OpenDataUitspraken.zip", tofile_path='test.dl', show_progress=True )

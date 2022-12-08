@@ -1,8 +1,7 @@
 ' Formatting values into text '
 
 
-import os
-import urllib
+import os, re, urllib
 
 
 
@@ -23,16 +22,17 @@ def kmgtp(amount,kilo=1000, append='',thresh=15, nextup=0.9, rstrip0=True, extra
         Decimal/SI kilos by default, so useful beyond bytes.
         Specify kilo=1024 if you want binary kilos. By default this also adds the i.
 
-        thresh is the controls where we take one digit away, e.g. for 1.3GB but 16GB.
-        Default is at 15 which is entirely arbitrary. 
+        thresh is the controls where (in terms of the number we show) we take one digit away, 
+          e.g. for 1.3GB but 16GB.
+        Default is at 15, which is entirely arbitrary. 
         Disable using None.
 
         nextup makes us switch to the next higher up earlier, e.g. 700GB but 0.96TB
-        Disable using None.
- 
+        Disable this behaviour by passing in None.
+
         extradigits=1 (or maybe more) to unconditionally see a less-rounded number
         (though note rstrip can still apply)
-
+        
         rstrip0     whether to take off '.0' if present (defaults to true)
         append      is mostly meant for optional space between number and unit.
     """
@@ -40,9 +40,6 @@ def kmgtp(amount,kilo=1000, append='',thresh=15, nextup=0.9, rstrip0=True, extra
     giga  = mega*kilo
     tera  = giga*kilo
     peta  = tera*kilo
-    #exa   = peta*kilo
-    #zetta = exa*kilo
-    #yotta = zetta*kilo
     if nextup is None:
         nextup = 1.0
     if thresh is None:
@@ -53,18 +50,10 @@ def kmgtp(amount,kilo=1000, append='',thresh=15, nextup=0.9, rstrip0=True, extra
     if abs(amount) < nextup*kilo: # less than a kilo; omits multiplier and i
         showval = amount
     else:
-        for csize, mchar in ( (peta, 'P'),
-                              (tera, 'T'),
-                              (giga, 'G'),
-                              (mega, 'M'),
-                              (kilo, 'K'),
-                              #(exa,  'E'),# exa, zetta, yotta is shown as peta amounts. Too large to comprehend anyway.
-                              #(zeta, 'Z'),
-                              #(yotta,'Y'),
-           ):
-            if abs(amount) > nextup*csize:
-                showval = amount/float(csize)
-                if showval<thresh:
+        for csize, mchar in ( (peta, 'P'), (tera, 'T'), (giga, 'G'), (mega, 'M'), (kilo, 'K'), ): # exa, zetta, yotta is shown as peta amounts. Too large to comprehend anyway.
+            if abs(amount)  >  nextup * csize:
+                showval = float(amount) / float(csize)
+                if showval < thresh:
                     showdigits = 1 + extradigits
                 else:
                     showdigits = 0 + extradigits
@@ -88,4 +77,7 @@ def url_basename(url):
         Yes, basename(url) will often work - except if there's query parameters.
     '''
     return os.path.basename( urllib.parse.urlparse(url).path )
+
+
+
 

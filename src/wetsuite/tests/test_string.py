@@ -10,3 +10,10 @@ def test_remove_diacritics():
     assert wetsuite.helpers.string.remove_diacritics( 'v\xf3\xf3r' ) == 'voor'
 
 
+def test_is_numeric():
+    assert wetsuite.helpers.string.is_numeric('2.1.') == True
+    assert wetsuite.helpers.string.is_numeric('2.1. ') == True
+    assert wetsuite.helpers.string.is_numeric(' 2.1.') == True
+    assert wetsuite.helpers.string.is_numeric('02 ') == True
+    assert wetsuite.helpers.string.is_numeric('B2 ') == False
+    assert wetsuite.helpers.string.is_numeric(' ') == False

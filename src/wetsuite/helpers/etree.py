@@ -58,7 +58,8 @@ some_ns_prefixes = {
 
     'http://www.w3.org/1998/Math/MathML':'mathml', # more usually m: or mml:
 
-    'http://tuchtrecht.overheid.nl/':'tucht',     # maybe tr
+    'http://tuchtrecht.overheid.nl/':'tucht',
+    'http://www.tweedekamer.nl/xsd/tkData/v1-0':'tk',
     'http://publications.europa.eu/celex/':'celex',
     'http://decentrale.regelgeving.overheid.nl/cvdr/':'cvdr',
     'http://psi.rechtspraak.nl/':'psi', 
@@ -106,17 +107,14 @@ def all_text_fragments(under, ignore_empty=False, ignore_tags=[]):
 
         ignore_tags does not currently ignore the subtree, just the direct contents
 
-        For example:
-
+        For example,  all_text_fragments( fromstring('<a>foo<b>bar</b></a>') ) == ['foo', 'bar']
     '''
     r = []
     for e in under.getiterator(): # walks the subtree
-        if e.tag in ignore_tags:
-            #print('IGNORE', e.tag)
-            continue
         if e.text != None:
-            if not (ignore_empty and len(e.text.strip())==0):
-                r.append( e.text )
+            if e.tag not in ignore_tags: # only ignore contents of ignored tags; tail is considered outside
+                if not (ignore_empty and len(e.text.strip())==0):
+                    r.append( e.text )
         if e.tail != None:
             if not (ignore_empty and len(e.tail.strip())==0):
                 r.append( e.tail )
@@ -223,7 +221,7 @@ def indent(tree, whitespacestrip=True):
 
 
 def indent_inplace(elem, level=0, whitespacestrip=True):
-    ''' Alters the text nodes so that the tostring()ed version will look nice and indented.
+    ''' Alters the text nodes so that the tostring()ed version will look nice and indented when printed as plain text.
     
         Keep in mind that this may change the meaning of the document - the output should _only_ be used for presentation.
  
@@ -253,7 +251,9 @@ def indent_inplace(elem, level=0, whitespacestrip=True):
 
 
 def node_walk(root):  # https://stackoverflow.com/questions/60863411/find-path-to-the-node-using-elementtree
-    ''' walks all nodes, in a way where we remember both path and node.
+    ''' walks all nodes under the given node,
+        remembering both path and node as we go.
+
         Is a generator yieldng (path, node)
 
         Mainly a helper for path_count()
@@ -273,10 +273,12 @@ def node_walk(root):  # https://stackoverflow.com/questions/60863411/find-path-t
 
 
 def path_count(root):
-    ''' Count how often each path happens, under a specific root node.
-        Meant to help grasp the structure of documents.
+    ''' Walk nodes under a node,
+        count how often each path happens.
 
         Returns a dict from path strings to their count
+
+        Meant to summarize the rough structure of a document.
     '''
     count = {}
     for node_path, n in node_walk( root ):

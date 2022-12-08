@@ -44,7 +44,7 @@ default_forceifnoterm = None
 default_forceifnotty  = None
 
 
-def guess_color_support(forceifnottty=False, forceifnoterm=False, fallback=True):
+def guess_color_support(forceifnottty=False, forceifnoterm=False, fallback=True): # pragma: no cover     because it's necessarily context-dependent
     ''' Tries to guess whether we can use color code output.
 
         If we are not on a tty/pty (usually a pipe), return False
@@ -127,7 +127,7 @@ _guess = supported()
 
     
 # Try to get column width (*nix-mostly)
-def tty_size(debug=False):
+def tty_size(debug=False):                   # pragma: no cover     because it's necessarily context-dependent
     """ fetches current terminal size
 
         Has a few methods under *nix, probably largely redundant.
@@ -304,40 +304,72 @@ RESET        = NOCOLOR + DEFAULT
 
 
 # ease-of-use globals
-def brightblack(s, prepend=''):    return _add_color_if_supported(s,BRIGHTBLACK,prepend=prepend)
-def darkgray(s, prepend=''):       return _add_color_if_supported(s,BRIGHTBLACK,prepend=prepend)
-def darkgrey(s, prepend=''):       return _add_color_if_supported(s,BRIGHTBLACK,prepend=prepend)
-def black(s, prepend=''):          return _add_color_if_supported(s,BLACK,prepend=prepend)
-def red(s, prepend=''):            return _add_color_if_supported(s,RED,prepend=prepend)
-def brightred(s, prepend=''):      return _add_color_if_supported(s,BRIGHTRED,prepend=prepend)
-def green(s, prepend=''):          return _add_color_if_supported(s,GREEN,prepend=prepend)
-def brightgreen(s, prepend=''):    return _add_color_if_supported(s,BRIGHTGREEN,prepend=prepend)
-def orange(s, prepend=''):         return _add_color_if_supported(s,ORANGE,prepend=prepend)
-def yellow(s, prepend=''):         return _add_color_if_supported(s,YELLOW,prepend=prepend)
-def brightyellow(s, prepend=''):   return _add_color_if_supported(s,BRIGHTYELLOW,prepend=prepend)
-def blue(s, prepend=''):           return _add_color_if_supported(s,BLUE,prepend=prepend)
-def brightblue(s, prepend=''):     return _add_color_if_supported(s,BRIGHTBLUE,prepend=prepend)
-def magenta(s, prepend=''):        return _add_color_if_supported(s,MAGENTA,prepend=prepend)
-def brightmagenta(s, prepend=''):  return _add_color_if_supported(s,BRIGHTMAGENTA,prepend=prepend)
-def cyan(s, prepend=''):           return _add_color_if_supported(s,CYAN,prepend=prepend)
-def brightcyan(s, prepend=''):     return _add_color_if_supported(s,BRIGHTCYAN,prepend=prepend)
-def gray(s, prepend=''):           return _add_color_if_supported(s,GREY,prepend=prepend)
-def grey(s, prepend=''):           return _add_color_if_supported(s,GREY,prepend=prepend)
-def brightgrey(s, prepend=''):     return _add_color_if_supported(s,BRIGHTGREY,prepend=prepend)
-def brightgray(s, prepend=''):     return _add_color_if_supported(s,BRIGHTGRAY,prepend=prepend)
-def white(s, prepend=''):          return _add_color_if_supported(s,WHITE,prepend=prepend)
+def brightblack(s, prepend=''): 
+    return _add_color_if_supported(s,BRIGHTBLACK,prepend=prepend)
+def darkgray(s, prepend=''):       
+    return _add_color_if_supported(s,BRIGHTBLACK,prepend=prepend)
+def darkgrey(s, prepend=''):       
+    return _add_color_if_supported(s,BRIGHTBLACK,prepend=prepend)
+def black(s, prepend=''):          
+    return _add_color_if_supported(s,BLACK,prepend=prepend)
+def red(s, prepend=''):            
+    return _add_color_if_supported(s,RED,prepend=prepend)
+def brightred(s, prepend=''):      
+    return _add_color_if_supported(s,BRIGHTRED,prepend=prepend)
+def green(s, prepend=''):          
+    return _add_color_if_supported(s,GREEN,prepend=prepend)
+def brightgreen(s, prepend=''):    
+    return _add_color_if_supported(s,BRIGHTGREEN,prepend=prepend)
+def orange(s, prepend=''):         
+    return _add_color_if_supported(s,ORANGE,prepend=prepend)
+def yellow(s, prepend=''):         
+    return _add_color_if_supported(s,YELLOW,prepend=prepend)
+def brightyellow(s, prepend=''):   
+    return _add_color_if_supported(s,BRIGHTYELLOW,prepend=prepend)
+def blue(s, prepend=''):           
+    return _add_color_if_supported(s,BLUE,prepend=prepend)
+def brightblue(s, prepend=''):     
+    return _add_color_if_supported(s,BRIGHTBLUE,prepend=prepend)
+def magenta(s, prepend=''):        
+    return _add_color_if_supported(s,MAGENTA,prepend=prepend)
+def brightmagenta(s, prepend=''):  
+    return _add_color_if_supported(s,BRIGHTMAGENTA,prepend=prepend)
+def cyan(s, prepend=''):           
+    return _add_color_if_supported(s,CYAN,prepend=prepend)
+def brightcyan(s, prepend=''):     
+    return _add_color_if_supported(s,BRIGHTCYAN,prepend=prepend)
+def gray(s, prepend=''):           
+    return _add_color_if_supported(s,GREY,prepend=prepend)
+def grey(s, prepend=''):           
+    return _add_color_if_supported(s,GREY,prepend=prepend)
+def brightgrey(s, prepend=''):     
+    return _add_color_if_supported(s,BRIGHTGREY,prepend=prepend)
+def brightgray(s, prepend=''):     
+    return _add_color_if_supported(s,BRIGHTGRAY,prepend=prepend)
+def white(s, prepend=''):          
+    return _add_color_if_supported(s,WHITE,prepend=prepend)
 
-def bgblack(s, prepend=''):        return _add_color_if_supported(s,BGBLACK,prepend=prepend)
-def bgred(s, prepend=''):          return _add_color_if_supported(s,BGRED,prepend=prepend)
-def bggreen(s, prepend=''):        return _add_color_if_supported(s,BGGREEN,prepend=prepend)
-def bgblue(s, prepend=''):         return _add_color_if_supported(s,BGBLUE,prepend=prepend)
-def bgyellow(s, prepend=''):       return _add_color_if_supported(s,BGYELLOW,prepend=prepend)
-def bgorange(s, prepend=''):       return _add_color_if_supported(s,BGORANGE,prepend=prepend)
-def bgmagenta(s, prepend=''):      return _add_color_if_supported(s,BGMAGENTA,prepend=prepend)
-def bgcyan(s, prepend=''):         return _add_color_if_supported(s,BGCYAN,prepend=prepend)
+def bgblack(s, prepend=''):        
+    return _add_color_if_supported(s,BGBLACK,prepend=prepend)
+def bgred(s, prepend=''):          
+    return _add_color_if_supported(s,BGRED,prepend=prepend)
+def bggreen(s, prepend=''):        
+    return _add_color_if_supported(s,BGGREEN,prepend=prepend)
+def bgblue(s, prepend=''):         
+    return _add_color_if_supported(s,BGBLUE,prepend=prepend)
+def bgyellow(s, prepend=''):       
+    return _add_color_if_supported(s,BGYELLOW,prepend=prepend)
+def bgorange(s, prepend=''):       
+    return _add_color_if_supported(s,BGORANGE,prepend=prepend)
+def bgmagenta(s, prepend=''):      
+    return _add_color_if_supported(s,BGMAGENTA,prepend=prepend)
+def bgcyan(s, prepend=''):         
+    return _add_color_if_supported(s,BGCYAN,prepend=prepend)
 
-def default(s, prepend=''):        return _add_color_if_supported(s,DEFAULT,prepend=prepend)
-def reset():                       return _add_color_if_supported('',RESET)
+def default(s, prepend=''):        
+    return _add_color_if_supported(s,DEFAULT,prepend=prepend)
+def reset():                       
+    return _add_color_if_supported('',RESET)
 def clearscreen():
     if _guess:
         return CLEARSCREEN
@@ -360,7 +392,7 @@ def _strip_escapes_if_not_supported(s, forceaway=False):
     else:
         return ere.sub('',s)
 
-def _add_color_if_supported(s,colcode,prepend=''):
+def _add_color_if_supported(s, colcode, prepend=''):
     if _guess:
         return prepend+colcode+s+RESET
     else:
@@ -369,7 +401,6 @@ def _add_color_if_supported(s,colcode,prepend=''):
 
 
 ### Experimenting with escape-aware functions. TODO: clean up and document.
-
 
 def real_len(s):
     ''' Returns 2-tuple:
