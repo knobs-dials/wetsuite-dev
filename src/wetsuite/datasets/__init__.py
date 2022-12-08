@@ -37,7 +37,7 @@ class Dataset:
 
 
 
-def hash(data):
+def hash(data: bytes):
     ' calculate SHA1 hash of some data. '
     s1h = hashlib.sha1()
     s1h.update( data )
@@ -45,7 +45,7 @@ def hash(data):
 
 
 
-def load(dataset_name, show_progress=True):
+def load(dataset_name: str, show_progress=True):
     ''' Loads a dataset into memory, by name.
     
         First time it's downloaded.
@@ -123,7 +123,7 @@ def load(dataset_name, show_progress=True):
 # This needs to become a remotely stored thing.  
 #   right now it's hardcoded because I'm figuring out the loading API in general
 
-_index_url = 'https://https://wetsuite.knobs-dials.com/datasets/index.json'
+_index_url = 'https://wetsuite.knobs-dials.com/datasets/index.json'
 
 _index = None
 
@@ -142,7 +142,10 @@ def fetch_index():
         Current hosting is on github. TODO: keep it generic so that any hoster will do?
     '''
     return {
-        'kamervragen':       {  'url':'https://wetsuite.knobs-dials.com/datasets/kamervragen.json.bz2',  'version':'preliminary', 'short_description':'',    }
+        'kamervragen':         {  'url':'https://wetsuite.knobs-dials.com/datasets/kamervragen.json.bz2',              'version':'preliminary', 'short_description':'',    }
+        'kansspelautoriteit':  {  'url':'https://wetsuite.knobs-dials.com/datasets/kansspelautoriteit_plain.json.bz2', 'version':'preliminary', 'short_description':'',    }
+
+        #'gemeente-list':{       'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes-nodate.json.bz2',    'version':'preliminary', 'short_description':'List of municipalities',    }
         #'gemeente-list-2022':{  'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes-2022.json.bz2',    'version':'preliminary', 'short_description':'List of municipalities',    }
     }
 
