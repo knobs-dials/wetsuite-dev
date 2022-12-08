@@ -25,7 +25,7 @@ class Dataset:
         * have an  .data attribute        that contains all the data
         * have a   .description attribute that describes the structure to that data.
 
-        (...and exists in part to not accidentally print the entire dataset to your console)
+        ...and exists partly so that a str() doesn't accidentally print hundreds of megabytes to your console.
     '''
     def __init__(self, dict_data):
         self._data = dict_data
@@ -38,7 +38,7 @@ class Dataset:
 
 
 def hash(data: bytes):
-    ' calculate SHA1 hash of some data. '
+    ' Calculate SHA1 hash of some byte data,  returns that hash as a hex string. '
     s1h = hashlib.sha1()
     s1h.update( data )
     return s1h.hexdigest()
@@ -46,10 +46,13 @@ def hash(data: bytes):
 
 
 def load(dataset_name: str, show_progress=True):
-    ''' Loads a dataset into memory, by name.
-    
-        First time it's downloaded.
-        It's cached in your home directory.
+    ''' Takes a dataset name,
+        - downloads it if necessary - after the first time it's cached in your home directory
+        - loads it into memory
+        
+        Returns a Dataset object - which is a container with 
+        - a .description string 
+        - a .data member that is probably some nested python structure
     '''
     global _index
     if _index == None:
@@ -130,7 +133,7 @@ _index = None
 
 def list_datasets():
     global _index
-    if _index==None:
+    if _index is None:
         _index = fetch_index()
     return _index.keys()
 
