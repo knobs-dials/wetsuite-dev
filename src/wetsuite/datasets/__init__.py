@@ -142,8 +142,8 @@ def fetch_index():
         Current hosting is on github. TODO: keep it generic so that any hoster will do?
     '''
     return {
-        'kamervragen':         {  'url':'https://wetsuite.knobs-dials.com/datasets/kamervragen.json.bz2',              'version':'preliminary', 'short_description':'',    }
-        'kansspelautoriteit':  {  'url':'https://wetsuite.knobs-dials.com/datasets/kansspelautoriteit_plain.json.bz2', 'version':'preliminary', 'short_description':'',    }
+        'kamervragen':         {  'url':'https://wetsuite.knobs-dials.com/datasets/kamervragen.json.bz2',              'version':'preliminary', 'short_description':'',    },
+        'kansspelautoriteit':  {  'url':'https://wetsuite.knobs-dials.com/datasets/kansspelautoriteit_plain.json.bz2', 'version':'preliminary', 'short_description':'',    },
 
         #'gemeente-list':{       'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes-nodate.json.bz2',    'version':'preliminary', 'short_description':'List of municipalities',    }
         #'gemeente-list-2022':{  'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes-2022.json.bz2',    'version':'preliminary', 'short_description':'List of municipalities',    }
