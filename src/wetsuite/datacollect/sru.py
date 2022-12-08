@@ -33,11 +33,11 @@ class SRUBase(object):
 
         
     def _url(self):
-        """ combines the basic URL parts given to the constructor, and ensures there's a ? 
+        """ combines the basic URL parts given to the constructor, and ensures there's a ?  (so you know you can add &k=v)
             This can probably go into the constructor, when I know how much is constant across SRU URLs
         """
         ret = self.base_url
-        if '?' not in ret:
+        if '?' not in ret: 
             ret += '?'
         #escape.uri_dict might be a little clearer/cleaner
         if self.sru_version not in ('',None):
@@ -68,6 +68,10 @@ class SRUBase(object):
         '''
         url = self._url() 
         url += '&operation=explain'
+
+        if self.verbose:
+            print( url )
+        
         r = requests.get( url )
         tree = wetsuite.helpers.etree.fromstring(r.content)
         wetsuite.helpers.etree.strip_namespace_inplace(tree) # easier without namespaces
@@ -75,12 +79,14 @@ class SRUBase(object):
         explain = tree.find('record/recordData/explain')
 
         def get_attrtext(treenode, name, attr):
+            ' under etree object :treenode:, find a node called :name:, and get the value of its :attr: attribute '
             if tree is not None:
                 node = treenode.find(name)
                 if node is not None:
                     return name, attr, node.get(attr)
         
         def get_nodetext(treenode, name):
+            ' under etree object :treenode:, find a node called :name:, and get the inital text under it '
             if tree is not None:
                 node = treenode.find(name)
                 if node is not None:

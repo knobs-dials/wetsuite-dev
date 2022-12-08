@@ -20,15 +20,15 @@ def parse_jci(s: str):
             e  end of geldigheid
             z  zichtdatum
     """
-    d = {}
+    ret = {}
     m = re.match('(?:jci)?([0-9.]+):([a-z]):(BWB[RV][0-9]+)(.*)', s)
     if m is None:
         raise ValueError('%r does not look like a valid jci'%s)
     else:
         version, typ, bwb, rest = m.groups()
-        d['version'] = version
-        d['type']    = typ
-        d['bwb']     = bwb
+        ret['version'] = version
+        ret['type']    = typ
+        ret['bwb']     = bwb
         # The jci standard doesn't seem to make it clear whether it's supposed to be a conformant URL or URN, so it's unsure whether there is specific parameter encoding.
         #   The below is somewhat manual, but might prove more robust then just   d['params']  = urllib.parse.parse_qs(rest)
         params = {}
@@ -39,8 +39,8 @@ def parse_jci(s: str):
                     params[key] = pd[key]
                 else:
                     params[key].extend( pd[key] )
-        d['params'] = params
+        ret['params'] = params
 
-    return d
+    return ret
 
 
