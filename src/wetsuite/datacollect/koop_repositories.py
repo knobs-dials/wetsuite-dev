@@ -25,17 +25,6 @@ class BWB(wetsuite.datacollect.sru.SRUBase):
                                                         x_connection='BWB', verbose=verbose)
 
 
-## Test / example of document restriction
-
-class Belastingrecht(wetsuite.datacollect.sru.SRUBase):
-    ''' test: SRU endpoint for Basis Wetten Bestand, restricted to a specific rechtsgebied.
-    '''
-    def __init__(self):
-        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search', 
-                                                        x_connection='BWB', extra_query='overheidbwb.rechtsgebied == belastingrecht')
-
-
-
 class CVDR(wetsuite.datacollect.sru.SRUBase):
     ''' SRU endpoint for the CVDR (Centrale Voorziening Decentrale Regelgeving) repository
 
@@ -51,62 +40,80 @@ class CVDR(wetsuite.datacollect.sru.SRUBase):
 
 
 
-## Untested, so commented out for now.
+## Test / example of document restriction
 
-# class SamenwerkendeCatalogi(wetsuite.datacollect.sru.SRUBase):
-#     ' SRU endpoint for the Samenwerkende Catalogi repository '
-#     def __init__(self, verbose=False):
-#         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru/Search', x_connection='samenwerkendecatalogi', extra_query='c.product-area==samenwerkendecatalogi', verbose=verbose)
-
-
-# class PLOOI(wetsuite.datacollect.sru.SRUBase):
-#     ''' SRU endpoint for the Platform Open Overheidsinformatie repository 
-
-#         https://www.open-overheid.nl/plooi/
-
-#         https://www.koopoverheid.nl/voor-overheden/rijksoverheid/plooi-platform-open-overheidsinformatie
-#     '''
-#     def __init__(self, verbose=False):
-#         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru/Search', 
-#                                                         x_connection='plooi', verbose=verbose)
+class Belastingrecht(wetsuite.datacollect.sru.SRUBase):
+    ''' test: SRU endpoint for Basis Wetten Bestand, restricted to a specific rechtsgebied.
+    '''
+    def __init__(self):
+        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search', 
+                                                        x_connection='BWB', extra_query='overheidbwb.rechtsgebied == belastingrecht')
 
 
-# class OfficielePublicaties(wetsuite.datacollect.sru.SRUBase):
-#     def __init__(self, verbose=False):
-#         ' SRU endpoint for the OfficielePublicaties repository'
-#         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru/Search', 
-#                                                         x_connection='officielepublicaties', extra_query='c.product-area==officielepublicaties', verbose=verbose)
 
 
-# class LokaleBekendmakingen(wetsuite.datacollect.sru.SRUBase):
-#     def __init__(self, verbose=False):
-#         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru/Search', 
-#                                                         x_connection='lokalebekendmakingen', extra_query='c.product-area==lokalebekendmakingen', verbose=verbose)
+## Untested
+
+class WetgevingsKalender(wetsuite.datacollect.sru.SRUBase):
+    ''' SRU endpoint for wetgevingskalender, see e.g. https://wetgevingskalender.overheid.nl/ '''
+    def __init__(self, verbose=False):
+        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search',
+                                                        x_connection='wgk', extra_query='c.product-area==wgk', verbose=verbose)
 
 
-# class TuchtRecht(wetsuite.datacollect.sru.SRUBase):
-#     ''' SRU endpoint for the TuchtRecht repository
-    
-#         https://tuchtrecht.overheid.nl/
-#     '''
-#     def __init__(self, verbose=False):
-#         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru/Search',
-#                                                         x_connection='tuchtrecht', extra_query='c.product-area==tuchtrecht', verbose=verbose)
+class SamenwerkendeCatalogi(wetsuite.datacollect.sru.SRUBase):
+    ' SRU endpoint for the Samenwerkende Catalogi repository '
+    def __init__(self, verbose=False):
+        wetsuite.datacollect.sru.SRUBase.__init__(self,  base_url='http://repository.overheid.nl/sru/Search', 
+                                                        x_connection='samenwerkendecatalogi', extra_query='c.product-area==samenwerkendecatalogi', verbose=verbose)
 
 
-# class WetgevingsKalender(wetsuite.datacollect.sru.SRUBase):
-#     def __init__(self, verbose=False):
-#         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search',
-#                                                         x_connection='wgk', extra_query='c.product-area==wgk', verbose=verbose)
+class OfficielePublicaties(wetsuite.datacollect.sru.SRUBase):
+    def __init__(self, verbose=False):
+        ' SRU endpoint for the OfficielePublicaties repository'
+        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru/Search', 
+                                                        x_connection='officielepublicaties', extra_query='c.product-area==officielepublicaties', verbose=verbose)
 
 
-# class StatenGeneraalDigitaal(wetsuite.datacollect.sru.SRUBase):
-#     def __init__(self, verbose=False):
-#         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='https://repository.overheid.nl/sru/Search', 
-#                                                        x_connection='sgd', extra_query='c.product-area==sgd', verbose=verbose)
+class LokaleBekendmakingen(wetsuite.datacollect.sru.SRUBase):
+    ''' SRU endpoint for bekendmakingen repository '''
+    def __init__(self, verbose=False):
+        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru/Search', 
+                                                        x_connection='lokalebekendmakingen', extra_query='c.product-area==lokalebekendmakingen', verbose=verbose)
 
 
-## Broken?
+class StatenGeneraalDigitaal(wetsuite.datacollect.sru.SRUBase):
+    ''' SRU endpoint for Staten-Generaal Digitaal repository '''
+   def __init__(self, verbose=False):
+       wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='https://repository.overheid.nl/sru/Search', 
+                                                      x_connection='sgd', extra_query='c.product-area==sgd', verbose=verbose)
+
+
+
+
+
+## Broken or untested
+
+class PLOOI(wetsuite.datacollect.sru.SRUBase):
+    ''' SRU endpoint for the Platform Open Overheidsinformatie repository 
+
+        https://www.open-overheid.nl/plooi/
+
+        https://www.koopoverheid.nl/voor-overheden/rijksoverheid/plooi-platform-open-overheidsinformatie
+    '''
+    def __init__(self, verbose=False):
+        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru/Search', 
+                                                        x_connection='plooi', verbose=verbose)
+
+class TuchtRecht(wetsuite.datacollect.sru.SRUBase):
+    ''' SRU endpoint for the TuchtRecht repository
+   
+        https://tuchtrecht.overheid.nl/
+    '''
+    def __init__(self, verbose=False):
+        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru/Search',
+                                                        x_connection='tuchtrecht', extra_query='c.product-area==tuchtrecht', verbose=verbose)
+
 
 # class PUCOpenData(wetsuite.datacollect.sru.SRUBase):
 #     ''' Publicatieplatform UitvoeringsContent
@@ -231,7 +238,7 @@ def cvdr_parse_identifier(text:str):
     '''
     if ':' in text:
         text = text.split(':',1)[1]
-    m = re.match('(?:CVDR)?([0-9]+)(_[0-9]+)?', text)
+    m = re.match('(?:CVDR)?([0-9]+)([_][0-9]+)?', text.replace('/','_'))
     if m is not None:
         work, enum = m.groups()
         if enum==None:
@@ -877,18 +884,28 @@ def bwb_toestand_text(tree):
     #    print(' RET: %s '%ret)
 
 
-def cvdr_versions_for_work( cvdrid ) -> list:
+_versions_cache = {}
+
+def cvdr_versions_for_work( cvdrid:str ) -> list:
     """ takes a CVDR id (with or without _version, i.e. expression id or work id),
         searches KOOP's CVDR repo, 
         Returns: a list of all version expression id 
+
+        Keep in mind that this actively posts requests, so preferably don't do this in bulk, and/or cache your results.
     """ 
+    if cvdrid in _versions_cache:
+        print( "HIT %r -> %r"%(cvdrid, _versions_cache[cvdrid]) )
+        return _versions_cache[cvdrid]
+
     sru_cvdr = CVDR() # TODO: see if doing this here stays valid
     work_id, expression_id = wetsuite.datacollect.koop_repositories.cvdr_parse_identifier(cvdrid)
     results = sru_cvdr.search_retrieve_many("workid = CVDR%s"%work_id, up_to=10000)   # only fetches as many as needed, usually a single page of results. TODO: maybe think about injection?
-    print(f"amt results: {len(results)}")
+    #print(f"amt results: {len(results)}")
     ret=[]
     for record in results:
         meta = wetsuite.datacollect.koop_repositories.cvdr_meta(record)
         result_expression_id = meta['identifier'][0]['text']
         ret.append( result_expression_id )
-    return sorted( ret )
+    ret = sorted( ret )
+    _versions_cache[cvdrid] = ret        
+    return ret

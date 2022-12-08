@@ -9,7 +9,7 @@ def download( url:str, tofile_path:str = None, show_progress:bool=False):
     ''' if tofile is not None, we stream to that file path, by name 
            tofile is None      we return the data (which means we kept it in RAM, which may not be wise for huge downloads)
 
-        uses requests's stream=True, which is chunked HTTP transfer and/or just a TCP window?
+        uses requests's stream=True, which seems chunked HTTP transfer, or just a TCP window? TOCHECK
     '''
     if tofile_path is not None:
         f = open(tofile_path,'wb')
@@ -20,7 +20,7 @@ def download( url:str, tofile_path:str = None, show_progress:bool=False):
         def handle_chunk(data):
             ret.append(data)
 
-    def prog():
+    def progress_update():
         bar = ''
         if total_length is not None:
             frac = float(fetched)/total_length
@@ -37,7 +37,7 @@ def download( url:str, tofile_path:str = None, show_progress:bool=False):
     if not response.ok:
         raise ValueError( response.status_code )
 
-    chunk_size = 64*1024 # 524288
+    chunk_size = 128*1024
     if total_length is not None: 
         total_length = int(total_length)
         #show_progress = True
@@ -48,11 +48,11 @@ def download( url:str, tofile_path:str = None, show_progress:bool=False):
         handle_chunk(data)
         fetched += len(data)
         if show_progress:
-            sys.stderr.write( prog() )    
+            sys.stderr.write( progress_update() )    
             sys.stderr.flush()
 
     if show_progress:
-        sys.stderr.write( prog()+'\n' )
+        sys.stderr.write( progress_update()+'\n' )
         sys.stderr.flush()
 
     if tofile_path is None:

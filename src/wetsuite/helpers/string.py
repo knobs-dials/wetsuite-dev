@@ -16,8 +16,8 @@ def match_any_substring(string:str, options:list):
 
 
 
-# Combining (but not actually combin*ed*) character ranges in unicode, since you often want to remove these
 re_combining = re.compile(u'[\u0300-\u036f\u1dc0-\u1dff\u20d0-\u20ff\ufe20-\ufe2f]',re.U)
+" helps remove diacritics - Combining (but not actually combin*ed*) character ranges in unicode, since you often want to remove these " 
 # all_combining=[]
 # for s,e in ((0x0300,0x036f),
 #             (0x1dc0,0x1dff),

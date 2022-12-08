@@ -15,7 +15,6 @@ import urllib.parse
 __all__ = ['nodetext','attr', 'uri','uri_component','uri_dict']
 
 
-
 def nodetext(s, if_none=None):
     ''' Escapes for HTML/XML text nodes:
         Replaces <, >, and & with entities

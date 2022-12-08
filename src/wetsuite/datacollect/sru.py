@@ -1,8 +1,11 @@
 #!/usr/bin/python3
-'''  Very minimal SRU implementation - just enough to access KOOP's repositories. Built on by koop_repositories module
+'''  Very minimal SRU implementation - just enough to access KOOP's repositories. 
 
-     Not meant to be a generic implementation, written because existing python SRU libraries I tried didn't seem to like the apparently-custom URL component (x-connection) that these repos use, 
-     so until we figure out a clean solution, here's a just-enough-to-work implementation for our specific use case.
+     Used by the koop_repositories module.
+
+     Not meant to be a generic implementation - it was written because existing python SRU libraries we tried 
+     didn't seem to like the apparently-custom URL component (x-connection) that the KOOP rpositories use, 
+     so until we figure out a cleaner solution, here's a just-enough-to-work implementation for our specific use cases.
 '''
 # https://www.loc.gov/standards/sru/sru-1-1.html
 
@@ -24,11 +27,11 @@ class SRUBase(object):
               e.g. when one repository contains distinct document sets
               in these cases, x_connection seems to include in extra sets, and the combination is sometimes too much (?)
         '''
-        self.base_url     = base_url
-        self.x_connection = x_connection
-        self.sru_version  = '1.2'
-        self.extra_query  = extra_query
-        self.verbose      = verbose
+        self.base_url        = base_url
+        self.x_connection    = x_connection
+        self.sru_version     = '1.2'
+        self.extra_query     = extra_query
+        self.verbose         = verbose
         self.numberOfRecords = None # hackish, TODO: rethink
 
         
