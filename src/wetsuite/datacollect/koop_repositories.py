@@ -83,7 +83,7 @@ class LokaleBekendmakingen(wetsuite.datacollect.sru.SRUBase):
 
 
 class StatenGeneraalDigitaal(wetsuite.datacollect.sru.SRUBase):
-    ''' SRU endpoint for Staten-Generaal Digitaal repository '''
+   ''' SRU endpoint for Staten-Generaal Digitaal repository '''
    def __init__(self, verbose=False):
        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='https://repository.overheid.nl/sru/Search', 
                                                       x_connection='sgd', extra_query='c.product-area==sgd', verbose=verbose)
