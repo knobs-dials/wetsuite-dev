@@ -8,7 +8,7 @@ setup(
     author='scarfboy',
     author_email='scarfboy@gmail.com',
     description='Wetsuite',
-    packages=['wetsuite.datasets', 'wetsuite.helpers', 'wetsuite.phrases', 'wetsuite.datacollect'],
+    packages=['wetsuite.datasets', 'wetsuite.helpers', 'wetsuite.phrases', 'wetsuite.datacollect', 'wetsuite.extras'],
     package_dir={"": "src"},
     python_requires=">=3",
     install_requires=['requests', 'numpy >= 1.11.1', 'matplotlib >= 1.5.1', 'spacy', 'spacy-transformers' ],
