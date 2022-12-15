@@ -3,9 +3,16 @@
 Some demonstations of how to get started with specific wetsuite functionality and/or datasets.
 
 
-These are python notebooks, which are useful for demos as they let you more easily tweaking smaller fragments of the code.
+These are python notebooks (Each cell is a fragment of code, executed one at a time, often in sequence),
+which let you experiment with code with less back-and-forth between editor and running a script, 
+and lets us demonstrate code with easier annotation.
 
-If you open them in google colab (these have a link to do that) you don't need your own infrastructure to play around with these at all -- colab gives you a copy running in a temporary instance to experiment with at will.
+
+These notebooks include links to load these in google colab, an online platform that can run these without installation (in a temporary instance),
+so that you can do some initial experiments without the bother of setting up on your own infrastructure. 
+Which you probably _do_ want to do when using this library in more serious projects.
+
+
 
 
 
