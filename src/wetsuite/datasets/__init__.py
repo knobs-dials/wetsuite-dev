@@ -5,14 +5,10 @@
     so there is an describe() to get you started, that each dataset should fill out.
 
     TODO: 
-    * rewrite as class instead of using globals, it's a little cleaner
-    * decide how often to re-fetch the index. Each interpreter (which is what it does right now)? Store and base on mtime?
-    * think about having stable datasets, for things like benchmarking
-      maybe "any dataset that has a date is fixed, any other may be updated over time" ?
-
-    CONSIDER:
-    * hosting on github, or some other sensible place?
-    * Make datasets shared-and-installable , e.g. like spacy does? (maybe not?)
+    * decide how often to re-fetch the index client-side. 
+        Each interpreter (which is what it does right now)?   
+        Store and base on mtime with possible override? 
+        Decide it's cheap enough to fetch each time? (but fall back onto stored?)
 '''
 
 import sys, os, json, hashlib, tempfile, bz2
@@ -20,28 +16,38 @@ import sys, os, json, hashlib, tempfile, bz2
 import wetsuite.helpers.net
 
 
-class Dataset:
-    ''' This object does little more than 
-        * have an  .data attribute        that contains all the data
-        * have a   .description attribute that describes the structure to that data.
-
-        ...and exists partly so that a str() doesn't accidentally print hundreds of megabytes to your console.
-    '''
-    def __init__(self, dict_data):
-        self._data = dict_data
-
-        self.data        = dict_data.get('data')
-        self.description = dict_data.get('description')
-        #for key in self.data:
-        #    setattr(self, key, self.data[key])
-
-
-
 def hash(data: bytes):
     ' Calculate SHA1 hash of some byte data,  returns that hash as a hex string. '
     s1h = hashlib.sha1()
     s1h.update( data )
     return s1h.hexdigest()
+
+
+
+
+class Dataset:
+    ''' This object does little more than 
+        * take a dict
+        * put its ['description'] into a .description attribute    
+            that describes the structure to that data.
+        * put its ['data'] into a  .data attribute        
+            that contains all the data
+
+        ...and exists laregely so that a str() doesn't accidentally print hundreds of megabytes to your console.
+    '''
+    def __init__(self, dict_data, name=''):
+        self._data = dict_data
+
+        #for key in self.data:
+        #    setattr(self, key, self.data[key])
+        # the above seems powerful but potentially iffy, so for now:
+        self.data        = dict_data.get('data')
+        self.description = dict_data.get('description')
+        self.name        = name
+        self.num_items   = len(self.data)
+        
+    def __str__(self):
+        return '<wetsuite.datasets.Dataset name=%r num_items=%r>'%()
 
 
 
@@ -86,7 +92,7 @@ def load(dataset_name: str, show_progress=True):
     if not os.path.exists( data_path ):
         
         #with open(data_path,'wb') as f:
-        print( "Downloading %r to %r"%(data_url, data_path) )
+        print( "Downloading %r to %r"%(data_url, data_path), file=sys.stderr )
 
         tmp_handle, tmp_path = tempfile.mkstemp(prefix='download', dir=data_dir)
         os.close(tmp_handle) # open file handle is sorta secure, but that's not really our goal here
@@ -107,8 +113,9 @@ def load(dataset_name: str, show_progress=True):
                         write_file_object.write(data)
                         uncompressed_data_bytes += len(data)
                         if show_progress:
-                            print( "\rDecompressing... %3sB"%(wetsuite.helpers.format.kmgtp( uncompressed_data_bytes, kilo=1024 ), ), end='' )
-
+                            print( "\rDecompressing... %3sB"%(wetsuite.helpers.format.kmgtp( uncompressed_data_bytes, kilo=1024 ), ), end='', file=sys.stderr )
+                if show_progress:
+                    print('', file=sys.stderr)
             print('  done.', file=sys.stderr)
             os.unlink( tmp_path )
         # CONSIDER: add gz and zip cases, because they're standard library anyway
@@ -117,7 +124,7 @@ def load(dataset_name: str, show_progress=True):
 
     ### Finally the real bit: read from disk, and return.
     with open(data_path) as f:
-        return Dataset( json.loads( f.read() ) )
+        return Dataset( dict_data=json.loads( f.read() ), name=dataset_name )
         
 
 
@@ -125,6 +132,7 @@ def load(dataset_name: str, show_progress=True):
 ### Index of current datasets
 # This needs to become a remotely stored thing.  
 #   right now it's hardcoded because I'm figuring out the loading API in general
+# TODO: figure out hosting, and where to put the base URL
 
 _index_url = 'https://wetsuite.knobs-dials.com/datasets/index.json'
 
@@ -142,21 +150,22 @@ def fetch_index():
     ''' Index is expected to be
           {'datasetname':{url:'http://example.com/dataset.tgz', 'description':'Blah'}}
 
-        Current hosting is on github. TODO: keep it generic so that any hoster will do?
+        CONSIDER: keep hosting generic (HTTP fetch?) so that any hoster will do.
     '''
-    return {
-        'kamervragen':         {  'url':'https://wetsuite.knobs-dials.com/datasets/kamervragen.json.bz2',              'version':'preliminary', 'short_description':'',    },
-        'kansspelautoriteit':  {  'url':'https://wetsuite.knobs-dials.com/datasets/kansspelautoriteit_plain.json.bz2', 'version':'preliminary', 'short_description':'',    },
+    if True:
+        index_dict = {
+            'kamervragen':         {  'url':'https://wetsuite.knobs-dials.com/datasets/kamervragen.json.bz2',              'version':'preliminary', 'short_description':'',    },
+            'kansspelautoriteit':  {  'url':'https://wetsuite.knobs-dials.com/datasets/kansspelautoriteit_plain.json.bz2', 'version':'preliminary', 'short_description':'',    },
 
-        #'gemeente-list':{       'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes-nodate.json.bz2',    'version':'preliminary', 'short_description':'List of municipalities',    }
-        #'gemeente-list-2022':{  'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes-2022.json.bz2',    'version':'preliminary', 'short_description':'List of municipalities',    }
-    }
+            'gemeentes':           {  'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes.json',                    'version':'preliminary', 'short_description':'List of municipalities',    }
+            #'gemeente-list-2022':{  'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes-2022.json',                'version':'preliminary', 'short_description':'List of municipalities',    }
+        }
+    else:
+        try:
+            index_data = wetsuite.helpers.net.download( _index_url )
+            index_dict = json.loads( index_data )
+        except:
+            raise
 
-
-    index_data = wetsuite.helpers.net.download( _index_url )
-
-    try:
-        index_dict = json.loads( index_data )
-    except:
-        raise
+    return index_dict
 
