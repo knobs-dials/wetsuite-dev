@@ -1,8 +1,14 @@
 import wetsuite.helpers.string
 
 
-def test_match_any_substring():
-    assert wetsuite.helpers.string.match_any_substring('microfishkes', ['mikrofi','microfi','fiches'])  
+def test_contains_one_of():
+    assert wetsuite.helpers.string.contains_one_of('microfishkes', ['mikrofi','microfi','fiches']) == True
+    assert wetsuite.helpers.string.contains_one_of('microforks', ['mikrofi','microfi','fiches']) == False
+
+
+def test_contains_all_of():
+    assert wetsuite.helpers.string.contains_all_of('AA (BB/CCC)', ('AA', 'BB', 'CC') ) == True
+    assert wetsuite.helpers.string.contains_all_of('AA (B/CCC)', ('AA', 'BB', 'CC') ) == False
 
 
 def test_remove_diacritics():
