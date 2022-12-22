@@ -31,6 +31,7 @@ some_ns_prefixes = {
 
     'http://www.w3.org/1999/02/22-rdf-syntax-ns#':'rdf',
     'http://www.w3.org/2000/01/rdf-schema':'rdfs',
+    'http://www.w3.org/2000/01/rdf-schema#':'rdfs',
     'http://www.w3.org/ns/rdfa#':'rdfa',
     'http://purl.org/dc/terms/':'dcterms', #cf dc, see also https://stackoverflow.com/questions/47519315/what-is-the-difference-between-dublin-core-terms-and-dublin-core-elements-vocabu
     'http://purl.org/dc/elements/1.1/':'dc',
@@ -56,20 +57,35 @@ some_ns_prefixes = {
 
     'http://www.w3.org/2005/Atom':'atom',
 
-    'http://www.w3.org/1998/Math/MathML':'mathml', # more usually m: or mml:
+    'http://www.w3.org/1998/Math/MathML':'mathml', # more usually m: or mml: but this may be clearer
 
     'http://tuchtrecht.overheid.nl/':'tucht',
     'http://www.tweedekamer.nl/xsd/tkData/v1-0':'tk',
     'http://publications.europa.eu/celex/':'celex',
     'http://decentrale.regelgeving.overheid.nl/cvdr/':'cvdr',
-    'http://psi.rechtspraak.nl/':'psi', 
+    'http://psi.rechtspraak.nl/':'psi',
     'https://e-justice.europa.eu/ecli':'ecli',
     'http://www.rechtspraak.nl/schema/rechtspraak-1.0':'recht', # ?
-    
+
+    'http://standaarden.overheid.nl/owms/terms/':'overheid',
     'http://standaarden.overheid.nl/owms/terms':'overheid',  # maybe 'owms' would be clearer?
-    'http://standaarden.overheid.nl/oep/meta/':'overheidop', # ?
+    
+    'http://standaarden.overheid.nl/rijksoverheid/terms':'rijksoverheid',
+    'http://standaarden.overheid.nl/inspectieloket/terms/':'inspectieloket',
+    'http://standaarden.overheid.nl/bm/terms':'overheidbm',
+   
+    'http://standaarden.overheid.nl/buza/terms/':'overheidbuza',
+    'http://standaarden.overheid.nl/oep/meta/':'overheidoep', # ?
+    'http://standaarden.overheid.nl/op/terms/':'overheidop', # ?
+    'http://standaarden.overheid.nl/vergunningen/terms/':'overheidvg',
+    'http://standaarden.overheid.nl/product/terms/':'overheidproduct',
+    'http://standaarden.overheid.nl/cvdr/terms/':'overheidrg',
+    'http://standaarden.overheid.nl/vac/terms/':'overheidvac',
+
+    'http://schemas.microsoft.com/ado/2007/08/dataservices':'ms-odata',
+    'http://schemas.microsoft.com/ado/2007/08/dataservices/metadata':'ms-odata-meta',
 }
-'some readable XML prefixes for friendlier display. Purely for pretty-printing, not according to the document definition. '
+'some readable XML prefixes for friendlier display. Purely for pretty-printing, and _not_ according to the document definition. '
 # It might be useful to find namespaces from many XML files:
 #   locate .xml | tr '\n' '\0' | xargs -0 grep -oh 'xmlns:[^ >]*'
 # with an eventual
