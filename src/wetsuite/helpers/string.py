@@ -14,6 +14,20 @@ def match_any_substring(string:str, options:list):
                       if thing!=-1)
               )>0
 
+# TODO: replace uses of above with below
+
+def contains_one_of( haystack:str, needles):
+    for needle in needles:
+        if needle in haystack:
+            return True
+    return False
+
+def contains_all_of( haystack:str, needles):
+    for needle in needles:
+        if needle not in haystack:
+            return False
+    return True
+
 
 
 re_combining = re.compile(u'[\u0300-\u036f\u1dc0-\u1dff\u20d0-\u20ff\ufe20-\ufe2f]',re.U)
