@@ -1,0 +1,36 @@
+#!/usr/bin/python3
+''' Tries to show common nestings in an XML document. 
+'''
+import argparse, sys
+import wetsuite.helpers.etree
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-u',"--start-under",               action="store",       dest="under",           default=None,     help="start under a specific path")
+    parser.add_argument('-N',"--keep-namespaces",           action="store_true",  dest="keep_namespaces", default=False,    help="Don't strip namespaces first")
+    parser.add_argument('files',                nargs='+')
+    args = parser.parse_args()
+
+    for filename in args.files:
+        if len(args.files)>1:
+            print("\n== %s =="%filename)
+        tree = wetsuite.helpers.etree.fromstring(  open(filename,'rb').read()  )
+
+        if not args.keep_namespaces:      
+            wetsuite.helpers.etree.strip_namespace_inplace(tree)
+
+        if args.under is not None:
+            start = tree.find( args.under ) # maybe findall makes more sense?
+            if start==None:
+                print("Requested start path %r not found"%args.under)
+                sys.exit(-1)
+        else:
+            start = tree
+
+        counts = wetsuite.helpers.etree.path_count( start )
+
+        items = sorted( counts.items(), key = lambda x:x[1] ) # sort by count, ascending
+        for path, count in items:
+            print( "%6d   %s"%(count,path))
+

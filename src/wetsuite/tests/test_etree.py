@@ -6,9 +6,9 @@ def test_strip():
     original     = '<a xmlns:pre="foo"> <pre:b/> </a>'
     reserialized = '<a xmlns:ns0="foo"> <ns0:b /> </a>'
     no_ns        = '<a> <b /> </a>'
-    
+
     tree = fromstring( original )
-    assert tostring( tree ).decode('u8') in (original, reserialized)           # lxml seems to preserve prefixes, others do not, so either is good   (TODO: check)
+    assert tostring( tree ).decode('u8') in (original, reserialized)           # lxml seems to preserve prefix strings, others do not, so either is good   (TODO: check)
 
     stripped = strip_namespace( tree )
     assert stripped.find('{foo}b') == None  and  stripped.find('b').tag == 'b' # test whether it actually stripped the namespaces
@@ -20,30 +20,34 @@ def test_strip():
     assert tree.find('{foo}b') == None  and  tree.find('b').tag == 'b'         # test whether it alters in-place
 
 
-    # test just that it doesn't trip on a comment
+def test_attribute_stripping():
+    with_attr = fromstring( '<a xmlns:pre="foo"> <b pre:at="tr"/> </a>' )
+    strip_namespace_inplace( with_attr ) 
+    assert tostring(with_attr) == b'<a> <b at="tr"/> </a>'  
+
+
+def test_comment_robustness():
+    " tests whether we're not assuming the only node type is element "
     strip_namespace_inplace( fromstring('<a> <b /><!--comment--> </a>') )
 
-    # test just that it doesn't trip on a processing instruction  (note: apparently an initial <?xml doesn't count as one)
+
+def test_processing_instruction_robustness(): # note: apparently an initial <?xml doesn't count as a processing expression
     strip_namespace_inplace( fromstring(b'<a><?xml-stylesheet type="text/xsl" href="style.xsl"?></a>') ) 
 
 
-    # stripping from attributes
-    with_attr = fromstring( '<a xmlns:pre="foo"> <b pre:at="tr"/> </a>' )
-    strip_namespace_inplace( with_attr ) 
-    assert tostring(with_attr) == b'<a xmlns:pre="foo"> <b at="tr"/> </a>'  
+def test_strip_default():
+    withns1    = b'<a xmlns="foo"><b/></a>'
+    withns2    = b'<a><b xmlns="foo"/></a>'
+    withoutns  = b'<a><b/></a>'
 
-
-    # stripping selectively
-    with_attr = fromstring( '<root xmlns:aa="http://a" xmlns:bb="http://b"> <aa:a/> <bb:b/> </root>' )
-    assert tostring( strip_namespace(with_attr, namespace='http://a')) == b'<root xmlns:aa="http://a" xmlns:bb="http://b"> <a/> <bb:b/> </root>' 
-    assert tostring( strip_namespace(with_attr, namespace='http://b')) == b'<root xmlns:aa="http://a" xmlns:bb="http://b"> <aa:a/> <b/> </root>' 
-
-
+    to1 = tostring( strip_namespace( fromstring( withns1 ) ) )
+    to2 = tostring( strip_namespace( fromstring( withns2 ) ) )
+    assert to1 == withoutns
+    assert to2 == withoutns
 
 
 def test_all_text_fragments():
     assert all_text_fragments( fromstring('<a>foo<b>bar</b>quu</a>') ) == ['foo', 'bar', 'quu']
-
     assert all_text_fragments( fromstring('<a>foo<b>bar</b>quu</a>'), ignore_tags=['b'] ) == ['foo', 'quu']
 
 
@@ -63,5 +67,5 @@ def test_kvelements_to_dict():
                 <identifier>BWBR0001840</identifier>
                 <title>Grondwet</title>
                 <onderwerp/>
-            </foo>''')) == {'identifier':'BWBR0001840', 'title':'Grondwet'}
+           </foo>''')) == {'identifier':'BWBR0001840', 'title':'Grondwet'}
 
