@@ -1,26 +1,25 @@
-''' Is 
-    - a wrapper around ElementTree import,
-    - some general helpers.
-    - including some helper functions shared by some debug scripts.
-
+''' A wrapper around ElementTree import, from lxml (only) because some of this code is lxml-specific.
+    
+    Some general helpers.    
+    ...including some helper functions shared by some debug scripts.
 
     CONSIDER: 
     - A "turn tree into nested dicts" function - see e.g. https://lxml.de/FAQ.html#how-can-i-map-an-xml-tree-into-a-dict-of-dicts
 '''
 
-# TODO: evaluate how different/better lxml is, and maybe don't fall back to avoid confusion?
-try: 
-    from lxml.etree import ElementTree,  fromstring, tostring,   register_namespace, Element, _Comment, _ProcessingInstruction 
-except  ImportError:
-    from xml.etree import ElementTree 
-    from xml.etree.ElementTree import fromstring, tostring,   register_namespace, Element, _Comment, _ProcessingInstruction
+#try: 
+import lxml.etree
+from lxml.etree import ElementTree,  fromstring, tostring,   register_namespace, Element, _Comment, _ProcessingInstruction 
+#except  ImportError:
+#from xml.etree import ElementTree 
+#from xml.etree.ElementTree import fromstring, tostring,   register_namespace, Element, _Comment, _ProcessingInstruction
 
 
 
 some_ns_prefixes = { 
     'http://www.w3.org/2000/xmlns/':'xmlns',
     'http://www.w3.org/2001/XMLSchema':'xsd',
-    #'http://www.w3.org/2001/XMLSchema#':'xsd', # ?   Also, maybe avoid duplicate names? Except we _explicitly_ are only doing this for pretty printing.
+    #'http://www.w3.org/2001/XMLSchema#':'xsd', # ?   Also, maybe avoid duplicate names? Except we are only doing this _only_ for pretty printing.
 
     'http://www.w3.org/XML/1998/namespace':'xml',
 
@@ -92,7 +91,7 @@ some_ns_prefixes = {
 #   | sort | uniq -c | sort -rn
 
 
-def kvelements_to_dict(under, strip_text=True):
+def kvelements_to_dict(under, strip_text=True, ignore_tagnames=[]):
     ''' Where people use elements for single text values, it's convenient to get them as a dict.
         
         Given an etree object,
@@ -109,6 +108,8 @@ def kvelements_to_dict(under, strip_text=True):
     '''
     ret = {}
     for ch in under:
+        if ch.tag in ignore_tagnames:
+            continue
         if ch.text is not None:
             text = ch.text
             if strip_text:
@@ -138,90 +139,54 @@ def all_text_fragments(under, ignore_empty=False, ignore_tags=[]):
 
 
 
-def strip_namespace(tree, namespace=None, remove_from_attr=True):
+def strip_namespace(tree, remove_from_attr=True):
     ''' Returns a copy of a tree, with namespaces stripped.
         See strip_namespace_inplace for the parameters.
     '''
     # There may be a slightly faster way of doing this in one go?
     import copy
     newtree = copy.deepcopy( tree ) # assuming this is enough.  Should verify with lxml and etree implementation
-    strip_namespace_inplace(newtree, namespace=namespace, remove_from_attr=remove_from_attr)
+    strip_namespace_inplace(newtree, remove_from_attr=remove_from_attr)
     return newtree
 
 
-def strip_namespace_inplace(etree, namespace=None, remove_from_attr=True):
-    ''' Takes a parsed ET structure and does an in-place removal of all namespaces,
-        or removes a specific namespace (by its URL - and it needs to be exact,
-        we don't do anything clever like dealing with final-slash differences).
- 
-        Can make node searches simpler in structures with unpredictable namespaces
-        and in content given to be non-mixed.
+def strip_namespace_inplace(etree, remove_from_attr=True):
+    ''' Takes a parsed ET structure and does an in-place removal of all namespaces.
  
         By default does so for node names as well as attribute names.       
-        (doesn't remove the namespace definitions, but apparently
-         ElementTree serialization omits any that are unused)
 
         Note that for attributes that are unique only because of namespace, this may cause attributes to be overwritten. 
         For example: <e p:at="bar" at="quu">   would become: <e at="bar">
-        I don't think I've yet seen any XML where this matters, though.
+        I've not yet seen any XML where this matters, but it might.
 
         Returns the URLs for the stripped namespaces, in case you want to report them.
 
-        CONSIDER: 
-        - remove all (applicalbe) 'xmlns' and 'xmlns:*' attributes.  They're not in the way, but unused namespaces can be confusing.
-
+        TODO: remove namespace defaulting as well
     '''
     ret = {}
-    if namespace==None: # all namespaces                               
-        for elem in etree.getiterator():
-            if isinstance(elem, _Comment): # won't have a .tag to have a namespace in.
-                continue
-            if isinstance(elem, _ProcessingInstruction): # won't have a .tag to have a namespace in.
-                continue
-            tagname = elem.tag
-            if tagname[0]=='{':
-                elem.tag = tagname[ tagname.index('}',1)+1:]
- 
-            if remove_from_attr:
-                to_delete=[]
-                to_set={}
-                for attr_name in elem.attrib:
-                    if attr_name[0]=='{':
-                        urlendind=attr_name.index('}',1)
-                        ret[ attr_name[1:urlendind] ] = True
-                        old_val = elem.attrib[attr_name]
-                        to_delete.append(attr_name)
-                        attr_name = attr_name[urlendind+1:]
-                        to_set[attr_name] = old_val
-                for key in to_delete:
-                    elem.attrib.pop(key)
-                elem.attrib.update(to_set)
- 
-    else: # asked to remove single specific namespace.
-        ns = '{%s}' % namespace
-        nsl = len(ns)
-        for elem in etree.getiterator():
-            if isinstance(elem, _Comment):
-                continue
-            if isinstance(elem, _ProcessingInstruction):
-                continue
-            if elem.tag.startswith(ns):
-                elem.tag = elem.tag[nsl:]
- 
-            if remove_from_attr:
-                to_delete=[]
-                to_set={}
-                for attr_name in elem.attrib:
-                    if attr_name.startswith(ns):
-                        old_val = elem.attrib[attr_name]
-                        to_delete.append(attr_name)
-                        ret[ attr_name[1:nsl-1] ] = True
-                        attr_name = attr_name[nsl:]
-                        to_set[attr_name] = old_val
-                for key in to_delete:
-                    elem.attrib.pop(key)
-                elem.attrib.update(to_set)
-
+    for elem in etree.getiterator():
+        if isinstance(elem, _Comment): # won't have a .tag to have a namespace in,
+            continue # so we can ignore it
+        if isinstance(elem, _ProcessingInstruction): # won't have a .tag to have a namespace in,
+            continue # so we can ignore it
+        tagname = elem.tag
+        if tagname[0]=='{':
+            elem.tag = tagname[ tagname.index('}',1)+1: ]
+        if remove_from_attr:
+            to_delete = []
+            to_set    = {}
+            for attr_name in elem.attrib:
+                if attr_name[0]=='{':
+                    urlendind = attr_name.index('}', 1)
+                    ret[ attr_name[1:urlendind] ] = True
+                    old_val = elem.attrib[attr_name]
+                    to_delete.append( attr_name )
+                    attr_name = attr_name[urlendind+1:]
+                    to_set[attr_name] = old_val
+            for delete_key in to_delete:
+                elem.attrib.pop( delete_key )
+            elem.attrib.update( to_set )
+    lxml.etree.cleanup_namespaces( etree ) # remove unused namespace declarations
     return ret
 
 
