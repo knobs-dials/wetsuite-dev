@@ -5,9 +5,9 @@ import wetsuite.helpers.format
 import urllib, requests
 
 
-def download( url:str, tofile_path:str = None, show_progress:bool=False):
-    ''' if tofile is not None, we stream to that file path, by name 
-           tofile is None      we return the data (which means we kept it in RAM, which may not be wise for huge downloads)
+def download( url:str, tofile_path:str = None, show_progress:bool=False, chunk_size=131072):
+    ''' if tofile is not None, we stream-save to that file path, by name  (and return None)
+           tofile is None      we return the data as a bytes object (which means we kept it in RAM, which may not be wise for huge downloads) 
 
         uses requests's stream=True, which seems chunked HTTP transfer, or just a TCP window? TOCHECK
     '''
@@ -37,7 +37,6 @@ def download( url:str, tofile_path:str = None, show_progress:bool=False):
     if not response.ok:
         raise ValueError( response.status_code )
 
-    chunk_size = 128*1024
     if total_length is not None: 
         total_length = int(total_length)
         #show_progress = True
