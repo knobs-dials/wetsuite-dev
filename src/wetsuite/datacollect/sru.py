@@ -17,14 +17,18 @@ import wetsuite.helpers.escape
 import wetsuite.helpers.etree
 
 
+# TODO: centralize parsing of originalData / enrichedData as much as we can, so that each individual user doesn't have to.
+
+
+
 class SRUBase(object):
     def __init__(self, base_url:str, x_connection:str=None, extra_query:str=None, verbose=False):
         ''' base_url should be everything up to the ?
             
             Notes:
-            - x_connection is used to specify the collection within a server, and seems to be non-standard
-            - extra_query is AND-ed into the query, and is intended for necessary restrictions, 
-              e.g. when one repository contains distinct document sets
+            - x_connection is used to specify the collection within a server, and seems to be non-standard and required
+
+            - extra_query is used to let us AND something into the query, and is intended to restrict to a subset of documents
               in these cases, x_connection seems to include in extra sets, and the combination is sometimes too much (?)
         '''
         self.base_url        = base_url
@@ -51,7 +55,14 @@ class SRUBase(object):
 
     
     def explain(self, readable=True, strip_namespaces=True): 
-        ' returns unicode (for consistency) '
+        ''' Does an explain operation,
+            Returns the XML
+            - if readable==False, it returns it as-is
+            - if readable==True (default), it will ease human readability:
+                - strips namespaces
+                - reindent 
+            The XML is a unicode string (for consistency with ourselves)
+        '''
         url = self._url() 
         url += '&operation=explain'
         r = requests.get( url )
@@ -66,11 +77,16 @@ class SRUBase(object):
 
 
     def explain_parsed(self): 
-        ''' Returns a dict giving some basic information from an explain operation.
+        ''' Does an explain operation
+            Returns a dict with some of the more interesting details
             TODO: actually read the standard instead of assuming things.
         '''
         url = self._url() 
         url += '&operation=explain'
+
+        ret = {
+            'explain_url':url
+        }
 
         if self.verbose:
             print( url )
@@ -78,38 +94,39 @@ class SRUBase(object):
         r = requests.get( url )
         tree = wetsuite.helpers.etree.fromstring(r.content)
         wetsuite.helpers.etree.strip_namespace_inplace(tree) # easier without namespaces
+        #wetsuite.helpers.etree.indent_inplace(tree) # debug
 
         explain = tree.find('record/recordData/explain')
 
         def get_attrtext(treenode, name, attr):
             ' under etree object :treenode:, find a node called :name:, and get the value of its :attr: attribute '
-            if tree is not None:
+            if treenode is not None:
                 node = treenode.find(name)
                 if node is not None:
                     return name, attr, node.get(attr)
         
         def get_nodetext(treenode, name):
             ' under etree object :treenode:, find a node called :name:, and get the inital text under it '
-            if tree is not None:
+            if treenode is not None:
                 node = treenode.find(name)
                 if node is not None:
-                    return name, node.text
+                    return node.text
+            return None
         
-        ret={ 'explain_url':url }
         for (treenode, name, attr) in ( 
-                (explain.find('serverInfo'), 'database', 'numRecs'),
-            ):
+            (explain.find('serverInfo'), 'database', 'numRecs'),
+        ):
             name, attr, val = get_attrtext(treenode, name, attr)
             ret[f'{name}/{attr}'] = val
 
         for treenode, name in ( # TODO: make this more complete
-                (explain.find('serverInfo'), 'host'),
-                (explain.find('serverInfo'), 'port'),
-                (explain.find('databaseInfo'), 'title'),
-                (explain.find('databaseInfo'), 'description'),
-                (explain.find('databaseInfo'), 'extent'),
-            ):
-            name, val = get_nodetext(treenode, name)
+            (explain.find('serverInfo'), 'host'),
+            (explain.find('serverInfo'), 'port'),
+            (explain.find('databaseInfo'), 'title'),
+            (explain.find('databaseInfo'), 'description'),
+            (explain.find('databaseInfo'), 'extent'),
+        ):
+            val = get_nodetext(treenode, name)
             ret[name] = val
 
         indices, sets = [], []
@@ -124,12 +141,23 @@ class SRUBase(object):
         for set in indexInfo.findall('set'):
             name       = set.get('name')
             identifier = set.get('identifier')
-            title      = set.find('title').text
+            title = None
+            if set.find('title') is not None:
+                title = set.find('title').text
             sets.append( (name, identifier, title) )
 
         ret['indices'] = indices
         ret['sets'] = sets
         return ret
+
+
+    def num_records(self):
+        ''' 
+        After you do a search_retrieve, this should be set to a number.
+        
+        This function may change.
+        '''
+        return self.numberOfRecords
 
 
     def search_retrieve(self, query:str, start_record=None, maximum_records=None, callback=None, verbose=False):
@@ -138,6 +166,8 @@ class SRUBase(object):
             Returns each result record as a separate ElementTree object.
             Exactly what this contains varies per repo, but you may well _want_ this raw because it can contain metadata not easily fetched from the results themselves.
 
+            You mat want to fish out the number of results (TODO: make that easier)
+            
             Notes:
             - strips namespaces from the results - makes writing code more convenient
             
@@ -157,7 +187,7 @@ class SRUBase(object):
             - option to returning URL instead of searching
         ''' 
 
-        if self.extra_query:
+        if self.extra_query is not None:
             query = '%s and %s'%(self.extra_query, query)
         
         url = self._url() 
@@ -184,19 +214,22 @@ class SRUBase(object):
         # TODO: think about that, user code may not expact that
         wetsuite.helpers.etree.strip_namespace_inplace(tree) 
 
-        if tree.tag=='diagnostics':
+        if tree.tag=='diagnostics': # TODO: figure out if this actually happened 
             raise RuntimeError( wetsuite.helpers.etree.strip_namespace(tree).find( 'diagnostic/message' ).text )
+        elif tree.find( 'diagnostics') is not None:
+            raise RuntimeError( wetsuite.helpers.etree.strip_namespace(tree).find( 'diagnostics/diagnostic/message' ).text )
 
         elif tree.tag=='explainResponse':
             wetsuite.helpers.etree.strip_namespace_inplace(tree) # bit lazy
             raise RuntimeError( 'search returned explain response instead' )
+        
+        if verbose:
+            print( wetsuite.helpers.etree.tostring( wetsuite.helpers.etree.indent( tree )) .decode('u8') )
 
         self.numberOfRecords = int(tree.find('numberOfRecords').text)
         if verbose:
             print('numberOfRecords:', self.numberOfRecords, file=sys.stderr)
         
-        #time.sleep(sleep_sec)
-
         ret = []
         for record in tree.findall('records/record'):  
             ret.append(record)
@@ -215,7 +248,7 @@ class SRUBase(object):
             This can be more convenient way of dealing with many results while they come in,
 
             Notes:
-            - up_to is the absolute offset, e.g. start_offset=200, up_to=250 givs you records 200..250, not 200..450
+            - up_to is the absolute offset, e.g. start_offset=200, up_to=250 gives you records 200..250, not 200..450
 
             - since we fetch in chunks, we may fetch more records than you asked for, by up to at_a_time amount of entries. We could be slightly nicer about that.
 
@@ -244,8 +277,9 @@ class SRUBase(object):
 
             offset += at_a_time
             
-            if offset >= up_to: # crossed beyond what was asked for
+            if offset >= up_to: # crossed beyond what was asked for  (we don't return it even if we fetched it)
                 break
+
             if self.numberOfRecords is not None and offset > self.numberOfRecords: # crossed beyond what exists in the search result
                 break
 
