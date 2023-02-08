@@ -231,6 +231,22 @@ def indent_inplace(elem, level=0, whitespacestrip=True):
             elem.tail = i
 
 
+
+def all_text_fragments(under):
+    ''' Returns all fragments of text contained in a subtree, as a list of strings. 
+        Keep in mind that in pretty-printed XML, many fragments are only spaced and newlines 
+        You might extend this, e.g. with specific tag names to ignore the contents of.
+    '''
+    r = []
+    for e in under.getiterator(): # walks the subtree
+        if e.text != None:
+            r.append( e.text )
+        if e.tail != None:
+            r.append( e.tail )
+    return r
+
+
+
 def node_walk(root):  # https://stackoverflow.com/questions/60863411/find-path-to-the-node-using-elementtree
     ''' walks all nodes under the given node,
         remembering both path and node as we go.
