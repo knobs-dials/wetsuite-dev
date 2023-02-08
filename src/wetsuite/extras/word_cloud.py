@@ -22,16 +22,18 @@ stopwords_nl = ('de','het','een', 'en','of', 'die','van', 'op','aan','door','voo
 def count_normalized(strings: List[str], min_count:int=1, min_word_length=2, normalize_func=None, stopwords=None) -> dict:
     ''' Takes a list of strings, returns a { string: count } dict.
 
-        By default, this counts strings as if they were case-insensitive, but report the most common case of capitalisation,
-        which is due to the default normalize_func.
+        By default, this counts strings as if they were case-insensitive, but then reports it as the most common case of capitalisation.
+        (you can be insensitive to other things via normalize_func)
 
-        For example, count_case_insensitive( 'a A A a A A a B b b B b'.split()) 
+        For example, count_case_insensitive( 'a A A a A A a B b b B b'.split() ) 
         will give {'A':7, 'b':5}
 
         
-         normalize_func: should be a str->str function.   If you hand in None (default), it defaults to apply str.lower()
+         normalize_func: should be a str->str function.   
+                         If you hand in None (default), it defaults to apply str.lower()
+                         If you need case sensitive, try  lambda s:s
 
-        min_word_length: strings shorter than this are not counted.
+        min_word_length: strings shorter than this are removed.
                          This is tested after normalization, so you can remove things in normalization too.
 
               min_count: if the final count is < min_count, it does not show up in the results 
