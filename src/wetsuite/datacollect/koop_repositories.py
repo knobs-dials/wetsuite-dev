@@ -40,70 +40,49 @@ class CVDR(wetsuite.datacollect.sru.SRUBase):
 
 
 
-## Test / example of document restriction
-
-class Belastingrecht(wetsuite.datacollect.sru.SRUBase):
-    ''' test: SRU endpoint for Basis Wetten Bestand, restricted to a specific rechtsgebied.
-    '''
-    def __init__(self):
-        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search', 
-                                                        x_connection='BWB', extra_query='overheidbwb.rechtsgebied == belastingrecht')
 
 
+## Tested for basic function 
+# ...usually because we have a script that fetches data from it, but we haven't done anything with that data yet so have not dug deeper
 
-
-## Untested
-
-class WetgevingsKalender(wetsuite.datacollect.sru.SRUBase):
-    ''' SRU endpoint for wetgevingskalender, see e.g. https://wetgevingskalender.overheid.nl/ '''
+class OfficielePublicaties(wetsuite.datacollect.sru.SRUBase):
     def __init__(self, verbose=False):
-        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search',
-                                                        x_connection='wgk', extra_query='c.product-area==wgk', verbose=verbose)
+        ' SRU endpoint for the OfficielePublicaties repository'
+        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru', 
+                                                        x_connection='officielepublicaties', extra_query='c.product-area==officielepublicaties', verbose=verbose)
 
 
 class SamenwerkendeCatalogi(wetsuite.datacollect.sru.SRUBase):
     ' SRU endpoint for the Samenwerkende Catalogi repository '
     def __init__(self, verbose=False):
-        wetsuite.datacollect.sru.SRUBase.__init__(self,  base_url='http://repository.overheid.nl/sru/Search', 
+        wetsuite.datacollect.sru.SRUBase.__init__(self,  base_url='http://repository.overheid.nl/sru', 
                                                         x_connection='samenwerkendecatalogi', extra_query='c.product-area==samenwerkendecatalogi', verbose=verbose)
-
-
-class OfficielePublicaties(wetsuite.datacollect.sru.SRUBase):
-    def __init__(self, verbose=False):
-        ' SRU endpoint for the OfficielePublicaties repository'
-        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru/Search', 
-                                                        x_connection='officielepublicaties', extra_query='c.product-area==officielepublicaties', verbose=verbose)
 
 
 class LokaleBekendmakingen(wetsuite.datacollect.sru.SRUBase):
     ''' SRU endpoint for bekendmakingen repository '''
     def __init__(self, verbose=False):
-        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru/Search', 
+        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru', 
                                                         x_connection='lokalebekendmakingen', extra_query='c.product-area==lokalebekendmakingen', verbose=verbose)
 
 
 class StatenGeneraalDigitaal(wetsuite.datacollect.sru.SRUBase):
    ''' SRU endpoint for Staten-Generaal Digitaal repository '''
    def __init__(self, verbose=False):
-       wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='https://repository.overheid.nl/sru/Search', 
+       wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='https://repository.overheid.nl/sru', 
                                                       x_connection='sgd', extra_query='c.product-area==sgd', verbose=verbose)
 
 
 
+## Untested
 
-
-## Broken or untested
-
-class PLOOI(wetsuite.datacollect.sru.SRUBase):
-    ''' SRU endpoint for the Platform Open Overheidsinformatie repository 
-
-        https://www.open-overheid.nl/plooi/
-
-        https://www.koopoverheid.nl/voor-overheden/rijksoverheid/plooi-platform-open-overheidsinformatie
+class Belastingrecht(wetsuite.datacollect.sru.SRUBase):
+    ''' test: SRU endpoint for Basis Wetten Bestand, restricted to a specific rechtsgebied (via silent insertion into query)
     '''
-    def __init__(self, verbose=False):
-        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru/Search', 
-                                                        x_connection='plooi', verbose=verbose)
+    def __init__(self):
+        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru', 
+                                                        x_connection='BWB', extra_query='overheidbwb.rechtsgebied == belastingrecht')
+
 
 class TuchtRecht(wetsuite.datacollect.sru.SRUBase):
     ''' SRU endpoint for the TuchtRecht repository
@@ -115,17 +94,45 @@ class TuchtRecht(wetsuite.datacollect.sru.SRUBase):
                                                         x_connection='tuchtrecht', extra_query='c.product-area==tuchtrecht', verbose=verbose)
 
 
-# class PUCOpenData(wetsuite.datacollect.sru.SRUBase):
-#     ''' Publicatieplatform UitvoeringsContent
-#         https://puc.overheid.nl/
-#     '''
-#     def __init__(self, verbose=False):
-#         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search', x_connection='pod', extra_query='c.product-area==pod', verbose=verbose)
+## Broken or untested
+
+# Does not seem to do what I think - though I may be misunderstanding it.
+class WetgevingsKalender(wetsuite.datacollect.sru.SRUBase):
+    ''' SRU endpoint for wetgevingskalender, see e.g. https://wetgevingskalender.overheid.nl/ '''
+    def __init__(self, verbose=False):
+        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru',
+                                                        x_connection='wgk', 
+                                                        #extra_query='c.product-area any wgk', 
+                                                        verbose=verbose)
 
 
-# class EuropeseRichtlijnen(wetsuite.datacollect.sru.SRUBase):
-#     def __init__(self, verbose=False):
-#         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search', x_connection='eur', extra_query='c.product-area==pod', verbose=verbose)
+# broken in that the documents URLs it links to will 404 - this seems to be because PLOOI beta led to a half-retraction and redesign?
+class PLOOI(wetsuite.datacollect.sru.SRUBase):
+    ''' SRU endpoint for the Platform Open Overheidsinformatie repository 
+
+        https://www.open-overheid.nl/plooi/
+
+        https://www.koopoverheid.nl/voor-overheden/rijksoverheid/plooi-platform-open-overheidsinformatie
+    '''
+    def __init__(self, verbose=False):
+        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search', x_connection='plooi', verbose=verbose)
+        #wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru', x_connection='plooi', verbose=verbose)
+
+
+class PUCOpenData(wetsuite.datacollect.sru.SRUBase):
+    ''' Publicatieplatform UitvoeringsContent
+        https://puc.overheid.nl/
+    '''
+    def __init__(self, verbose=False):
+        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru', x_connection='pod', #extra_query='c.product-area==pod', 
+                                                  verbose=verbose)
+        #wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search', x_connection='pod', extra_query='c.product-area==pod', verbose=verbose)
+
+
+class EuropeseRichtlijnen(wetsuite.datacollect.sru.SRUBase):
+    def __init__(self, verbose=False):
+        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru', 
+                                                  x_connection='eur', extra_query='c.product-area any eur', verbose=verbose)
 
 
 
@@ -139,12 +146,19 @@ def cvdr_meta(tree, flatten=False):
         - CVDR content xml's root              (in which case it's ./meta)
         ...because both contain almost the same metadata almost the same way (the difference is enrichedData in the search results).
 
-        Returns owmskern, owmsmantel, and cvdripm's elements, and if it's a search result, also the enrichedData
+        Returns owmskern, owmsmantel, and cvdripm's elements merged into a single dict. 
+        If it's a search result, it will also mention the enrichedData.
 
-        Because various elements can repeat (and things like source frequently do), there is a structured and a simpler, flattened way to fetch it.
-          That flattened versions is less precise and is only intended for quick and dirty presentation.  Avoid it when dealing with data in a structured way.
-          If flatten==False (default),    returns a dict like { 'creator': [{'attr': {'scheme': 'overheid:Gemeente'}, 'text': 'Zuidplas'}], ... }
-          If flatten==True,               you get a creatively flattened single string, like { 'creator': 'Zuidplas (overheid:Gemeente)', ... }
+        Because various elements can repeat - and various things frequently do (e.g. 'source'), each value is a list.
+
+        Because in some cases there are tag-specific attributes, for this reason:
+          If flatten==False (default),    returns a dict like 
+                                            { 'creator': [{'attr': {'scheme': 'overheid:Gemeente'}, 'text': 'Zuidplas'}], ... }
+        For quick and dirty presentation you may wish to smush those into one string:
+          If flatten==True,               you get a creatively flattened single string, like 
+                                            { 'creator': 'Zuidplas (overheid:Gemeente)', ... }
+            Please avoid it when you care to deal with data in a structured way  (even if you can sometimes get away with it due to empty attributs).
+
 
         In a lot of cases we care mainly for tagname and text, and there are no attributes, e.g.
           owmskern's    <identifier>CVDR641872_2</identifier>
@@ -166,6 +180,8 @@ def cvdr_meta(tree, flatten=False):
     ret = {}
 
     tree = wetsuite.helpers.etree.strip_namespace(tree)
+    #print( wetsuite.helpers.etree.tostring(tree).decode('u8') )
+
 
     # we want tree to be the node under which ./meta lives
     if tree.find('meta') is not None:
@@ -248,8 +264,9 @@ def cvdr_parse_identifier(text:str):
     else:
         raise ValueError('%r does not look like a CVDR identifier'%text)
 
+
 def cvdr_param_parse(rest:str):
-    ' Picks the parameters from a juriconnect style identifier string.   Used by cvdr_refs.  Duplicates code in meta.py - TODO: centralize that '
+    ''' Picks the parameters from a juriconnect style identifier string.   Used by cvdr_refs.  Duplicates code in meta.py - TODO: centralize that '''
     params = {}
     for param in rest.split('&'):
         pd = urllib.parse.parse_qs(param)
@@ -263,108 +280,6 @@ def cvdr_param_parse(rest:str):
             else:
                 params[key].extend( val )
     return params
-
-
-def cvdr_sourcerefs(tree): 
-    ''' Given the XML content document as an etree object, looks for the <source> tags, which are references to laws and other regulations (VERIFY)
-    
-        The references seem to be more convention-based than standardized.
-
-        This exists in part to normalize it a bit - yet this is more creative than a helper function probably should be.
-    '''
-    ret = []
-    tree = wetsuite.helpers.etree.strip_namespace(tree)
-    owmsmantel = tree.find('meta/owmsmantel')
-    for source in owmsmantel.findall('source'):
-        resourceIdentifier = source.get('resourceIdentifier')
-        source_text        = source.text
-
-        if source_text is None:
-            continue
-
-        source_text = source_text.strip()
-        if len(source_text)==0:
-            continue
-
-        if resourceIdentifier.startswith('CVDR://') or 'CVDR' in resourceIdentifier:
-            orig = resourceIdentifier
-            if resourceIdentifier.startswith('CVDR://'):
-                resourceIdentifier = resourceIdentifier[7:]
-            parsed = cvdr_parse_identifier(resourceIdentifier)
-            specref = parsed[1]
-            if specref is None:
-                specref = parsed[0]
-            ret.append( ('CVDR', orig, specref, None, source_text) )
-
-            #print( '%r -> %r'%(orig, parsed ))
-
-
-        elif resourceIdentifier.startswith('BWB://'):
-            # I've not found its definition, probably because there is none, but it looks mostly jci?
-            # BWB://1.0:r:BWBR0005416
-            # BWB://1.0:c:BWBR0008903&artikel=12&g=2011-11-08
-            # BWB://1.0:v:BWBR0015703&artikel=art. 30              which is messy
-            m = re.match('(?:jci)?([0-9.]+):([a-z]):(BWB[RV][0-9]+)(.*)', resourceIdentifier)
-            if m is not None:
-                version, typ, bwb, rest = m.groups()
-                params = cvdr_param_parse(rest)
-                ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
-                #print( 'BWB://-style   %r  %r'%(bwb, params) )
-
-        elif resourceIdentifier.startswith('http://') or resourceIdentifier.startswith('https://'):
-            # http://wetten.overheid.nl/BWBR0013016
-            # http://wetten.overheid.nl/BWBR0003245/geldigheidsdatum_19-08-2009
-            
-            m = re.match('https?://wetten.overheid.nl/(BWB[RV][0-9]+)(/.*)?', resourceIdentifier)
-            if m is not None:
-                bwb, rest = m.groups()
-                params={}
-                if rest is not None:
-                    params =  cvdr_param_parse(rest)
-                #print("http-wetten: %r %r"%(bwb, params))
-                ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
-
-            #else:
-            #    print("http-UNKNOWN: %r"%(resourceIdentifier), file=sys.stderr)
-            #
-            #
-            # though also includes things that are specific but don't look like it, e.g.
-            #   http://wetten.overheid.nl/cgi-bin/deeplink/law1/title=Gemeentewet/article=255
-            # actually redirects to 
-            #   https://wetten.overheid.nl/BWBR0005416/2022-08-01/#TiteldeelIV_HoofdstukXV_Paragraaf4_Artikel255
-            #
-            # or completely free-form, like the following (which is a broken link)
-            #   http://www.stadsregioamsterdam.nl/beleidsterreinen/ruimte_wonen_en/wonen/regelgeving_wonen
-
-        elif resourceIdentifier.startswith('jci') or 'v:BWBR' in resourceIdentifier or 'c:BWBR' in resourceIdentifier:
-            try:
-                d = wetsuite.datacollect.meta.parse_jci( resourceIdentifier )
-            except ValueError as ve:
-                #print("ERROR: bad jci in %r"%ve, file=sys.stderr)
-                continue
-            bwb, params = d['bwb'], d['params']
-            #print("JCI: %r %r"%(bwb, params))
-            ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
-
-        else:
-            pass
-            #if len(resourceIdentifier.strip())>0:
-            #    print( 'UNKNOWN: %r %r'%(resourceIdentifier, source_text), file=sys.stderr )
-            #    #print( wetsuite.helpers.etree.tostring(source) )
-    return ret
-
-
-# def cvdr_toelichting(tree):
-#     ''' Annoyingly, toelichting can be either in regeling/nota-toelichting
-#         or just be bijlage content 
-#         TODO: also deal with the latter
-#     '''
-#     nota_toelichting = tree.find('body/regeling/nota-toelichting')
-#     ret = wetsuite.helpers.etree.all_text_fragments( nota_toelichting )
-#     return ('\n\n'.join(ret)).strip()
-# 
-#     #bijlage = tree.find('body/regeling/bijlage')
-
 
 
 def cvdr_text(tree):
@@ -492,8 +407,105 @@ def cvdr_text(tree):
     return ret
 
 
+def cvdr_sourcerefs(tree): 
+    ''' Given the XML content document as an etree object, looks for the <source> tags, which are references to laws and other regulations (VERIFY)
+    
+        The references seem to be more convention-based than standardized.
+
+        This exists in part to normalize it a bit - yet this is more creative than a helper function probably should be.
+    '''
+    ret = []
+    tree = wetsuite.helpers.etree.strip_namespace(tree)
+    owmsmantel = tree.find('meta/owmsmantel')
+    for source in owmsmantel.findall('source'):
+        resourceIdentifier = source.get('resourceIdentifier')
+        source_text        = source.text
+
+        if source_text is None:
+            continue
+
+        source_text = source_text.strip()
+        if len(source_text)==0:
+            continue
+
+        if resourceIdentifier.startswith('CVDR://') or 'CVDR' in resourceIdentifier:
+            orig = resourceIdentifier
+            if resourceIdentifier.startswith('CVDR://'):
+                resourceIdentifier = resourceIdentifier[7:]
+            parsed = cvdr_parse_identifier(resourceIdentifier)
+            specref = parsed[1]
+            if specref is None:
+                specref = parsed[0]
+            ret.append( ('CVDR', orig, specref, None, source_text) )
+
+            #print( '%r -> %r'%(orig, parsed ))
 
 
+        elif resourceIdentifier.startswith('BWB://'):
+            # I've not found its definition, probably because there is none, but it looks mostly jci?
+            # BWB://1.0:r:BWBR0005416
+            # BWB://1.0:c:BWBR0008903&artikel=12&g=2011-11-08
+            # BWB://1.0:v:BWBR0015703&artikel=art. 30              which is messy
+            m = re.match('(?:jci)?([0-9.]+):([a-z]):(BWB[RV][0-9]+)(.*)', resourceIdentifier)
+            if m is not None:
+                version, typ, bwb, rest = m.groups()
+                params = cvdr_param_parse(rest)
+                ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
+                #print( 'BWB://-style   %r  %r'%(bwb, params) )
+
+        elif resourceIdentifier.startswith('http://') or resourceIdentifier.startswith('https://'):
+            # http://wetten.overheid.nl/BWBR0013016
+            # http://wetten.overheid.nl/BWBR0003245/geldigheidsdatum_19-08-2009
+            
+            m = re.match('https?://wetten.overheid.nl/(BWB[RV][0-9]+)(/.*)?', resourceIdentifier)
+            if m is not None:
+                bwb, rest = m.groups()
+                params={}
+                if rest is not None:
+                    params =  cvdr_param_parse(rest)
+                #print("http-wetten: %r %r"%(bwb, params))
+                ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
+
+            #else:
+            #    print("http-UNKNOWN: %r"%(resourceIdentifier), file=sys.stderr)
+            #
+            #
+            # though also includes things that are specific but don't look like it, e.g.
+            #   http://wetten.overheid.nl/cgi-bin/deeplink/law1/title=Gemeentewet/article=255
+            # actually redirects to 
+            #   https://wetten.overheid.nl/BWBR0005416/2022-08-01/#TiteldeelIV_HoofdstukXV_Paragraaf4_Artikel255
+            #
+            # or completely free-form, like the following (which is a broken link)
+            #   http://www.stadsregioamsterdam.nl/beleidsterreinen/ruimte_wonen_en/wonen/regelgeving_wonen
+
+        elif resourceIdentifier.startswith('jci') or 'v:BWBR' in resourceIdentifier or 'c:BWBR' in resourceIdentifier:
+            try:
+                d = wetsuite.datacollect.meta.parse_jci( resourceIdentifier )
+            except ValueError as ve:
+                #print("ERROR: bad jci in %r"%ve, file=sys.stderr)
+                continue
+            bwb, params = d['bwb'], d['params']
+            #print("JCI: %r %r"%(bwb, params))
+            ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
+
+        else:
+            pass
+            #if len(resourceIdentifier.strip())>0:
+            #    print( 'UNKNOWN: %r %r'%(resourceIdentifier, source_text), file=sys.stderr )
+            #    #print( wetsuite.helpers.etree.tostring(source) )
+    return ret
+
+
+# def cvdr_toelichting(tree):
+#     ''' Annoyingly, toelichting can be either in regeling/nota-toelichting
+#         or just be bijlage content 
+#         TODO: also deal with the latter
+#     '''
+#     nota_toelichting = tree.find('body/regeling/nota-toelichting')
+#     ret = wetsuite.helpers.etree.all_text_fragments( nota_toelichting )
+#     return ('\n\n'.join(ret)).strip()
+# 
+#     #bijlage = tree.find('body/regeling/bijlage')
 
 
 def bwb_title_looks_boring(text):
@@ -538,7 +550,6 @@ def bwb_searchresult_meta(record): # TODO: rename bwb_meta to this in files
     merged.update(enrichedData)
 
     return merged
-
 
 
 def bwb_toestand_usefuls(tree):
@@ -889,12 +900,12 @@ _versions_cache = {}
 def cvdr_versions_for_work( cvdrid:str ) -> list:
     """ takes a CVDR id (with or without _version, i.e. expression id or work id),
         searches KOOP's CVDR repo, 
-        Returns: a list of all version expression id 
+        Returns: a list of all matching version expression ids  
 
-        Keep in mind that this actively posts requests, so preferably don't do this in bulk, and/or cache your results.
-    """ 
+        Keep in mind that this actively does requests, so preferably don't do this in bulk, and/or cache your results.
+    """
     if cvdrid in _versions_cache:
-        print( "HIT %r -> %r"%(cvdrid, _versions_cache[cvdrid]) )
+        #print( "HIT %r -> %r"%(cvdrid, _versions_cache[cvdrid]) )
         return _versions_cache[cvdrid]
 
     sru_cvdr = CVDR() # TODO: see if doing this here stays valid
