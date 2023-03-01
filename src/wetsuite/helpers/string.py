@@ -2,6 +2,7 @@
 import re, unicodedata
 
 def contains_any_of( haystack:str, needles, case_sensitive=True):
+    ' Returns whether one string contains at least one of the strings in the list you give it '
     if not case_sensitive:
         haystack = haystack.lower()
         needles = list(needle.lower()  for needle in needles)
@@ -14,6 +15,7 @@ def contains_any_of( haystack:str, needles, case_sensitive=True):
 
 
 def contains_all_of( haystack:str, needles, case_sensitive=True):
+    ' Returns whether one string contains all of the strings in the list you give it '
     if not case_sensitive:
         haystack = haystack.lower()
         needles = list(needle.lower()  for needle in needles)
@@ -26,8 +28,10 @@ def contains_all_of( haystack:str, needles, case_sensitive=True):
 
 
 def ordered_unique(strlist, case_sensitive=True, remove_none=True ):
-    ''' Take a list of strings, take out later duplicates - keep order of what we keep. 
-        Can be made case insensitive - it then keeps the first casing it saw
+    ''' Makes values in a list of strings unique (take out later duplicates),
+        but unlike just set(strlist), this keep the order of what we keep.
+
+        Can be made case insensitive. It then keeps the first casing it saw.
     '''
     ret = []
     retlow = []
