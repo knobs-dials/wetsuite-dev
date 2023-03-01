@@ -118,24 +118,39 @@ def kvelements_to_dict(under, strip_text=True, ignore_tagnames=[]):
     return ret
 
 
+def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_tags=[], join:str=None):
+    ''' Returns all fragments of text contained in a subtree, as a list of strings.
+        
+        Note that for free-form HTML-like documents, the best choices are more contextual than we'd like, 
+          and this function does _not_ give enough  control.
 
-def all_text_fragments(under, ignore_empty=False, ignore_tags=[]):
-    ''' Returns all fragments of text contained in a subtree, as a list of strings
+        strip() is what to remove
+        ignore_empty removes strings that are empty when called with strip(strip)
 
-        ignore_tags does not currently ignore the subtree, just the direct contents
+        ignore_tags does not currently ignore the subtree, just the direct (first) content.
 
         For example,  all_text_fragments( fromstring('<a>foo<b>bar</b></a>') ) == ['foo', 'bar']
+
+        TODO: more tests, I'm moderately sure strip doesn't do exactly what I think.
     '''
-    r = []
-    for e in under.getiterator(): # walks the subtree
-        if e.text != None:
-            if e.tag not in ignore_tags: # only ignore contents of ignored tags; tail is considered outside
-                if not (ignore_empty and len(e.text.strip())==0):
-                    r.append( e.text )
-        if e.tail != None:
-            if not (ignore_empty and len(e.tail.strip())==0):
-                r.append( e.tail )
-    return r
+    ret = []
+    for elem in under.getiterator(): # walks the subtree
+        if elem.text != None:
+            if elem.tag not in ignore_tags: # only ignore contents of ignored tags; tail is considered outside
+                etss = elem.text.strip(strip)
+                if ignore_empty and len(etss)==0:
+                    pass
+                else:
+                    ret.append( etss )
+        if elem.tail != None:
+            etss = elem.tail.strip(strip)
+            if ignore_empty and len(etss)==0:
+                pass
+            else:
+                ret.append( etss )
+    if join is not None:
+        ret = join.join( ret )
+    return ret
 
 
 
@@ -229,21 +244,6 @@ def indent_inplace(elem, level=0, whitespacestrip=True):
     else:
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
-
-
-
-def all_text_fragments(under):
-    ''' Returns all fragments of text contained in a subtree, as a list of strings. 
-        Keep in mind that in pretty-printed XML, many fragments are only spaced and newlines 
-        You might extend this, e.g. with specific tag names to ignore the contents of.
-    '''
-    r = []
-    for e in under.getiterator(): # walks the subtree
-        if e.text != None:
-            r.append( e.text )
-        if e.tail != None:
-            r.append( e.tail )
-    return r
 
 
 
