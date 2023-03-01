@@ -1,3 +1,5 @@
 __pycache__/
 *.py[cod]
 *~
+src/wetsuite/coverage.txt
+src/wetsuite/datacollect/db.sql
