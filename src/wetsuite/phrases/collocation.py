@@ -17,8 +17,7 @@ def product(l):
 
 
 class Collocation:
-    ''' A simple collocation calculator.
-    '''
+    ''' A basic collocation calculator class. '''
     def __init__(self, connectors=[]):
         ''' connectors takes a list of words that, if they are at the edge of an n-gram, will not be entered into (n>1)-grams, but are fine to appear inside (n>3)-grams
         '''
@@ -29,8 +28,8 @@ class Collocation:
 
 
     def consume_tokens(self, token_list, gramlens=(2,3,4)): 
-        """ count unigram and bigram counts. 
-            Takes a list of string tokens.
+        """ Takes a list of string tokens.
+            Counts unigram and n-gram from it, for given values of n. 
         """
         self.saw_tokens += len(token_list)
         for i in range(len(token_list)):
@@ -43,10 +42,12 @@ class Collocation:
 
 
     def add_uni(self, s, cnt=1):
+        ' Used by consume_tokens, you typically should not need this '
         self.uni[s] += cnt
 
 
     def add_gram(self, strtup, cnt=1):
+        ' Used by consume_tokens, you typically should not need this '
         if strtup[0] in self.connectors:
             #print("IGNORE %r because of connector at pos 0"%(strtup,))
             return
@@ -57,7 +58,9 @@ class Collocation:
 
 
     def cleanup_unigrams(self, mincount=2):
-        " ideally we remove all n-grams using them too, but it's CPU-cheaper to leave the entries in memory. Hm. "
+        """ Remove unigrams that are rare - by default: that appear just once. You may wish to increase this.
+            ideally we remove all n-grams using them too, but it's CPU-cheaper to leave the entries in memory. Hm.
+        """
         new_uni = defaultdict(int)
         for k, v in self.uni.items():
             if v>=mincount:
@@ -76,31 +79,38 @@ class Collocation:
 
 
     def score_grams(self, method='mik2', sort=True):
+        ''' score n-grams we have counted 
+        
+            The scoring logic is currently somewhat arbitrary, and needs work.
+        '''
         ret = []
         for strtup, tup_count in self.grams.items():
 
-            # if you did a clean-unigrams, we should ignore anything involving the things that removed (consider: fall back to a small chance for anything unknown)
+            # if you did a clean-unigrams, we should ignore anything involving the things that removed 
+            # CONSIDER: unseen unigrams as min(available scores) or tiny percentile or such
             skip_entry = False
             for s in strtup:
-                if s not in self.uni:
+                if s not in self.uni:    # TODO: rethink, together with cleanup
                     skip_entry = True
                     break
             if skip_entry:
                 continue
 
             uni_counts = list( self.uni[s]  for s in strtup)
-            muc = product(uni_counts) 
+            mul = product(uni_counts) 
             
+            # TODO: evaluate decent methods of collocation scoring. The ones I've seen so far seem statistically iffy.
             if method=='mik':
-                score = (float(tup_count)) / muc
+                score = (float(tup_count)) / mul
             elif method=='mik2':
-                score = (float(tup_count)**2) / muc
+                score = (float(tup_count)**2) / mul
             elif method=='mik3':
-                score = (float(tup_count)**3) / muc
+                score = (float(tup_count)**3) / mul
             else:
                 raise ValueError('%r not a known scoring method'%method)
 
-            score *= 35.**len(strtup)  # fudge factor to get larger-n n-grams on roughly the same scale. TODO: remove, or think about this more. More related more to vocab size?
+            score *= 35.**len(strtup)  # fudge factor to get larger-n  n-grams on roughly the same scale. 
+            # TODO: remove, or think about this more.   More related more to vocab size?
 
             ret.append(  ( strtup, score, tup_count, uni_counts )  )
 
@@ -122,11 +132,11 @@ class Collocation:
 
 
 if __name__ == '__main__':
-    ''' when run as a script, it will tak arguments it expects to be text files.    You probably want moderately large files ''' 
+    ''' when run as a script, it will take arguments it expects to be plain text files.    You probably want moderately large files ''' 
     import time, sys
 
     def simple_tokenize(s):
-        ' split into words ' 
+        ' simple split into words ' 
         l = re.split('[\s!@#$%^&*()"\':;/.,?\xab\xbb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a\u2358\u275b\u275c\u275d\u275e\u275f\u2760\u276e\u276f\u2e42\u301d\u301e\u301f\uff02\U0001f676\U0001f677\U0001f678-]+', s)
         return list(e   for e in l  if len(e)>0)
 
