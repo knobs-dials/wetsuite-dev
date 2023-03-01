@@ -9,11 +9,14 @@
         Each interpreter (which is what it does right now)?   
         Store and base on mtime with possible override? 
         Decide it's cheap enough to fetch each time? (but fall back onto stored?)
+    * decide how to store and access. For very large datasets we may want something like HDF5 
+        because right now we don't have a choice but to have all the dataset in RAM
 '''
 
 import sys, os, json, hashlib, tempfile, bz2
 
 import wetsuite.helpers.net
+from wetsuite.helpers.notebook import is_interactive
 
 
 def hash(data: bytes):
@@ -51,7 +54,7 @@ class Dataset:
 
 
 
-def load(dataset_name: str, show_progress=True):
+def load(dataset_name: str, verbose=None, force_refetch=False):
     ''' Takes a dataset name,
         - downloads it if necessary - after the first time it's cached in your home directory
         - loads it into memory
@@ -59,10 +62,18 @@ def load(dataset_name: str, show_progress=True):
         Returns a Dataset object - which is a container with 
         - a .description string 
         - a .data member that is probably some nested python structure
+
+        verbose - tells you more about the download (on stderr)
+           can be given True or False. By default, we try to detect whether we are in an interactive context.
+        force_refetch - whether to remove the current contents before fetching
+           dataset naming should prevent the need for this (except if you're the wetsuite programmer)
     '''
     global _index
     if _index == None:
         _index = fetch_index()
+
+    if verbose is None:
+        verbose = is_interactive() # only show if interactive
 
     if dataset_name not in _index:
         raise ValueError("Do not know dataset name %r"%dataset_name)
@@ -84,23 +95,24 @@ def load(dataset_name: str, show_progress=True):
     dataset_details = _index[dataset_name]
     data_url        = dataset_details['url']
     location_hash   = hash( data_url.encode('utf8') ) 
-
-    # If we don't have it in our cache, then download it.
     data_path = os.path.join( data_dir, location_hash )      # CONSIDER: using dataset_name instead of location_hash  (BUT that would mean restricting the characters allowed in there)
-    # right now the data_path is a single file per dataset, expected to be a JSON file.
+    # right now the data_path is a single file per dataset, expected to be a JSON file. TODO: decide on whether that is our standard, or needs changing
 
-    if not os.path.exists( data_path ):
-        
-        #with open(data_path,'wb') as f:
-        print( "Downloading %r to %r"%(data_url, data_path), file=sys.stderr )
+    # If we don't have it in our cache, or a re-fetch was forced, then download it.
+    if force_refetch or not os.path.exists( data_path ):
+        if verbose:
+            print( "Downloading %r to %r"%(data_url, data_path), file=sys.stderr )
 
+        # CONSIDER: using context manager variant if that's cleaner
         tmp_handle, tmp_path = tempfile.mkstemp(prefix='download', dir=data_dir)
-        os.close(tmp_handle) # open file handle is sorta secure, but that's not really our goal here
+        os.close(tmp_handle)  # the open file handle is fairly secure, but here we only care about a non-clashing filename
 
-        wetsuite.helpers.net.download( data_url, tofile_path=tmp_path, show_progress=show_progress)
+        # download it to that temporary filename
+        wetsuite.helpers.net.download( data_url, tofile_path=tmp_path, show_progress=verbose)
 
         ## if it was compressed, decompress it in the cache - as part of the download, not the load
-        # THINK: it may be preferable to store it compressed, and decompress every load. Or at least make this a parameter
+        # compressed into its fina place.   There is a race condition in multiple loads() of the same thing. CONSIDER: fixing that via a second temporary file
+        # CONSIDER: it may be preferable to store it compressed, and decompress every load. Or at least make this a parameter
         if data_url.endswith('.bz2'):
             #print('Decompressing...', file=sys.stderr)
             uncompressed_data_bytes = 0
@@ -112,17 +124,17 @@ def load(dataset_name: str, show_progress=True):
                             break
                         write_file_object.write(data)
                         uncompressed_data_bytes += len(data)
-                        if show_progress:
+                        if verbose:
                             print( "\rDecompressing... %3sB"%(wetsuite.helpers.format.kmgtp( uncompressed_data_bytes, kilo=1024 ), ), end='', file=sys.stderr )
-                if show_progress:
+                if verbose:
                     print('', file=sys.stderr)
             print('  done.', file=sys.stderr)
             os.unlink( tmp_path )
-        # CONSIDER: add gz and zip cases, because they're standard library anyway
-        else: # assume it was uncompressed
+        else: # assume it was uncompressed, just move it into place
             os.rename( tmp_path, data_path )
+        # CONSIDER: add gz and zip cases, because they're standard library anyway
 
-    ### Finally the real bit: read from disk, and return.
+    ### Finally the real loading bit: read from disk, and return.
     with open(data_path) as f:
         return Dataset( dict_data=json.loads( f.read() ), name=dataset_name )
         
@@ -156,10 +168,13 @@ def fetch_index():
         index_dict = {
             'kamervragen':         {  'url':'https://wetsuite.knobs-dials.com/datasets/kamervragen.json.bz2',              'version':'preliminary', 'short_description':'',    },
             'kansspelautoriteit':  {  'url':'https://wetsuite.knobs-dials.com/datasets/kansspelautoriteit_plain.json.bz2', 'version':'preliminary', 'short_description':'',    },
+            'rvsadviezen':         {  'url':'https://wetsuite.knobs-dials.com/datasets/raadvanstate_adviezen.json.bz2',    'version':'preliminary', 'short_description':'Plain text version of advice under https://raadvanstate.nl/adviezen/',   },
 
-            'gemeentes':           {  'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes.json',                    'version':'preliminary', 'short_description':'List of municipalities',    }
-            #'gemeente-list-2022':{  'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes-2022.json',                'version':'preliminary', 'short_description':'List of municipalities',    }
+            # just metadata, no text
+            'gemeentes':            {  'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes.json',                    'version':'preliminary', 'short_description':'List of municipalities',    },
+            #'fracties_membership': {  }
         }
+        
     else:
         try:
             index_data = wetsuite.helpers.net.download( _index_url )
