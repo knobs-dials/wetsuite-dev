@@ -76,7 +76,7 @@ class SRUBase(object):
             return r.content.decode('utf-8')
 
 
-    def explain_parsed(self): 
+    def explain_parsed(self):
         ''' Does an explain operation
             Returns a dict with some of the more interesting details
             TODO: actually read the standard instead of assuming things.
@@ -90,9 +90,8 @@ class SRUBase(object):
 
         if self.verbose:
             print( url )
-        
         r = requests.get( url )
-        tree = wetsuite.helpers.etree.fromstring(r.content)
+        tree = wetsuite.helpers.etree.fromstring( r.content )
         wetsuite.helpers.etree.strip_namespace_inplace(tree) # easier without namespaces
         #wetsuite.helpers.etree.indent_inplace(tree) # debug
 
@@ -208,6 +207,9 @@ class SRUBase(object):
         except requests.exceptions.ReadTimeout: 
             r = requests.get( url, timeout=(20,20) ) # TODO: this makes no sense, don't do it
             
+        if r.status_code == 500:
+            raise RuntimeError( "SRU server reported an Internal Server Error (HTTP status 500) for %r"%url )
+
         tree = wetsuite.helpers.etree.fromstring( r.content )
 
         # easier without namespaces, they serve no disambiguating function in most of these cases anyway
@@ -238,7 +240,7 @@ class SRUBase(object):
         return ret # maybe return list, like _many does?
 
 
-    def search_retrieve_many(self, query:str, at_a_time:int = 50, start_record:int=1, up_to:int=250, callback=None, wait_between_sec:float=0.5, verbose=False):
+    def search_retrieve_many(self, query:str, at_a_time:int=10, start_record:int=1, up_to:int=250, callback=None, wait_between_sec:float=0.5, verbose=False):
         ''' While search_retrieve() could be used directly to e.g. see if there are results at all,
             it is really a helpfer for this funtion, which adds "fetch all results in chunks",
             by calling search_retrieve repeatedly.
