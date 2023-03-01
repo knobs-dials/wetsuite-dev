@@ -1,0 +1,10 @@
+# pydoctor CacheControl astor
+pydoctor --project-name=wetsuite \
+ --project-base-dir="." \
+ --make-html \
+ --theme=readthedocs \
+ --docformat=plaintext \
+ --html-output=docs/api \
+ --add-package=`pwd` \
+ .
+ 
