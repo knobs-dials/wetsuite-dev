@@ -11,7 +11,7 @@ setup(
     packages=['wetsuite.datasets', 'wetsuite.helpers', 'wetsuite.phrases', 'wetsuite.datacollect', 'wetsuite.extras'],
     package_dir={"": "src"},
     python_requires=">=3",
-    install_requires=['requests', 'numpy >= 1.11.1', 'matplotlib >= 1.5.1', 'spacy', 'spacy-transformers', 'dateutil' ],
+    install_requires=['requests', 'numpy >= 1.11.1', 'matplotlib >= 1.5.1', 'spacy', 'spacy-transformers', 'python-dateutil' ],
     extras_require={
         'spacy-cpu':'spacy',
         'spacy-cuda80':'spacy[cuda80]',
