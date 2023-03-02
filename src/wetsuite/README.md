@@ -6,9 +6,7 @@ And a bunch of libraries
 
 
 ### Quick experiments
-The easiest way to experiment without any installation is probably notebooks on google colab.
-
-Check the `examples` directory.
+The easiest way to experiment, without wotting about installation, is probably notebooks on google colab - open an interesting example [from the `examples` directory](../../examples) and click on `Open in colab`
 
 
 ### Local install
@@ -27,7 +25,7 @@ though if you like to work from notebooks, this is more complex to set up.
 TODO: example
 
 
-### spacy and GPU
+#### spacy and GPU
 Various example code defaults to the CPU variant of spacy so that it functions everywhere.
 
 If you have a GPU then it is eventually worth using it.
