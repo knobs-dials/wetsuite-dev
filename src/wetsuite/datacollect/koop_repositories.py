@@ -53,7 +53,7 @@ class OfficielePublicaties(wetsuite.datacollect.sru.SRUBase):
 
 
 class SamenwerkendeCatalogi(wetsuite.datacollect.sru.SRUBase):
-    " SRU endpoint for the Samenwerkende Catalogi repository '
+    " SRU endpoint for the Samenwerkende Catalogi repository "
     def __init__(self, verbose=False):
         wetsuite.datacollect.sru.SRUBase.__init__(self,  base_url='http://repository.overheid.nl/sru', 
                                                         x_connection='samenwerkendecatalogi', extra_query='c.product-area==samenwerkendecatalogi', verbose=verbose)
