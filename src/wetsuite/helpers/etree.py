@@ -1,4 +1,6 @@
 ''' A wrapper around ElementTree import, from lxml (only) because some of this code is lxml-specific.
+
+    TODO: minimize the amount of "will break because lxml only", and add tests to try to break that
     
     Some general helpers.    
     ...including some helper functions shared by some debug scripts.
