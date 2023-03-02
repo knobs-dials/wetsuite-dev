@@ -286,9 +286,10 @@ def cvdr_text(tree):
     ''' Given the XML content document as etree object, this is a quick and dirty 'give me mainly the plaintext in it',
         skipping any introductions and such.
 
-        TODO: This is currently mostly copy-pasted from the bwb code, and should be simplified (and possibly become the same function as that)
+        TODO: This is currently mostly copy-pasted from the bwb code, and should probably be unified - after I figure out all the varying structure
     '''
     ret = []
+    tree = wetsuite.helpers.etree.strip_namespace( tree )
 
     body           = tree.find('body')
     regeling       = body.find('regeling')
