@@ -16,22 +16,22 @@ import wetsuite.helpers.etree
 
 
 class BWB(wetsuite.datacollect.sru.SRUBase):
-    ''' SRU endpoint for the Basis Wetten Bestand repository
+    """ SRU endpoint for the Basis Wetten Bestand repository
 
         See a description in https://www.overheid.nl/sites/default/files/wetten/Gebruikersdocumentatie%20BWB%20-%20Zoeken%20binnen%20het%20basiswettenbestand%20v1.3.1.pdf
-    '''
+    """
     def __init__(self, verbose=False):
         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search', 
                                                         x_connection='BWB', verbose=verbose)
 
 
 class CVDR(wetsuite.datacollect.sru.SRUBase):
-    ''' SRU endpoint for the CVDR (Centrale Voorziening Decentrale Regelgeving) repository
+    """ SRU endpoint for the CVDR (Centrale Voorziening Decentrale Regelgeving) repository
 
         https://www.hetwaterschapshuis.nl/centrale-voorziening-decentrale-regelgeving
 
         https://www.koopoverheid.nl/voor-overheden/gemeenten-provincies-en-waterschappen/cvdr/handleiding-cvdr
-    '''
+    """
     def __init__(self, verbose=False):
         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search', 
                                                         x_connection='cvdr', verbose=verbose
@@ -47,27 +47,27 @@ class CVDR(wetsuite.datacollect.sru.SRUBase):
 
 class OfficielePublicaties(wetsuite.datacollect.sru.SRUBase):
     def __init__(self, verbose=False):
-        ' SRU endpoint for the OfficielePublicaties repository'
+        " SRU endpoint for the OfficielePublicaties repository "
         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru', 
                                                         x_connection='officielepublicaties', extra_query='c.product-area==officielepublicaties', verbose=verbose)
 
 
 class SamenwerkendeCatalogi(wetsuite.datacollect.sru.SRUBase):
-    ' SRU endpoint for the Samenwerkende Catalogi repository '
+    " SRU endpoint for the Samenwerkende Catalogi repository '
     def __init__(self, verbose=False):
         wetsuite.datacollect.sru.SRUBase.__init__(self,  base_url='http://repository.overheid.nl/sru', 
                                                         x_connection='samenwerkendecatalogi', extra_query='c.product-area==samenwerkendecatalogi', verbose=verbose)
 
 
 class LokaleBekendmakingen(wetsuite.datacollect.sru.SRUBase):
-    ''' SRU endpoint for bekendmakingen repository '''
+    " SRU endpoint for bekendmakingen repository "
     def __init__(self, verbose=False):
         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru', 
                                                         x_connection='lokalebekendmakingen', extra_query='c.product-area==lokalebekendmakingen', verbose=verbose)
 
 
 class StatenGeneraalDigitaal(wetsuite.datacollect.sru.SRUBase):
-   ''' SRU endpoint for Staten-Generaal Digitaal repository '''
+   """ SRU endpoint for Staten-Generaal Digitaal repository """
    def __init__(self, verbose=False):
        wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='https://repository.overheid.nl/sru', 
                                                       x_connection='sgd', extra_query='c.product-area==sgd', verbose=verbose)
@@ -77,18 +77,18 @@ class StatenGeneraalDigitaal(wetsuite.datacollect.sru.SRUBase):
 ## Untested
 
 class Belastingrecht(wetsuite.datacollect.sru.SRUBase):
-    ''' test: SRU endpoint for Basis Wetten Bestand, restricted to a specific rechtsgebied (via silent insertion into query)
-    '''
+    """ test: SRU endpoint for Basis Wetten Bestand, restricted to a specific rechtsgebied (via silent insertion into query)
+    """
     def __init__(self):
         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru', 
                                                         x_connection='BWB', extra_query='overheidbwb.rechtsgebied == belastingrecht')
 
 
 class TuchtRecht(wetsuite.datacollect.sru.SRUBase):
-    ''' SRU endpoint for the TuchtRecht repository
+    """ SRU endpoint for the TuchtRecht repository
    
         https://tuchtrecht.overheid.nl/
-    '''
+    """
     def __init__(self, verbose=False):
         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru/Search',
                                                         x_connection='tuchtrecht', extra_query='c.product-area==tuchtrecht', verbose=verbose)
@@ -98,7 +98,7 @@ class TuchtRecht(wetsuite.datacollect.sru.SRUBase):
 
 # Does not seem to do what I think - though I may be misunderstanding it.
 class WetgevingsKalender(wetsuite.datacollect.sru.SRUBase):
-    ''' SRU endpoint for wetgevingskalender, see e.g. https://wetgevingskalender.overheid.nl/ '''
+    """ SRU endpoint for wetgevingskalender, see e.g. https://wetgevingskalender.overheid.nl/ """
     def __init__(self, verbose=False):
         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru',
                                                         x_connection='wgk', 
@@ -108,21 +108,21 @@ class WetgevingsKalender(wetsuite.datacollect.sru.SRUBase):
 
 # broken in that the documents URLs it links to will 404 - this seems to be because PLOOI beta led to a half-retraction and redesign?
 class PLOOI(wetsuite.datacollect.sru.SRUBase):
-    ''' SRU endpoint for the Platform Open Overheidsinformatie repository 
+    """ SRU endpoint for the Platform Open Overheidsinformatie repository 
 
         https://www.open-overheid.nl/plooi/
 
         https://www.koopoverheid.nl/voor-overheden/rijksoverheid/plooi-platform-open-overheidsinformatie
-    '''
+    """
     def __init__(self, verbose=False):
         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search', x_connection='plooi', verbose=verbose)
         #wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru', x_connection='plooi', verbose=verbose)
 
 
 class PUCOpenData(wetsuite.datacollect.sru.SRUBase):
-    ''' Publicatieplatform UitvoeringsContent
+    """ Publicatieplatform UitvoeringsContent
         https://puc.overheid.nl/
-    '''
+    """
     def __init__(self, verbose=False):
         wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru', x_connection='pod', #extra_query='c.product-area==pod', 
                                                   verbose=verbose)
@@ -141,7 +141,7 @@ class EuropeseRichtlijnen(wetsuite.datacollect.sru.SRUBase):
 
 
 def cvdr_meta(tree, flatten=False):
-    ''' Takes an etree object that is either 
+    """ Takes an etree object that is either 
         - a search result's individual record  (in which case we're looking for ./recordData/gzd/originalData/meta
         - CVDR content xml's root              (in which case it's ./meta)
         ...because both contain almost the same metadata almost the same way (the difference is enrichedData in the search results).
@@ -176,7 +176,7 @@ def cvdr_meta(tree, flatten=False):
           owmsmantel's  <isRatifiedBy scheme="overheid:BestuursorgaanGemeente">college van burgemeester en wethouders</isRatifiedBy>
           owmsmantel's  <isFormatOf resourceIdentifier="https://zoek.officielebekendmakingen.nl/gmb-2022-66747">gmb-2022-66747</isFormatOf>
           owmsmantel's  <source resourceIdentifier="https://lokaleregelgeving.overheid.nl/CVDR641839">Verordening jeugdhulp gemeente Pijnacker-Nootdorp 2020</source>
-    '''
+    """
     ret = {}
 
     tree = wetsuite.helpers.etree.strip_namespace(tree)
@@ -243,7 +243,7 @@ def cvdr_meta(tree, flatten=False):
 
 
 def cvdr_parse_identifier(text:str):
-    ''' Given a CVDR style identifier string (sometimes called JCDR), returns a tuple:
+    """ Given a CVDR style identifier string (sometimes called JCDR), returns a tuple:
         - work ID                                          , without 'CVDR'
         - expression ID  (will be None if it was a work ID), without 'CVDR'
         e.g.
@@ -251,7 +251,7 @@ def cvdr_parse_identifier(text:str):
             CVDR101405_1  -->  ('101405', '101405_1')
             CVDR101406    -->  ('101406',  None     )
             1.0:101407_1  -->  ('101407', '101407_1')
-    '''
+    """
     if ':' in text:
         text = text.split(':',1)[1]
     m = re.match('(?:CVDR)?([0-9]+)([_][0-9]+)?', text.replace('/','_'))
@@ -266,7 +266,7 @@ def cvdr_parse_identifier(text:str):
 
 
 def cvdr_param_parse(rest:str):
-    ''' Picks the parameters from a juriconnect style identifier string.   Used by cvdr_refs.  Duplicates code in meta.py - TODO: centralize that '''
+    """ Picks the parameters from a juriconnect style identifier string.   Used by cvdr_refs.  Duplicates code in meta.py - TODO: centralize that """
     params = {}
     for param in rest.split('&'):
         pd = urllib.parse.parse_qs(param)
@@ -292,7 +292,7 @@ def cvdr_text(tree):
 
         This is currently mostly copy-pasted from the bwb code TODO: unify, after I figure out all the varying structure
 
-        TODO: write functions that support "give me flat text for each article separatelly"
+        TODO: write functions that support "give me flat text for each article separately"
     """
     ret = []
     tree = wetsuite.helpers.etree.strip_namespace( tree )
