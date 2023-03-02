@@ -282,12 +282,18 @@ def cvdr_param_parse(rest:str):
     return params
 
 
+
 def cvdr_text(tree):
-    ''' Given the XML content document as etree object, this is a quick and dirty 'give me mainly the plaintext in it',
+    """ Given the XML content document as etree object, this is a quick and dirty 'give me mainly the plaintext in it',
         skipping any introductions and such.
 
-        TODO: This is currently mostly copy-pasted from the bwb code, and should probably be unified - after I figure out all the varying structure
-    '''
+        Returns a single string.
+          this ic currently a best-effort formatting, where you should e.g. find that paragraphs are split with double newlines.
+
+        This is currently mostly copy-pasted from the bwb code TODO: unify, after I figure out all the varying structure
+
+        TODO: write functions that support "give me flat text for each article separatelly"
+    """
     ret = []
     tree = wetsuite.helpers.etree.strip_namespace( tree )
 
