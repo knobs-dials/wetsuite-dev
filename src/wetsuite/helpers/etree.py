@@ -201,7 +201,7 @@ def strip_namespace_inplace(etree, remove_from_attr=True):
             for delete_key in to_delete:
                 elem.attrib.pop( delete_key )
             elem.attrib.update( to_set )
-    lxml.etree.cleanup_namespaces( etree ) # remove unused namespace declarations
+    #lxml.etree.cleanup_namespaces( etree ) # remove unused namespace declarations. TODO: deal with this failing on non-lxml etree    
     return ret
 
 
