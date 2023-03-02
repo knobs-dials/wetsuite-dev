@@ -110,6 +110,8 @@ def kvelements_to_dict(under, strip_text=True, ignore_tagnames=[]):
     '''
     ret = {}
     for ch in under:
+        if isinstance(ch, _Comment) or isinstance(ch, _ProcessingInstruction): 
+            continue
         if ch.tag in ignore_tagnames:
             continue
         if ch.text is not None:
@@ -136,7 +138,9 @@ def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_ta
         TODO: more tests, I'm moderately sure strip doesn't do exactly what I think.
     '''
     ret = []
-    for elem in under.getiterator(): # walks the subtree
+    for elem in under.iter(): # walks the subtree
+        if isinstance(elem, _Comment) or isinstance(elem, _ProcessingInstruction): 
+            continue
         if elem.text != None:
             if elem.tag not in ignore_tags: # only ignore contents of ignored tags; tail is considered outside
                 etss = elem.text.strip(strip)
@@ -189,6 +193,7 @@ def strip_namespace(tree, remove_from_attr=True):
 
 def _strip_namespace_inplace(tree, remove_from_attr=True):
     ''' Takes a parsed ET structure and does an in-place removal of all namespaces.
+        Returns a list of removed namespaces, which you can usually ignore.
         No longer meant to be used directly - mostly to help centralize a check for non-lxml etrees, feel free to use it if you stick to lxml.
     '''
     ret = {}
@@ -221,6 +226,11 @@ def _strip_namespace_inplace(tree, remove_from_attr=True):
 def indent(tree, whitespacestrip=True):
     ''' Returns a copy of a tree, with text so that it would print indented by depth. 
 
+        Keep in mind that this may change the meaning of the document - the output should _only_ be used for presentation.
+
+        whitespacestrip can make contents that contain a lot of newlines look cleaner, 
+        but changes the stored data even more.
+
         See also _indent_inplace()
     '''
     import copy
@@ -231,11 +241,6 @@ def indent(tree, whitespacestrip=True):
 
 def _indent_inplace(elem, level=0, whitespacestrip=True):
     ''' Alters the text nodes so that the tostring()ed version will look nice and indented when printed as plain text.
-    
-        Keep in mind that this may change the meaning of the document - the output should _only_ be used for presentation.
- 
-        whitespacestrip can make contents that contain a lot of newlines look cleaner, 
-        but changes the stored data even more.
     '''
     i = "\n" + level*"  "
  
@@ -292,7 +297,9 @@ def path_count(root):
     '''
     count = {}
     for node_path, n in node_walk( root ):
-        path = "/".join([n.tag for n in node_path] + [n.tag]) # includes root, which is a little redundant, but more consistent
+        if isinstance(n, _Comment) or isinstance(n, _ProcessingInstruction): 
+            continue # ignore things that won't have a .tag
+        path = "/".join([n.tag  for n in node_path] + [n.tag] )  # includes root, which is a little redundant, but more consistent
         if path not in count:
             count[ path ] = 1
         else:
