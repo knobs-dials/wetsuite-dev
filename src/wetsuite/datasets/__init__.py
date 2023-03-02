@@ -37,6 +37,8 @@ class Dataset:
             that contains all the data
 
         ...and exists laregely so that a str() doesn't accidentally print hundreds of megabytes to your console.
+
+        NOTE: This is provisional, and likely to change.
     '''
     def __init__(self, dict_data, name=''):
         self._data = dict_data
@@ -50,7 +52,7 @@ class Dataset:
         self.num_items   = len(self.data)
         
     def __str__(self):
-        return '<wetsuite.datasets.Dataset name=%r num_items=%r>'%()
+        return '<wetsuite.datasets.Dataset name=%r num_items=%r>'%(self.name, self.num_items)
 
 
 
