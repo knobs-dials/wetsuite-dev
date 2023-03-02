@@ -18,6 +18,16 @@ def detect_env():
         ret['notebook']    = False
         return ret
     
+    try: # probably slightly less nasty than by class name below
+        import google.colab 
+        ret['ipython']     = True 
+        ret['interactive'] = True
+        ret['notebook']    = True
+        ret['colab']       = True 
+        return ret
+    except:
+        pass
+
     try:
         import IPython
         ret['ipython']     = True
