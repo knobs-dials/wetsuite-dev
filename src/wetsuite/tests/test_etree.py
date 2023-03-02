@@ -5,7 +5,6 @@ def test_strip():
     ''' Test some basic assumptions around strip_namespace() and strip_namespace_inplace()  '''
     original     = '<a xmlns:pre="foo"> <pre:b/> </a>'
     reserialized = '<a xmlns:ns0="foo"> <ns0:b /> </a>'
-    no_ns        = '<a> <b /> </a>'
 
     tree = fromstring( original )
     assert tostring( tree ).decode('u8') in (original, reserialized)           # lxml seems to preserve prefix strings, others do not, so either is good   (TODO: check)
@@ -17,7 +16,11 @@ def test_strip():
 
     _strip_namespace_inplace( tree )
 
+    assert tostring(tree) == tostring(fromstring(b'<a> <b/> </a>'))            # back and forth to remove any difference in serialization
+    assert tostring(tree) == tostring(fromstring(b'<a> <b /> </a>'))           # and test _that_ assumption too
+
     assert tree.find('{foo}b') == None  and  tree.find('b').tag == 'b'         # test whether it alters in-place
+
 
 
 def test_attribute_stripping():
@@ -47,8 +50,16 @@ def test_strip_default():
 
 
 def test_all_text_fragments():
-    assert all_text_fragments( fromstring('<a>foo<b>bar</b>quu</a>') ) == ['foo', 'bar', 'quu']
+    assert all_text_fragments( fromstring('<a>foo<b>bar</b>quu</a>') )                    == ['foo', 'bar', 'quu']
+
+    assert all_text_fragments( fromstring('<a>foo<b></b>quu</a>'))                        == ['foo', 'quu']    # rather than a '', is expected behaviour.
+
+    assert all_text_fragments( fromstring('<a>foo<b> </b>quu</a>'))                       == ['foo', '', 'quu']
+    assert all_text_fragments( fromstring('<a>foo<b> </b>quu</a>'), ignore_empty=True)    == ['foo', 'quu']
+
     assert all_text_fragments( fromstring('<a>foo<b>bar</b>quu</a>'), ignore_tags=['b'] ) == ['foo', 'quu']
+
+    assert all_text_fragments( fromstring('<a>foo<b>bar</b>quu</a>'), join=' ' )          == 'foo bar quu'
 
 
 def test_indent():
@@ -69,6 +80,14 @@ def test_kvelements_to_dict():
                 <onderwerp/>
            </foo>''')) == {'identifier':'BWBR0001840', 'title':'Grondwet'}
 
+    kvelements_to_dict( fromstring(
+        '''<foo>
+                <identifier>BWBR0001840</identifier>
+                <title>Grondwet</title>
+                <onderwerp>ignore me</onderwerp>
+           </foo>'''), ignore_tagnames=['onderwerp'] ) == {'identifier':'BWBR0001840', 'title':'Grondwet'}
+
+
 
 def test_nonlxml(): 
     # see also https://lxml.de/compatibility.html
@@ -80,4 +99,6 @@ def test_nonlxml():
 
 
 if __name__ == '__main__':
+    test_strip()
     test_nonlxml()
+
