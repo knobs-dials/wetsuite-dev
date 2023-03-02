@@ -1,4 +1,4 @@
-from wetsuite.helpers.etree import fromstring, tostring, strip_namespace, strip_namespace_inplace, all_text_fragments, indent, path_count, kvelements_to_dict
+from wetsuite.helpers.etree import fromstring, tostring, strip_namespace, _strip_namespace_inplace, all_text_fragments, indent, path_count, kvelements_to_dict
 
 
 def test_strip():
@@ -15,24 +15,24 @@ def test_strip():
 
     assert tostring( tree ).decode('u8') in (original, reserialized)           # test whether deepcopy does what I think it does - whether the original tree is untouched
 
-    strip_namespace_inplace(tree)
+    _strip_namespace_inplace( tree )
 
     assert tree.find('{foo}b') == None  and  tree.find('b').tag == 'b'         # test whether it alters in-place
 
 
 def test_attribute_stripping():
     with_attr = fromstring( '<a xmlns:pre="foo"> <b pre:at="tr"/> </a>' )
-    strip_namespace_inplace( with_attr ) 
+    _strip_namespace_inplace( with_attr ) 
     assert tostring(with_attr) == b'<a> <b at="tr"/> </a>'  
 
 
 def test_comment_robustness():
     " tests whether we're not assuming the only node type is element "
-    strip_namespace_inplace( fromstring('<a> <b /><!--comment--> </a>') )
+    _strip_namespace_inplace( fromstring('<a> <b /><!--comment--> </a>') )
 
 
 def test_processing_instruction_robustness(): # note: apparently an initial <?xml doesn't count as a processing expression
-    strip_namespace_inplace( fromstring(b'<a><?xml-stylesheet type="text/xsl" href="style.xsl"?></a>') ) 
+    _strip_namespace_inplace( fromstring(b'<a><?xml-stylesheet type="text/xsl" href="style.xsl"?></a>') ) 
 
 
 def test_strip_default():
@@ -69,3 +69,15 @@ def test_kvelements_to_dict():
                 <onderwerp/>
            </foo>''')) == {'identifier':'BWBR0001840', 'title':'Grondwet'}
 
+
+def test_nonlxml(): 
+    # see also https://lxml.de/compatibility.html
+    import pytest, xml.etree.ElementTree
+
+    # the test is whether it warns, but doesn't crash
+    with pytest.warns(UserWarning, match=r'.*lxml.*'):
+        strip_namespace( xml.etree.ElementTree.fromstring(b'<a><?xml-stylesheet type="text/xsl" href="style.xsl"?></a>') ) 
+
+
+if __name__ == '__main__':
+    test_nonlxml()

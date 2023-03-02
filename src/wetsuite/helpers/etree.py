@@ -158,18 +158,7 @@ def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_ta
 
 def strip_namespace(tree, remove_from_attr=True):
     ''' Returns a copy of a tree, with namespaces stripped.
-        See strip_namespace_inplace for the parameters.
-    '''
-    # There may be a slightly faster way of doing this in one go?
-    import copy
-    newtree = copy.deepcopy( tree ) # assuming this is enough.  Should verify with lxml and etree implementation
-    strip_namespace_inplace(newtree, remove_from_attr=remove_from_attr)
-    return newtree
 
-
-def strip_namespace_inplace(etree, remove_from_attr=True):
-    ''' Takes a parsed ET structure and does an in-place removal of all namespaces.
- 
         By default does so for node names as well as attribute names.       
 
         Note that for attributes that are unique only because of namespace, this may cause attributes to be overwritten. 
@@ -180,8 +169,30 @@ def strip_namespace_inplace(etree, remove_from_attr=True):
 
         TODO: remove namespace defaulting as well
     '''
+    if not isinstance(tree, lxml.etree._Element):
+        import warnings
+        warnings.warn("That tree does not seem to parsed by lxml, and having non-lxml objects can cause issues.  Please consider using lxml, e.g. via wetsuite.helpers.etree.fromstring().  Trying to work around this, which may be slow.")
+        try:
+            import xml.etree
+            if isinstance(tree, xml.etree.ElementTree.Element):
+                tree = lxml.etree.fromstring( xml.etree.ElementTree.tostring( tree ) )  # copy it the dumb way - could possibly be done faster?
+            # implied else: hope for the best                
+        except ImportError as ie:
+            pass # no fix for you, then.
+        _strip_namespace_inplace(tree, remove_from_attr=remove_from_attr)
+    else:
+        import copy
+        tree = copy.deepcopy( tree ) # assuming this is enough.  Should verify with lxml and etree implementation
+        _strip_namespace_inplace(tree, remove_from_attr=remove_from_attr)
+    return tree
+
+
+def _strip_namespace_inplace(tree, remove_from_attr=True):
+    ''' Takes a parsed ET structure and does an in-place removal of all namespaces.
+        No longer meant to be used directly - mostly to help centralize a check for non-lxml etrees, feel free to use it if you stick to lxml.
+    '''
     ret = {}
-    for elem in etree.getiterator():
+    for elem in tree.iter():
         if isinstance(elem, _Comment): # won't have a .tag to have a namespace in,
             continue # so we can ignore it
         if isinstance(elem, _ProcessingInstruction): # won't have a .tag to have a namespace in,
@@ -203,22 +214,22 @@ def strip_namespace_inplace(etree, remove_from_attr=True):
             for delete_key in to_delete:
                 elem.attrib.pop( delete_key )
             elem.attrib.update( to_set )
-    #lxml.etree.cleanup_namespaces( etree ) # remove unused namespace declarations. TODO: deal with this failing on non-lxml etree    
+    lxml.etree.cleanup_namespaces( tree ) # remove unused namespace declarations. Will only work on lxml etree objects, hence the code above.
     return ret
 
 
 def indent(tree, whitespacestrip=True):
     ''' Returns a copy of a tree, with text so that it would print indented by depth. 
 
-        See also indent_inplace()
+        See also _indent_inplace()
     '''
     import copy
     newtree = copy.deepcopy( tree )
-    indent_inplace(newtree, level=0, whitespacestrip=whitespacestrip)
+    _indent_inplace(newtree, level=0, whitespacestrip=whitespacestrip)
     return newtree
 
 
-def indent_inplace(elem, level=0, whitespacestrip=True):
+def _indent_inplace(elem, level=0, whitespacestrip=True):
     ''' Alters the text nodes so that the tostring()ed version will look nice and indented when printed as plain text.
     
         Keep in mind that this may change the meaning of the document - the output should _only_ be used for presentation.
@@ -240,7 +251,7 @@ def indent_inplace(elem, level=0, whitespacestrip=True):
         if not elem.tail or not elem.tail.strip():
             elem.tail = i
         for elem in elem:
-            indent_inplace(elem, level+1)
+            _indent_inplace(elem, level+1)
         if not elem.tail or not elem.tail.strip():
             elem.tail = i
     else:

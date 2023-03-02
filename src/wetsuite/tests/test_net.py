@@ -4,8 +4,6 @@ from wetsuite.helpers.net import download
 
 
 def test_download():
-    ''' Test some basic assumptions around strip_namespace() and strip_namespace_inplace()  '''
-
     # checking that these don't raise any errors
     download('http://www.example.com')
 
