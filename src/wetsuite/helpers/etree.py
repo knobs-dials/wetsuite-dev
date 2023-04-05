@@ -86,7 +86,7 @@ some_ns_prefixes = {
     'http://schemas.microsoft.com/ado/2007/08/dataservices':'ms-odata',
     'http://schemas.microsoft.com/ado/2007/08/dataservices/metadata':'ms-odata-meta',
 }
-'some readable XML prefixes for friendlier display. Purely for pretty-printing, and _not_ according to the document definition. '
+'some readable XML prefixes for friendlier display. Purely for pretty-printing, will NOT be according to the document definition. '
 # It might be useful to find namespaces from many XML files:
 #   locate .xml | tr '\n' '\0' | xargs -0 grep -oh 'xmlns:[^ >]*'
 # with an eventual
@@ -96,8 +96,9 @@ some_ns_prefixes = {
 def kvelements_to_dict(under, strip_text=True, ignore_tagnames=[]):
     ''' Where people use elements for single text values, it's convenient to get them as a dict.
         
-        Given an etree object,
+        Given an etree element containing a series of such values,
         Returns a dict that is mostly just  { el.tag:el.text }
+        Skips keys with empty values.
         
         Would for example turn
             <foo>
@@ -135,12 +136,13 @@ def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_ta
 
         For example,  all_text_fragments( fromstring('<a>foo<b>bar</b></a>') ) == ['foo', 'bar']
 
-        TODO: more tests, I'm moderately sure strip doesn't do exactly what I think.
+        TODO: more tests, I'm moderately sure strip doesn't do quite what I think.
     '''
     ret = []
     for elem in under.iter(): # walks the subtree
         if isinstance(elem, _Comment) or isinstance(elem, _ProcessingInstruction): 
             continue
+        #print("tag %r in ignore_tags (%r): %s"%(elem.tag, ignore_tags, elem.tag in ignore_tags))
         if elem.text != None:
             if elem.tag not in ignore_tags: # only ignore contents of ignored tags; tail is considered outside
                 etss = elem.text.strip(strip)
@@ -159,19 +161,20 @@ def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_ta
     return ret
 
 
-
 def strip_namespace(tree, remove_from_attr=True):
-    ''' Returns a copy of a tree, with namespaces stripped.
+    ''' Returns a copy of a tree that has its namespaces stripped.
 
-        By default does so for node names as well as attribute names.       
+        More specifically it removes
+        * namespace from element names
+        * namespaces from attribute names (default, but optional)
+        * default namespaces (TODO: test that properly)
 
-        Note that for attributes that are unique only because of namespace, this may cause attributes to be overwritten. 
-        For example: <e p:at="bar" at="quu">   would become: <e at="bar">
-        I've not yet seen any XML where this matters, but it might.
+        Note that for attributes with the same name, that are unique only because of a different namespace,
+        this may cause attributes to be overwritten. 
+        For example:   <e p:at="bar" at="quu">   would become   <e at="bar">
+        I've not yet seen any XML where this matters - but it might.
 
         Returns the URLs for the stripped namespaces, in case you want to report them.
-
-        TODO: remove namespace defaulting as well
     '''
     if not isinstance(tree, lxml.etree._Element):
         import warnings
@@ -265,48 +268,68 @@ def _indent_inplace(elem, level=0, whitespacestrip=True):
 
 
 
-def node_walk(root):  # https://stackoverflow.com/questions/60863411/find-path-to-the-node-using-elementtree
-    ''' walks all nodes under the given node,
-        remembering both path and node as we go.
+def path_between(under, element):
+    ''' Given an ancestor and a descentent element from the same tree
+          (In many applications you want under to be the the root element)
 
-        Is a generator yieldng (path, node)
+        Returns the xpath-style path to get from (under) to this specific element
+             ...or raises a ValueError mentioning that the element is not in this tree
 
-        Mainly a helper for path_count()
+        Keep in mind that if you reformat a tree, the latter is likely.
+
+        This function has very little code, and if you do this for much of a document, you may want to steal the code
     '''
-    path_to_node = []
-    node_stack = [root]
-    while node_stack:
-        node = node_stack[-1]
-        if path_to_node  and  node is path_to_node[-1]:
-            path_to_node.pop()
-            node_stack.pop()
-            yield (path_to_node, node)
+    letree = lxml.etree.ElementTree( under )
+    return letree.getpath( element )
+
+
+
+
+def node_walk(under, max_depth=None):  # Based on https://stackoverflow.com/questions/60863411/find-path-to-the-node-using-elementtree
+    ''' Walks all elements under the given element,  remembering both path string and element reference as we go.
+        (note that this is not an xpath style with specific indices, just the names of the elements)
+
+        If given None, it emits nothing (we assume it's from a find() that hit nothing, and that it's easier to ignore here than in your code)
+
+        Is a generator yielding (path, element),   and is mainly a helper used by path_count()
+
+        TODO: re-test now that I've added max_depth, because I'm not 100% on the details
+    '''
+    if under is None:
+        return
+    path_to_element = []
+    element_stack = [under]
+    while len(element_stack) > 0:
+        element = element_stack[-1]
+        if len(path_to_element) > 0  and  element is path_to_element[-1]:
+            path_to_element.pop()
+            element_stack.pop()
+            yield (path_to_element, element)
         else:
-            path_to_node.append(node)
-            for child in reversed(node):
-                node_stack.append(child)
+            path_to_element.append( element )
+            for child in reversed( element ):
+                if max_depth is None or (max_depth is not None and len(path_to_element) < max_depth):
+                    element_stack.append( child )
+                
 
 
-def path_count(root):
-    ''' Walk nodes under a node,
-        count how often each path happens.
+def path_count(under, max_depth=None):
+    ''' Walk nodes under an etree element,
+          count how often each path happens (counting the complete path string).
+          written to summarize the rough structure of a document.
 
         Returns a dict from path strings to their count
-
-        Meant to summarize the rough structure of a document.
     '''
     count = {}
-    for node_path, n in node_walk( root ):
+    for node_path, n in node_walk( under, max_depth=max_depth ):
         if isinstance(n, _Comment) or isinstance(n, _ProcessingInstruction): 
             continue # ignore things that won't have a .tag
-        path = "/".join([n.tag  for n in node_path] + [n.tag] )  # includes root, which is a little redundant, but more consistent
+        path = "/".join([n.tag  for n in node_path] + [n.tag] )  # includes `under`` element, which is a little redundant, but more consistent
         if path not in count:
             count[ path ] = 1
         else:
             count[ path ] += 1
     return count    
-
-
 
 
 
