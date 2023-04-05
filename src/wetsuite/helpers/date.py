@@ -14,7 +14,7 @@ import dateutil.parser
 class DutchParserInfo(dateutil.parser.parserinfo):
     JUMP = [" ", ".", ",", ";", "-", "/", "'", "op", "en",  "m", "t", "van", 
             "e", "sten",
-            ]    # TODO: figure out what exactly these are (presumably tokens that can be ignored, no meaning to position?)
+            ]    # TODO: figure out what exactly these are (presumably tokens that can be ignored, no meaning to their position?)
             
     MONTHS =  [
         ('Jan', 'Januari'), ('Feb', 'Februari'), ('Mar', 'Maart'), ('Apr', 'April'), ('Mei'), ('Jun', 'Juni'), 
@@ -70,8 +70,10 @@ _re_dutch_date_1  = re.compile(r'\b[0-9]{1,2} (%s),? [0-9]{2,4}\b'%_maand_res, r
 _re_dutch_date_2  = re.compile(r'\b(%s) [0-9]{1,2},? [0-9]{2,4}\b'%_maand_res, re.I) # this is more an english-style thing
 
 def find_dates_in_text(text:str, try_parsing=True):
-    ''' Tries to fish out date-like strings from a text.  
-        
+    ''' Tries to fish out date-like strings from free-form text.  
+          Currently looks only for three specific patterns (1980-01-01, 1 jan 1980, jan 1 1980, the latter two in both Dutch and English),
+          and would not find anything else.
+
         Focuses first on the text part, and is currently more restrictive (looks only for some specific patterns) which is a nice way of saying 'probably a bunch of false negatives'
         though it then also hands it to parse()
         
@@ -104,14 +106,15 @@ def find_dates_in_text(text:str, try_parsing=True):
 
 
 def date_range( frm, to ):
-    ''' Returns each day days between the two given dates, as a datetime.date object
+    ''' Given two objects that are
+        - date objects
+        - datetime objects - will become their day
+        - string we manage to parse  (using dateutil library)
+          - ...please do not use formats like 02/02/11 and also expect the output to do what you want.
 
-        For the two arguments, 
-        - date objects are preferred
-        - datetime will become their day
-        - if given a string will try its best (using dateutil library).
-          - please do not use formats like 02/02/11 and also expect the output to do what you want.
+        Returns each day in the range between the two given dates (including the last), as a datetime.date object
 
+        
         For example:
             date_range( datetime.date(2022, 1, 29),   datetime.date(2022, 2, 2)  )
         and
@@ -154,13 +157,16 @@ def date_range( frm, to ):
     return ret
 
 
-
 def format_date(dt, strftime_format='%Y-%m-%d'):
+    ' calls strftime on a datetime object, by default like YYYY-MM-DD (ISO8601-style) '
     return dt.strftime(strftime_format)
+
 
 def format_date_range(rng, strftime_format='%Y-%m-%d'):
     ''' Formats a sequence of datetime.date objects (e.g. from date_range())
-        with a given strftime format, defaulting to YYYY-MM-DD   (ISO8601-ish)
+        with a given strftime format, defaulting to YYYY-MM-DD   (ISO8601-style)
+
+        ...by calling format_date() on each.
 
         For example:
             format_date_range(  date_range( datetime.date(2022, 1, 29),   datetime.date(2022, 2, 2) )  )
