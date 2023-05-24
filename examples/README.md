@@ -9,3 +9,100 @@ Currently these notebooks focus on some specific wetsuite functionality, dataset
 When you view the notebooks (e.g. here on github) and click the "Open in Colab" link, you will get a copy running in [google colab](https://colab.research.google.com/), which gives you a very temporary sandbox in which you can freely play, useful for experimentation and demonstrations without requiring any setup in your own infrastructure. 
 
 Once you care to use this as a library in more serious projects, you probably want to install onto your own infrastructure.
+
+## Minimal examples
+
+
+### Search by document type
+
+```python
+import wetsuite
+
+
+```
+
+
+### Search by keyword (in CVDR)
+
+```python
+import wetsuite
+
+result = wetsuite.search(category='cvdr', keywords=['...'], source='Amsterdam')
+        # alternative: wetsuite.search(query='IN: cvdr ')
+
+print(result)
+
+for id in result[:10]:
+    doc = wetsuite.load(id)
+    doc.save('local/path')
+    
+```
+
+
+### Extract plain text fragments (from BWB)
+
+```python
+
+# also as an illustration of the Document class
+
+
+
+```
+
+
+### Word cloud (kansspelbeschikkingen)
+
+```python
+
+
+
+```
+
+
+
+### Kamervragen
+
+```python
+
+
+
+```
+
+
+
+### Entity extraction (with spaCy)
+
+```python
+
+
+
+```
+ 
+
+### Relation extraction (with spaCy)
+
+```python
+
+
+
+```
+
+
+### OCR
+
+
+```python
+
+
+
+```
+
+
+### Topic modeling
+
+```python
+
+
+
+```
+
