@@ -69,8 +69,8 @@ class SRUBase(object):
         if readable:
             tree = wetsuite.helpers.etree.fromstring(r.content)
             if strip_namespaces==True:
-                wetsuite.helpers.etree.strip_namespace_inplace(tree) # easier without namespaces
-            wetsuite.helpers.etree.indent_inplace(tree)
+                tree = wetsuite.helpers.etree.strip_namespace(tree) # easier without namespaces
+            tree = wetsuite.helpers.etree.indent(tree)
             return wetsuite.helpers.etree.tostring(tree, encoding='unicode')
         else:
             return r.content.decode('utf-8')
@@ -92,8 +92,8 @@ class SRUBase(object):
             print( url )
         r = requests.get( url )
         tree = wetsuite.helpers.etree.fromstring( r.content )
-        wetsuite.helpers.etree.strip_namespace_inplace(tree) # easier without namespaces
-        #wetsuite.helpers.etree.indent_inplace(tree) # debug
+        tree = wetsuite.helpers.etree.strip_namespace(tree) # easier without namespaces
+        #tree = wetsuite.helpers.etree.indent(tree) # debug
 
         explain = tree.find('record/recordData/explain')
 
@@ -214,7 +214,7 @@ class SRUBase(object):
 
         # easier without namespaces, they serve no disambiguating function in most of these cases anyway
         # TODO: think about that, user code may not expact that
-        wetsuite.helpers.etree.strip_namespace_inplace(tree) 
+        tree = wetsuite.helpers.etree.strip_namespace(tree) 
 
         if tree.tag=='diagnostics': # TODO: figure out if this actually happened 
             raise RuntimeError( wetsuite.helpers.etree.strip_namespace(tree).find( 'diagnostic/message' ).text )
@@ -222,7 +222,7 @@ class SRUBase(object):
             raise RuntimeError( wetsuite.helpers.etree.strip_namespace(tree).find( 'diagnostics/diagnostic/message' ).text )
 
         elif tree.tag=='explainResponse':
-            wetsuite.helpers.etree.strip_namespace_inplace(tree) # bit lazy
+            tree = wetsuite.helpers.etree.strip_namespace(tree) # bit lazy
             raise RuntimeError( 'search returned explain response instead' )
         
         if verbose:
