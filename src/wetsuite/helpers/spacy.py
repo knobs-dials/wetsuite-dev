@@ -1,5 +1,42 @@
 
 
+
+# CONSIDER: a our own prefer_gpu/prefer_cpu that we listen to if and when a function first loads spacy
+
+_dutch = None
+def nl_noun_chunks(text):
+    ''' Meant as a quick and dirty way to pre-process text for when experimenting with models,
+        as a particularly to remove function words
+
+        To be more than that we might use something like spacy's pattern matching
+    '''
+    global _dutch
+    if _dutch is None:
+        import spacy
+        spacy.prefer_gpu() # TODO: conditional
+        #_dutch = spacy.load('nl_core_news_md')
+        _dutch = spacy.load('nl_core_news_lg')
+    doc = _dutch(text)
+    ret=[]
+    for nc in doc.noun_chunks:
+        ret.append( nc.text )
+    return ret
+
+
+_english = None
+def en_noun_chunks(text):
+    global _english
+    if _english is None:
+        import spacy
+        spacy.prefer_gpu() # TODO: conditional
+        _english = spacy.load('en_core_web_trf')
+    doc = _english(text)
+    ret=[]
+    for nc in doc.noun_chunks:
+        ret.append( nc.text )
+    return ret
+
+
 _langdet_model = None
 def detect_language(text: str):
     ''' Note that this depends on the spacy_fastlang library, which depends on the fasttext library.
@@ -35,7 +72,6 @@ def detect_language(text: str):
 
 
 
-
 _xx_sent_model = None
 def sentence_split(text):
     ''' A language-agnostic sentence splitter based on the xx_sent_ud_sm model. 
@@ -50,4 +86,31 @@ def sentence_split(text):
         _xx_sent_model  = spacy.load("xx_sent_ud_sm")
     doc = _xx_sent_model(text)
     return doc
+
+
+
+class ipython_content_visualisation(object):
+    ''' Python notebook visualisation to give some visual idea of contents:
+        marks out-of-vocabulary tokens red, and highlight the more interesting words (by POS).
+    '''    
+    def __init__(self, doc, mark_oov=True, highlight_content=True):
+        self.doc = doc
+        self.mark_oov = mark_oov
+        self.highlight_content = highlight_content
+
+    def _repr_html_(self):
+        from wetsuite.helpers.escape import attr, nodetext
+        ret = []
+        for token in list(self.doc):
+            style='padding:1px 4px; outline:1px solid #0002'
+            if self.highlight_content: 
+                if token.pos_ in ( 'PUNCT','SPACE', 'X',   'AUX','DET','CCONJ',): 
+                    style+=';opacity:0.3'
+                elif token.pos_ in ( 'ADP', 'VERB', ): 
+                    style+=';opacity:0.7'
+            if self.mark_oov  and  token.is_oov  and  token.pos_ not in ('SPACE',):
+                style+=';background-color:#833'
+            ret.append(  '<span title="%s" style="%s">%s</span>'%(  attr(token.pos_)+' '+attr(token.tag_),  style,  nodetext(token.text) )  )
+            ret.append('<span>%s</span>'%token.whitespace_ )
+        return ''.join(ret)
 
