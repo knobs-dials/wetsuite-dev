@@ -1,15 +1,27 @@
 #!/usr/bin/python3
-''' create wordcloud images.  Uses an existing wordcloud module '''
-import collections
-from typing import List
-import wordcloud  #  if not installed, do  pip3 install wordcloud
-                  # note that it draws in matplotlib, numpy, and PIL
+''' Thin wrapper module - create wordcloud images, using an existing wordcloud module.
 
-# ensure that matplotlib doesn't try to use X11. TODO: read up, iy may be better to do this conditionally
+    The wordcloud module we use likes to wrap all logic and parameters in one big class,
+    so this (thin) wrapper module exists largely to separate out the counting,
+    - to introduce some flexibility in how we count in a wordcloud.
+    - and to make those counting functions usable for other things
+'''
+import collections, re
+from typing import List
+
+
+# The wordcloud module imports matplotlib so we might need to ensure a non-graphical backend
+#   TODO: read up, it's probably good to do this conditionally -- and lazily?
 import matplotlib 
 matplotlib.use('Agg') 
 
 
+import wordcloud  #  if not installed, do  pip3 install wordcloud
+                  # note that it draws in matplotlib, numpy, and PIL
+
+
+# wordcloud loads some english stopwords implicitly.
+# The function below requires you to be more explicit, in which case some prepared lists are handy:
 stopwords_en = [ # wordcloud.STOPWORDS loads:
     "a", "about", "above", "after", "again", "against", "all", "also", "am", "an", "and", "any", 
     "are", "aren't", "as", "at", "be", "because", "been", "before", "being", "below", "between", 
@@ -31,33 +43,31 @@ stopwords_en = [ # wordcloud.STOPWORDS loads:
     "you're", "you've", "your", "yours", "yourself", "yourselves" 
 ] 
 
-stopwords_nl = ('de','het','een', 'en','of', 'die','van', 'op','aan','door','voor','tot','bij', 'kan','wordt')
+stopwords_nl = (
+    'de','het', 'een', 'en','of', 'die','van', 'op','aan','door','voor','tot','bij', 'kan','wordt',
+    'in', 'deze', 'dan', 'is', 'dat'
+)
 
 
 def wordcloud_from_freqs(freqs: dict, width:int=1800, height:int=800, background_color='white', min_font_size=10, **kwargs):
-    ''' Takes a {string: count} dict
+    ''' The most central function.
+    
+        Takes a {string: count} dict
           probably from one of the helper functions),
           and assumed to be filtered nicely already
 
         Returns a PIL image.
     '''
-    #CONSIDER: the wordcloud module imports matplotlib so we might need to ensure a non-graphical backend (though it only seems to use it for)
     wco = wordcloud.WordCloud( width=width,  height=height,  background_color=background_color,  min_font_size=min_font_size, **kwargs )
     im = wco.generate_from_frequencies( freqs )
     return im.to_image()
 
 
-def count_case_insensitive(strings: List[str],  min_count=1,  min_word_length=0,  stopwords=[])  ->  dict:
-    ''' Calls count_normalized()  with  normalize_func=lambda s:s.lower() 
-
-        Arguably not the best idea to have functions do nothing more than that, but this seems like a common case and saves some typing.
-    '''
-    return count_normalized( strings, min_count=min_count, min_word_length=min_word_length, normalize_func=lambda s:s.lower(), stopwords=stopwords )
-
 
 def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  normalize_func=None, stopwords=[])  ->  dict:
-    ''' Takes a list of strings
-        Returns a { string: count } dict.
+    ''' Takes a list of strings,  returns a { string: count } dict.
+
+        ...with some extra processing.
 
         normalize_func: half the point of this function. Should be a str->str function. 
         - We group things by what is equal after this function is applied, but we report the most common case before it is. 
@@ -120,13 +130,30 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
 
 
 
+def count_case_insensitive(strings: List[str],  min_count=1,  min_word_length=0,  stopwords=[])  ->  dict:
+    ''' Takes a list of strings,  returns a { string: count } dict.
+
+        Specifically: calls count_normalized()  with  normalize_func=lambda s:s.lower() 
+          which means it is case insensitive in counting strings, but it reports the most common capitalisation.
+
+        Giving a function to such a singular use is almost pointless, yet this seems like a common case and saves some typing.
+    '''
+    return count_normalized( strings, min_count=min_count, min_word_length=min_word_length, normalize_func=lambda s:s.lower(), stopwords=stopwords )
+
+
 
 def freqs_from_spacy_document(doc_or_sequence_of_docs, remove_stop=True, restrict_to_tags=('NOUN', 'PROPN', 'ADJ', 'ADV', 'VERB'), weigh_deps={'nsubj':5, 'obj':3} ) -> dict:
     ''' Returns a string->count dict 
         Tries to to be smarter about selecting useful words 
 
-        CONSIDER: make this a filter instead, so we can feed the result to count_normalized()
+        remove_stop removes according to Token.is_stop
+        restrict_to_tags  removes if not in this POS list
 
+        add_ents   - whether to add phrases from Doc.ents
+        add_ncs    - whether to add phrases from Doc.noun_chunks
+        weigh_deps - exists to weigh things words/ent/ncs stronger when they are/involve the sentence's subject or object
+
+        CONSIDER: make this a filter instead, so we can feed the result to count_normalized()
         CONSIDER: whether half of that can be part of some topic-modeling filtering.  And how filters might work around spacy.
     '''
     counts = collections.defaultdict(int)
@@ -149,6 +176,8 @@ def freqs_from_spacy_document(doc_or_sequence_of_docs, remove_stop=True, restric
         counts[ token.text  ] += 1
 
         # TODO: take dict of weighs
+
+        # TODO: make the following conditional
         if hasattr(token, 'dep_'):
             if token.dep_ in weigh_deps:
                 counts[ token.text ] += weigh_deps[token.dep_]
@@ -159,24 +188,27 @@ def freqs_from_spacy_document(doc_or_sequence_of_docs, remove_stop=True, restric
             for ent in  thing.ents:
                 #print( "ENT %s"%ent.text )
                 counts[ ent.text ] += 2
+            # TODO: involve weigh_deps
 
         if hasattr(thing, 'noun_chunks'): # TODO: tests
             for nc in thing.noun_chunks:
                 #print( "NC %s"%nc.text )
                 counts[ nc.text ] += 2
+            # TODO: involve weigh_deps
 
     return counts
 
 
-        
-if __name__ == '__main__':
-    # quick and dirty tests from text files
-    import sys, re
+def simple_tokenize(text: str):
+    ' split string into words - in a very dumb way but slightly better than just split() '
+    l = re.split('[\\s!@#$%^&*":;/,?\xab\xbb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a\u2358\u275b\u275c\u275d\u275e\u275f\u2760\u276e\u276f\u2e42\u301d\u301e\u301f\uff02\U0001f676\U0001f677\U0001f678-]+', text)
+    return list(e.strip("'")   for e in l  if len(e)>0)
 
-    def simple_tokenize(text: str):  # quick and dirty tokenizer
-        ' split string into words '
-        l = re.split('[\\s!@#$%^&*":;/,?\xab\xbb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a\u2358\u275b\u275c\u275d\u275e\u275f\u2760\u276e\u276f\u2e42\u301d\u301e\u301f\uff02\U0001f676\U0001f677\U0001f678-]+', text)
-        return list(e.strip("'")   for e in l  if len(e)>0)
+
+
+if __name__ == '__main__':
+    # quick and dirty tests from text files handed in
+    import sys, re
 
     for fn in sys.argv[1:]:
         with open(fn) as f:
@@ -185,7 +217,7 @@ if __name__ == '__main__':
             freqs = count_normalized( toks, min_count=2, normalize_func=lambda s:s.lower().strip('([])') )
             #print( freqs )
         im = wordcloud_from_freqs(freqs)
-        im.show()
+        im.show() # show in GUI
 
 
 
