@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 *~
 src/wetsuite/coverage.txt
+src/wetsuite/.coverage
 src/wetsuite/datacollect/db.sql
 src/wetsuite/datacollect/tweedekamer_nl/*.xml
 src/wetsuite/datacollect/tweedekamer_nl/*.json
