@@ -69,14 +69,47 @@ def findall_ecli(s:str, rstrip_dot=True):
             match_str = match_str.rstrip('.')
         ret.append( match_str )
     return ret 
-                                           
+
+
+def parse_ecli(ecli_string:str):
+    ''' mostly just reports the parts in a dict - I don't actually see much use over .split(':')
+
+    '''
+    ret = {}
+    ecli_list = ecli_string.strip().split(':')
+    if len(ecli_list) != 5:
+        raise ValueError("ECLI is expected to have five elements separated by four colons, %r does not"%ecli_string)
+    
+    ECLI, country_code, court_code, year, caseid = ecli_list
+    if ECLI.upper() != 'ECLI':
+        raise ValueError("First ECLI string isn't 'ECLI' in %r"%ecli_string)
+
+    if len(country_code)!=2:
+        raise ValueError("ECLI country %s isn't two characters"%country_code)
+
+    #if len(court):
+
+    # caseod    seems to be [A-Z-z0-9.]{,25} but countries usually keep shorter and structured, and may have historical numbering sorted in, etc.
+
+    ret['country_code'] = country_code
+    ret['court_code'] = court_code
+    ret['year'] = year
+    ret['caseid'] = caseid
+
+    #if court_code in nl_court_codes:
+    #    ret['court_name'] = nl_court_codes[court_code]
+
+    return ret
 
 
 
-# these may slowly change over time, of course
+
+
+
+# member countries slowly change over time, of course, so maybe we should just accept any three letters, or any existing nearby country?
 CELEX_COUNTRIES = [ 
     'BEL', 'DEU', 'FRA', 'CZE', 'ESP', 'PRT', 'AUT', 'CYP', 'BGR', 'EST', 'FIN', 'GBR', 'HUN', 'IRL', 
-    'LTU', 'MLT', 'LVA', 'SVN', 'SWE', 'GRC,' 'POL', 'DNK', 'ITA', 'LUX', 'NLD', 'SVK', 'ROU', 'HRV'
+    'LTU', 'MLT', 'LVA', 'SVN', 'SWE', 'GRC,' 'POL', 'DNK', 'ITA', 'LUX', 'NLD', 'SVK', 'ROU', 'HRV',
 ]
 
 CELEX_SECTORS = {
@@ -292,7 +325,7 @@ def equivalent_celex(celex1:str, celex2:str):
     
 
 def parse_celex(celex: str):
-    ''' Normalize a CELEX number, and return and describe its parts where possible.
+    ''' Normalize a CELEX number, and describe its parts where possible.
         All values are returned as strings, even where they are (ostensibly) numbers.
 
         Will strip a 'CELEX:' in front.
