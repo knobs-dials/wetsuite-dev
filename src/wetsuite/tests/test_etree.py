@@ -1,4 +1,4 @@
-from wetsuite.helpers.etree import fromstring, tostring, strip_namespace, _strip_namespace_inplace, all_text_fragments, indent, path_count, kvelements_to_dict
+from wetsuite.helpers.etree import fromstring, tostring, strip_namespace, _strip_namespace_inplace, all_text_fragments, indent, path_count, kvelements_to_dict, path_between
 
 
 def test_strip():
@@ -98,7 +98,33 @@ def test_nonlxml():
         strip_namespace( xml.etree.ElementTree.fromstring(b'<a><?xml-stylesheet type="text/xsl" href="style.xsl"?></a>') ) 
 
 
+def test_path_between():
+    import pytest
+
+    xml = '<a><b><c><d/><d/></c><d/></b></a>'
+    a = fromstring(xml) 
+    c = a.find('b/c')
+    d0 = c.getchildren()[0]
+    d1 = c.getchildren()[1]
+    assert path_between(a, d0) == '/a/b/c/d[1]'
+    assert path_between(a, d1) == '/a/b/c/d[2]'
+
+    with pytest.raises(ValueError, match=r'.*Element is not in this tree.*'):
+        path_between(a, fromstring(xml)) # new parse is not in the same tree
+
+    # TODO: decide what to do when they're in the same tree but not the way around that you expect
+    #with pytest.raises(ValueError, match=r'.*.*'):
+    #assert path_between(d1, a) 
+
+
+    #wetsuite.helpers.etree.path_between(tree, body.xpath('//al')[10]) == '/cvdr/body/regeling/regeling-tekst/artikel[1]/al[1]'
+    
+
+
+
+
 if __name__ == '__main__':
     test_strip()
     test_nonlxml()
+
 
