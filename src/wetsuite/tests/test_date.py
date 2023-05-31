@@ -41,7 +41,11 @@ def test_parse():
     assert parse('  5 may 1988  ') == datetime.datetime(1988, 5, 5, 0, 0)
     assert parse('  1 november 1988  ') == datetime.datetime(1988, 11, 1, 0, 0)
     assert parse('  1e november 1988  ') == datetime.datetime(1988, 11, 1, 0, 0)
+    assert parse('  20 december 2022  ') == datetime.datetime(2022, 12, 20, 0, 0)
+
     assert parse('  donderdag 1 november 1988  ') == datetime.datetime(1988, 11, 1, 0, 0) # it doesn't actually understand that (it was a tuesday), but it ignores it fine
+
+
 
 
 def test_find_dates_in_text():
