@@ -1,7 +1,5 @@
 #!/usr/bin/python3
-'''
-    Show mentions of "TODO:" and "CONSIDER:" in code.
-
+''' Show mentions of "TODO:" and "CONSIDER:" in code.
 '''
 import os, re
 
@@ -41,14 +39,11 @@ for r, ds, fs in os.walk( wetsuite_dir ):
                         seems_like_python = False
 
         if seems_like_python:
-            #print( ffn )
             with open(ffn, 'rb') as rf:
                 linedata = [] # list of  (onebasedlinenum, linestr)
                 for linenum, line in enumerate( rf.readlines() ):
                     line = line.decode('utf8') # doesn't need to be explicit but I was planning for a fallback
-                    linedata.append( (linenum+1, line)  )
-                #import pprint
-                #pprint.pprint( linedata)
+                    linedata.append( (linenum, line)  ) # note: line logic is 0-based, and we print it +1
 
                 matches_on_lines = []
                 for line_i, line_s in linedata:
@@ -56,48 +51,58 @@ for r, ds, fs in os.walk( wetsuite_dir ):
                         if re.search( restr, line_s ):
                             matches_on_lines.append( line_i )
                             break
-                #print( matches_on_lines)
-    
 
                 if len(matches_on_lines) > 0:
                     print( sc.brightyellow('=================  %s  ======================='%( ffn[len(wetsuite_dir):]).lstrip(os.sep)  ) ) # relative to root?
 
-                    ## Spend some time merging ranges 
-                    showlines = set() # in a lazy way
+                    # merge and separate ranges.
 
+                    # first add all line numbers to one big set (note: 1-based)
+                    showlines = set()   # 
                     prev = -9
                     ll = len(linedata)
                     for ml in matches_on_lines:
                         from_line = max(0, ml-context_lines)
-                        to_line   = min(ll, ml+context_lines)
+                        to_line   = min(ll-1, ml+context_lines)
                         for showline in range(from_line, to_line+1):
                             showlines.add( showline )
 
-                    fragments, cr = [], []
+                    # now we want to make a list of ranges, 
+                    fragments = [] # like  [ [1,2], [7,8,9,10], ]
+                    
+                    # this bit's less readable
+                    cur_range = []
                     def add_cr():
-                        global cr
-                        if len( cr ) > 0:
-                            # take off empty first/last lines
-                            while len( linedata[cr[0]][1].strip()) == 0:
-                                cr.pop(0)
-                            while len( linedata[cr[-1]][1].strip()) == 0:
-                                cr.pop(-1)
-                            fragments.append( cr )
-                            cr=[]
+                        global cur_range
+                        if len( cur_range ) > 0:
+                            # take off empty first and empty last lines. Written out longer than it needs to be for debug reasons.
+                            while len(cur_range) > 0:
+                                _, first_line = linedata[ cur_range[0] ]
+                                if len(first_line.strip())==0:
+                                    cur_range.pop(0)
+                                else:
+                                    break
+                            while len(cur_range) > 0:
+                                _, last_line = linedata[ cur_range[-1] ]
+                                if len(last_line.strip())==0:
+                                    cur_range.pop(-1)
+                                else:
+                                    break
+                            fragments.append( cur_range )
+                            cur_range=[]
 
                     for sl in sorted(showlines):
-                        if sl > prev+1:
+                        if sl > prev+1: # gap?
                             add_cr()
                         else:
-                            cr.append( sl )
+                            cur_range.append( sl )
                         prev = sl
                     add_cr()
 
 
                     for fragment in fragments:
-                        #print(  sc.yellow('|  ')+ sc.cyan('  -------  lines %s  -------'%( '..'.join( '%d'%v  for v in sorted( set([min(fragment), max(fragment)]) ) ) )  ) )
                         for showline in fragment:
-                            line_i, line_s = linedata[ showline ]
+                            line_i0, line_s = linedata[ showline ]
                             line_s = line_s.rstrip('\n')
 
                             for restr, colorfunc in lookfor_and_color.items(): 
@@ -108,10 +113,8 @@ for r, ds, fs in os.walk( wetsuite_dir ):
 
                             line_s = line_s.replace('TODO', sc.brightred('TODO'))
                             line_s = line_s.replace('CONSIDER', sc.brightmagenta('CONSIDER'))
-                            #print( repr(line_s) ) 
-                            print( sc.yellow('|% 4d| '%line_i)+ line_s )
+                            print( sc.yellow('|% 4d| '%(line_i0+1))+ line_s )
                         print(sc.yellow('|  '))
-                        #print(sc.yellow('|  '))
 
                     print('')
                     print('')
