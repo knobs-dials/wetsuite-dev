@@ -3,8 +3,8 @@ import urllib.parse
 
 import wetsuite.datacollect.koop_repositories
 
-# CONSIDER: import these via wetsuite.helpers.etree ? 
-from lxml.etree import _Comment, _ProcessingInstruction 
+
+from lxml.etree import _Comment, _ProcessingInstruction   # CONSIDER: import these via wetsuite.helpers.etree ? 
 
 
 
@@ -808,7 +808,7 @@ def cvdr_versions_for_work( cvdrid:str ) -> list:
 ###################################
 
 
-def alineas_with_selective_path(tree, start_at_path=None): # , ignore=['meta-data']
+def alineas_with_selective_path(tree, start_at_path=None, alinea_elemname='al'): # , ignore=['meta-data']
     ''' Try to capture most of the interesting structure in easier-to-digest python data form,
         (and without expecting a specific nesting)
     
@@ -855,6 +855,8 @@ def alineas_with_selective_path(tree, start_at_path=None): # , ignore=['meta-dat
 
         'divisie':  {'kop/label':'divisielabel', 'kop/nr':'divisienr', 'kop/titel':'divisietitel', '@bwb-ng-variabel-deel':'divisie_vd'},
         'circulaire.divisie':{'@bwb-ng-variabel-deel':'circulairedivisie_vd'},
+        'definitielijst':{},
+        'definitie-item':{'term':'term', 'li.nr':'li.nr'},
 
         'li':{'@nr':'li-nr', 'li.nr':'li.nr', '@bwb-ng-variabel-deel':'li_vd'},
         # some things to have in the stack-like thing, but which don't have details
@@ -863,6 +865,14 @@ def alineas_with_selective_path(tree, start_at_path=None): # , ignore=['meta-dat
         'bijlage':{},
         'lijst':{},
         # table, plaatje?
+
+        # rechtgeving.nl
+        'uitspraak':{'@id':'id'},
+        'section':{'@id':'id', 'title/nr':'nr', 'title':'title'},
+        'listitem':{},
+        'parablock':{'nr':'nr'},
+        'uitspraak.info':{},
+        'inhoudsindicatie':{'@id':'id'},
     }
 
     ret = []
@@ -887,7 +897,7 @@ def alineas_with_selective_path(tree, start_at_path=None): # , ignore=['meta-dat
             if isinstance(element, _Comment) or isinstance(element, _ProcessingInstruction): 
                 pass
             else:
-                if element.tag == 'al':
+                if element.tag == alinea_elemname:
                     xpath_path = wetsuite.helpers.etree.path_between(tree, element)
                     emit = {'path':xpath_path, 'parts':[], 'merged':{}}
                     for pathelem in path_to_element:
@@ -929,9 +939,16 @@ def merge_alinea_data( alinea_dicts, if_same={
     
     'artikel':'artikelnr', 
     'lid':'lidnr',
+
+    'definitie-item':'term',
+
+    #rechtspraak
+    'uitspraak':'id',
+    'uitspraak.info':None,
+    'section':'nr',
     } ):
-    ''' If you want relatively flat text, but want it grouped by logical units,
-        this might be what you want.
+    ''' If you want relatively flat text, but want it grouped by logical units within a document,
+        this function will help be what you want.
 
         Takes output from alineas_with_selective_path(), 
         merges text it if specified ['parts'] values values in the parts are the same - 
@@ -941,6 +958,8 @@ def merge_alinea_data( alinea_dicts, if_same={
         TODO: return a meta dict for each such grouped text (instead of the raw key)
     '''
     from collections import OrderedDict
+
+    r=0
 
     merged = OrderedDict()
     key_meta = {} # key -> meta dict
@@ -953,9 +972,15 @@ def merge_alinea_data( alinea_dicts, if_same={
             what = part_dict['what']
             #print( part_dict)            
             if what in if_same  and if_same[what] in part_dict:
-                interesting_val = part_dict[if_same[what]]
-                if interesting_val is None: # maybe warn that there isn't?
-                    interesting_val=''                
+                sel = if_same[what]
+                #print(sel)
+                if sel==None: # TODO: think about this adjustment
+                    interesting_val='_dummy_%d'%r
+                    r+=1
+                else:
+                    interesting_val = part_dict[sel]
+                    if interesting_val is None: # maybe warn that there isn't?
+                        interesting_val=''                
                 key.append( '%s:%s'%(what, interesting_val.strip()) )
                 meta.append( (what, interesting_val.strip() ) )
         key = '  '.join(key)
