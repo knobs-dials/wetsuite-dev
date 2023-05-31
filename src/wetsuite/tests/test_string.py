@@ -1,34 +1,65 @@
-import wetsuite.helpers.string
+import wetsuite.helpers.strings
 
 
 def test_contains_any_of():
-    assert wetsuite.helpers.string.contains_any_of('microfishkes', ['mikrofi','microfi','fiches']) == True
-    assert wetsuite.helpers.string.contains_any_of('microforks', ['mikrofi','microfi','fiches']) == False
-    assert wetsuite.helpers.string.contains_any_of('CASe', ['case',], case_sensitive=False) == True
+    from wetsuite.helpers.strings import contains_any_of
+
+    assert contains_any_of('microfishkes', ['mikrofi','microfi','fiches']) == True
+    assert contains_any_of('microforks', ['mikrofi','microfi','fiches']) == False
+    assert contains_any_of('CASe', ['case',], case_sensitive=False) == True
 
 
 def test_contains_all_of():
-    assert wetsuite.helpers.string.contains_all_of('AA (BB/CCC)', ('AA', 'BB', 'CC') ) == True
-    assert wetsuite.helpers.string.contains_all_of('AA (B/CCC)', ('AA', 'BB', 'CC') ) == False
-    assert wetsuite.helpers.string.contains_all_of('AA (B/CCC)', ('aa', 'BB'), case_sensitive=False ) == False
+    from wetsuite.helpers.strings import contains_all_of
+
+    assert contains_all_of('AA (BB/CCC)', ('AA', 'BB', 'CC') ) == True
+    assert contains_all_of('AA (B/CCC)', ('AA', 'BB', 'CC') ) == False
+    assert contains_all_of('AA (B/CCC)', ('aa', 'BB'), case_sensitive=False ) == False
 
 
 def test_ordered_unique():
-    assert wetsuite.helpers.string.ordered_unique( ['b', 'a', 'a'] ) == ['b', 'a']
-    assert wetsuite.helpers.string.ordered_unique( ['b', 'a', None, 'a'] ) == ['b', 'a']
-    assert wetsuite.helpers.string.ordered_unique( ['b', 'a', 'A'] ) == ['b', 'a', 'A']
-    assert wetsuite.helpers.string.ordered_unique( ['b', 'a', 'A'], case_sensitive=False ) == ['b', 'a']
+    from wetsuite.helpers.strings import ordered_unique
+
+    assert ordered_unique( ['b', 'a', 'a'] ) == ['b', 'a']
+    assert ordered_unique( ['b', 'a', None, 'a'] ) == ['b', 'a']
+    assert ordered_unique( ['b', 'a', 'A'] ) == ['b', 'a', 'A']
+    assert ordered_unique( ['b', 'a', 'A'], case_sensitive=False ) == ['b', 'a']
 
 
 def test_remove_diacritics():
-    assert wetsuite.helpers.string.remove_diacritics( 'ol\xe9'     ) == 'ole' 
-    assert wetsuite.helpers.string.remove_diacritics( 'v\xf3\xf3r' ) == 'voor'
+    from wetsuite.helpers.strings import remove_diacritics
+
+    assert remove_diacritics( 'ol\xe9'     ) == 'ole' 
+    assert remove_diacritics( 'v\xf3\xf3r' ) == 'voor'
 
 
 def test_is_numeric():
-    assert wetsuite.helpers.string.is_numeric('2.1.') == True
-    assert wetsuite.helpers.string.is_numeric('2.1. ') == True
-    assert wetsuite.helpers.string.is_numeric(' 2.1.') == True
-    assert wetsuite.helpers.string.is_numeric('02 ') == True
-    assert wetsuite.helpers.string.is_numeric('B2 ') == False
-    assert wetsuite.helpers.string.is_numeric(' ') == False
+    from wetsuite.helpers.strings import is_numeric
+    
+    assert is_numeric('2.1.') == True
+    assert is_numeric('2.1. ') == True
+    assert is_numeric(' 2.1.') == True
+    assert is_numeric('02 ') == True
+    assert is_numeric('B2 ') == False
+    assert is_numeric(' ') == False
+
+
+def test_interpret_ordinal_nl():
+    from wetsuite.helpers.strings import interpret_ordinal_nl
+
+    assert interpret_ordinal_nl('vierde') == 4
+    assert interpret_ordinal_nl('achtiende') == 18
+    assert interpret_ordinal_nl('twee\xebntwintigste') == 22
+    assert interpret_ordinal_nl('vierendertigste') == 34
+    assert interpret_ordinal_nl('vijftigste') == 50
+    assert interpret_ordinal_nl('negenentachtigste') == 89
+
+
+def test_ordinal_nl():
+    from wetsuite.helpers.strings import ordinal_nl
+    assert ordinal_nl(4)  == 'vierde'
+    assert ordinal_nl(18) == 'achtiende'
+    assert ordinal_nl(22) == 'tweeentwintigste'
+    assert ordinal_nl(34) == 'vierendertigste'
+    assert ordinal_nl(50) == 'vijftigste'
+    assert ordinal_nl(89) == 'negenentachtigste'
