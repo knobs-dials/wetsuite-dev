@@ -18,7 +18,8 @@ from lxml.etree import ElementTree,  fromstring, tostring,   register_namespace,
 
 
 
-some_ns_prefixes = { 
+some_ns_prefixes = { # CONSIDER: renaming to something like _some_ns_prefixes_presetation_only 
+    # Web and data
     'http://www.w3.org/2000/xmlns/':'xmlns',
     'http://www.w3.org/2001/XMLSchema':'xsd',
     #'http://www.w3.org/2001/XMLSchema#':'xsd', # ?   Also, maybe avoid duplicate names? Except we are only doing this _only_ for pretty printing.
@@ -29,37 +30,49 @@ some_ns_prefixes = {
     'http://www.w3.org/1999/xhtml':'xhtml',
     'http://www.w3.org/1999/xlink':'xlink',
     'http://schema.org/':'schema',
+    'http://www.w3.org/2005/Atom':'atom',
+
+    'http://www.w3.org/2000/svg':'svg',
+    'http://www.w3.org/1998/Math/MathML':'mathml', # more usually m: or mml: but this may be clearer
+    'http://www.w3.org/2001/XInclude':'xi',
+    'http://www.w3.org/1999/XSL/Transform':'xsl', # there seem to be multiple. See also http://www.w3.org/XSL/Transform/1.0 and http://www.w3.org/TR/WD-xsl ?
+    'http://www.w3.org/2005/xpath-functions#':'xpath-fn',
+    #'http://icl.com/saxon':'saxon',
+    #'http://xml.apache.org/xslt':'xalan',
+    'http://www.w3.org/1999/XSL/Format':'fo',
+    'http://www.w3.org/2003/g/data-view#':'grddl',
+    'http://www.w3.org/2006/time#':'time',
+
+    # getting into semantic data, linked data
+    'http://purl.org/dc/terms/':'dcterms', #cf dc, see also https://stackoverflow.com/questions/47519315/what-is-the-difference-between-dublin-core-terms-and-dublin-core-elements-vocabu
+    'http://purl.org/dc/elements/1.1/':'dc',
+    'http://purl.org/cld/freq/':'freq',
 
     'http://www.w3.org/1999/02/22-rdf-syntax-ns#':'rdf',
     'http://www.w3.org/2000/01/rdf-schema':'rdfs',
     'http://www.w3.org/2000/01/rdf-schema#':'rdfs',
     'http://www.w3.org/ns/rdfa#':'rdfa',
-    'http://purl.org/dc/terms/':'dcterms', #cf dc, see also https://stackoverflow.com/questions/47519315/what-is-the-difference-between-dublin-core-terms-and-dublin-core-elements-vocabu
-    'http://purl.org/dc/elements/1.1/':'dc',
-
     'http://www.w3.org/TR/vocab-regorg/':'rov',
     'http://www.w3.org/TR/vocab-org/':'org',
     'http://www.w3.org/2004/02/skos/core#':'skos',
+    'http://www.w3.org/TR/skos-reference/':'skosref',
+    'http://www.w3.org/2008/05/skos-xl#':'skosxl',
     'http://www.w3.org/2002/07/owl#':'owl',
-    'http://ogp.me/ns#':'og',
 
-    'http://www.w3.org/2001/XInclude':'xi',
-    'http://www.w3.org/1999/XSL/Transform':'xsl', # there seem to be multiple. See also http://www.w3.org/XSL/Transform/1.0 and http://www.w3.org/TR/WD-xsl ?
-    #'http://icl.com/saxon':'saxon',
-    #'http://xml.apache.org/xslt':'xalan',
-    'http://www.w3.org/1999/XSL/Format':'fo',
-    'http://www.w3.org/2003/g/data-view#':'grddl',
-    'http://xmlns.com/foaf/0.1/':'foaf',
+    'http://rdfs.org/ns/void#':'void', # Vocabulary of Interlinked Datasets 
     'http://purl.org/rss/1.0/modules/content/':'content',
+    'http://purl.org/linked-data/version#':'version',
+    'http://www.w3.org/ns/locn':'location',
+
+    'http://xmlns.com/foaf/0.1/':'foaf',
+    'http://ogp.me/ns#':'opengraph',
     'http://rdfs.org/sioc/ns#':'sioc',
-    'http://rdfs.org/sioc/types#':'sioct',
-    'http://www.w3.org/ns/locn':'locn',
-    'http://www.w3.org/2000/svg':'svg',
+    'http://rdfs.org/sioc/types#':'sioc-types',
+    'http://purl.org/linked-data/registry#':'reg',
+    'http://www.w3.org/ns/prov#':'prov',
+    'http://purl.org/pav/':'pav',
 
-    'http://www.w3.org/2005/Atom':'atom',
-
-    'http://www.w3.org/1998/Math/MathML':'mathml', # more usually m: or mml: but this may be clearer
-
+    # Government
     'http://tuchtrecht.overheid.nl/':'tucht',
     'http://www.tweedekamer.nl/xsd/tkData/v1-0':'tk',
     'http://publications.europa.eu/celex/':'celex',
@@ -70,24 +83,41 @@ some_ns_prefixes = {
 
     'http://standaarden.overheid.nl/owms/terms/':'overheid',
     'http://standaarden.overheid.nl/owms/terms':'overheid',  # maybe 'owms' would be clearer?
-    
     'http://standaarden.overheid.nl/rijksoverheid/terms':'rijksoverheid',
     'http://standaarden.overheid.nl/inspectieloket/terms/':'inspectieloket',
-    'http://standaarden.overheid.nl/bm/terms':'overheidbm',
-   
-    'http://standaarden.overheid.nl/buza/terms/':'overheidbuza',
-    'http://standaarden.overheid.nl/oep/meta/':'overheidoep', # ?
-    'http://standaarden.overheid.nl/op/terms/':'overheidop', # ?
-    'http://standaarden.overheid.nl/vergunningen/terms/':'overheidvg',
-    'http://standaarden.overheid.nl/product/terms/':'overheidproduct',
-    'http://standaarden.overheid.nl/cvdr/terms/':'overheidrg',
-    'http://standaarden.overheid.nl/vac/terms/':'overheidvac',
+    'http://standaarden.overheid.nl/buza/terms/':'overheid-buza',
+    'http://standaarden.overheid.nl/oep/meta/':'overheid-oep', 
+    'http://standaarden.overheid.nl/op/terms/':'overheid-op', 
+    'http://standaarden.overheid.nl/vergunningen/terms/':'overheid-vg',
+    'http://standaarden.overheid.nl/product/terms/':'overheid-product',
+    'http://standaarden.overheid.nl/cvdr/terms/':'overheid-rg', # decentrale regelgeving
+    'http://standaarden.overheid.nl/vac/terms/':'overheid-vac', # ?vocabularies?
+    'http://standaarden.overheid.nl/vb/terms/':'overheid-vastgoedbeheer',
+    'http://standaarden.overheid.nl/bm/terms/':'overheid-bm',
+    'http://standaarden.overheid.nl/vergunningen/terms/':'overheid-vergunning',
 
+    'http://standaarden.overheid.nl/dcatnl/terms/':'dcatnl',
+    'http://publications.europa.eu/resource/authority/file-type/':'file-type',
+    'http://standaarden.overheid.nl/inspectieloket/terms/':'inspectieloket',
+    'http://standaarden-acc.overheid.nl/owms/oquery/':'oquery',
+
+    'https://identifier.overheid.nl/tooi/id/ministerie/':'ministerie',
+    'https://identifier.overheid.nl/tooi/def/':'tooi',
+    'https://identifier.overheid.nl/tooi/def/ont/':'tooiont',
+    'https://identifier.overheid.nl/tooi/def/thes/top/':'tooitop',
+    'https://identifier.overheid.nl/tooi/def/wl/':'tooiwl',
+
+    # unsorted
+    'http://spinrdf.org/sp#':'sparql-spin',
+    'http://proton.semanticweb.org/2005/04/protons#':'protons',
+    'http://purl.org/NET/scovo#':'scovo',  # Statistical Core Vocabulary?
+    'http://rdf4j.org/schema/rdf4j#':'rdf4j',
+    'http://www.openrdf.org/schema/sesame#':'sesame',
     'http://schemas.microsoft.com/ado/2007/08/dataservices':'ms-odata',
     'http://schemas.microsoft.com/ado/2007/08/dataservices/metadata':'ms-odata-meta',
 }
-'some readable XML prefixes for friendlier display. Purely for pretty-printing, will NOT be according to the document definition. '
-# It might be useful to find namespaces from many XML files:
+'some readable XML prefixes for friendlier display.  Purely for consistent pretty-printing in debug, will NOT be correct according to the document definition. '
+# It might be useful to find namespaces from many XML files, with something like:
 #   locate .xml | tr '\n' '\0' | xargs -0 grep -oh 'xmlns:[^ >]*'
 # with an eventual
 #   | sort | uniq -c | sort -rn
@@ -97,17 +127,19 @@ def kvelements_to_dict(under, strip_text=True, ignore_tagnames=[]):
     ''' Where people use elements for single text values, it's convenient to get them as a dict.
         
         Given an etree element containing a series of such values,
-        Returns a dict that is mostly just  { el.tag:el.text }
+        Returns a dict that is mostly just  { el.tag:el.text }  so ignores .tail
         Skips keys with empty values.
         
-        Would for example turn
+        Would for example turn an etree tree like
             <foo>
                 <identifier>BWBR0001840</identifier>
                 <title>Grondwet</title>
                 <onderwerp/>
             </foo>
-        into:
+        into python dict:
             {'identifier':'BWBR0001840', 'title':'Grondwet'}
+
+        CONSIDER an empty_as_none parameter
     '''
     ret = {}
     for ch in under:
@@ -123,18 +155,32 @@ def kvelements_to_dict(under, strip_text=True, ignore_tagnames=[]):
     return ret
 
 
-def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_tags=[], join:str=None):
+def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_tags=[], join:str=None): # , add_spaces=['extref',]
     ''' Returns all fragments of text contained in a subtree, as a list of strings.
-        
-        Note that for free-form HTML-like documents, the best choices are more contextual than we'd like, 
-          and this function does _not_ give enough  control.
-
-        strip() is what to remove
-        ignore_empty removes strings that are empty when called with strip(strip)
-
-        ignore_tags does not currently ignore the subtree, just the direct (first) content.
 
         For example,  all_text_fragments( fromstring('<a>foo<b>bar</b></a>') ) == ['foo', 'bar']
+
+        Note that this is a convenience function that lets you be pragmatic with creative HTML-like nesting,
+        and perhaps should not be used for things that are strictly data.
+        
+        strip - is what to remove at the edges of each .text and .tail (handed to strip())
+
+        ignore_empty - removes strings that are empty when after that stripping
+
+        ignore_tags - ignores direct/first .text content of named tags
+          does not ignore .tail,
+          does not ignore the subtree
+
+        TODO:
+        - add_spaces - an acknowledgment that in non-HTML, 
+            as weell as equally free-form documents like this project often handles, 
+            that element should be considered to split a word (e.g. p in HTML) or 
+            that element probably doesn't split a word (e.g. em, sup in HTML)
+
+          Here you specify the things where we add spaces (maybe prepend to .text and .tail).
+          This is creative and not necessarily correct, but on average makes fewer weird mistakes
+          TODO: figure out a decent default from the various schemas
+
 
         TODO: more tests, I'm moderately sure strip doesn't do quite what I think.
     '''
@@ -318,7 +364,10 @@ def path_count(under, max_depth=None):
           count how often each path happens (counting the complete path string).
           written to summarize the rough structure of a document.
 
-        Returns a dict from path strings to their count
+        Path here means 'the name of each element', 
+          *not* xpath-style path with indices that resolve to the specific node.
+
+        Returns a dict from each path strings to how often it occurs
     '''
     count = {}
     for node_path, n in node_walk( under, max_depth=max_depth ):
@@ -333,3 +382,18 @@ def path_count(under, max_depth=None):
 
 
 
+def debug_pretty(tree, reindent=True, strip_namespaces=True, encoding='unicode'):
+    ''' Return (piece of) tree as a string, readable for debugging
+
+        Because this is purely meant for debugging use, it by default
+        - strips namespaces
+        - reindents
+        - returns as unicode
+
+        and is mostly just short for   etree.tostring(  etree.indent( etree.strip_namespace( tree ) ), encoding='unicode' )
+    '''
+    if strip_namespaces:
+        tree = strip_namespace( tree )
+    if reindent:
+        tree = indent( tree )
+    return tostring( tree, encoding=encoding )
