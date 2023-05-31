@@ -1,7 +1,8 @@
 import pytest
 
+
 def test_parse_jci():
-    from wetsuite.datacollect.meta import parse_jci
+    from wetsuite.helpers.meta import parse_jci
 
     d = parse_jci('jci1.31:c:BWBR0012345&g=2005-01-01&artikel=3.1')
     assert d['version']           == '1.31'
@@ -19,12 +20,19 @@ def test_parse_jci():
     assert d['params']['lid']     == ['1','2']
 
     with pytest.raises(ValueError, match=r'.*does not look like a valid jci.*'):
-        d = parse_jci('FIIISH')
+        d = parse_jci('FIIIISH!')
 
+
+def test_findall_ecli():
+    from wetsuite.helpers.meta import findall_ecli
+
+    assert findall_ecli(' gepubliceerd op uitspraken.rechtspraak.nl/inziendocument?id=ECLI:NL:RBDHA:2016:4235. ',True) == ['ECLI:NL:RBDHA:2016:4235']
+
+    assert findall_ecli(' gepubliceerd op uitspraken.rechtspraak.nl/inziendocument?id=ECLI:NL:RBDHA:2016:4235. ',False) == ['ECLI:NL:RBDHA:2016:4235.']
 
 
 def test_parse_celex():
-    from wetsuite.datacollect.meta import parse_celex
+    from wetsuite.helpers.meta import parse_celex
 
     # test that these don't throw errors
     parse_celex( '32016R0679' )
@@ -54,7 +62,7 @@ def test_parse_celex():
 
 
 def test_equivalent_celex():
-    from wetsuite.datacollect.meta import equivalent_celex
+    from wetsuite.helpers.meta import equivalent_celex
 
     assert equivalent_celex('CELEX:32012L0019', '32012L0019') == True
     assert equivalent_celex('02016R0679-20160504', '32016R0679') == True
