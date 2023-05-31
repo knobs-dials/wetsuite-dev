@@ -9,18 +9,16 @@ from wetsuite.helpers.notebook import is_interactive
 
 
 
-def download( url:str, tofile_path:str = None, show_progress:bool=None, chunk_size=131072):
-    ''' if tofile is not None, we stream-save to that file path, by name  (and return None)
-           tofile is None      we return the data as a bytes object (which means we kept it in RAM, which may not be wise for huge downloads) 
+def download( url:str, tofile_path:str = None, show_progress:bool=None, chunk_size=131072 ):
+    ''' Wrapper around requests.get() with some optional extras.
 
+        One of them is the option to stream-download to filesystem:     
+         if tofile is not None, we stream-save to that file path, by name  (and return None)
+            tofile is None      we return the data as a bytes object (which means we kept it in RAM, which may not be wise for huge downloads) 
         uses requests's stream=True, which seems chunked HTTP transfer, or just a TCP window? TOCHECK
 
-
-        show_progress: whether to print/show output. The default, none, means we try to determine whether we are in interactive context.
+        show_progress: whether to print/show output while downloading.
     '''
-    if show_progress is None:
-        show_progress = is_interactive()
-
     if tofile_path is not None:
         f = open(tofile_path,'wb')
         def handle_chunk(data):
