@@ -26,6 +26,29 @@ def hash(data: bytes):
     return s1h.hexdigest()
 
 
+def wetsuite_dir():
+    ''' Returns two directories: 
+        - a directory in the user profile we can store things
+        - a directory inside the first that that to put dataset files in
+        TODO: more checking, so we can give clearer errors
+    '''
+    ### Figure out a path we can store data
+    # (assumes we can access our own homedir)
+
+    ## check directory
+    home_dir = os.path.expanduser("~") # this works under windows, but it might be worth it to specifcally give a dir under %USERPROFILE%\AppData\Roaming
+                                       # (how do we resolve that?) Pick up USERPROFILE from os.environ or is there a better way?
+    wetsuite_dir = os.path.join( home_dir,     '.wetsuite' )
+    datasets_dir = os.path.join( wetsuite_dir, 'datasets' )
+    if not os.path.exists( datasets_dir ):
+        os.makedirs( datasets_dir )
+
+    if not os.access(wetsuite_dir, os.W_OK):
+        raise OSError("We cannot write to our local store, %r"%data_dir)
+    if not os.access(datasets_dir, os.W_OK):
+        raise OSError("We cannot write to our local store of datasets, %r"%data_dir)
+    return wetsuite_dir, datasets_dir
+
 
 
 class Dataset:
@@ -55,7 +78,6 @@ class Dataset:
         return '<wetsuite.datasets.Dataset name=%r num_items=%r>'%(self.name, self.num_items)
 
 
-
 def load(dataset_name: str, verbose=None, force_refetch=False):
     ''' Takes a dataset name,
         - downloads it if necessary - after the first time it's cached in your home directory
@@ -80,17 +102,7 @@ def load(dataset_name: str, verbose=None, force_refetch=False):
     if dataset_name not in _index:
         raise ValueError("Do not know dataset name %r"%dataset_name)
 
-    ### Figure out where the dataset is stored, or should be
-    ## check directory
-    home_dir = os.path.expanduser("~")
-    data_dir = os.path.join( home_dir, '.wetsuite', 'datasets' )
-
-    if not os.path.exists( data_dir ): 
-        os.makedirs( data_dir )
-
-    if not os.access(data_dir, os.W_OK):
-        raise OSError("We cannot write to our data directory, %r"%data_dir)
-    # TODO: more permission checking, so we could give clearer errors
+    _, data_dir = wetsuite_dir()
 
 
     ## figure out path in that directory
@@ -111,6 +123,8 @@ def load(dataset_name: str, verbose=None, force_refetch=False):
 
         # download it to that temporary filename
         wetsuite.helpers.net.download( data_url, tofile_path=tmp_path, show_progress=verbose)
+
+        # TODO: detect arrow (file magic: b'ARROW1')
 
         ## if it was compressed, decompress it in the cache - as part of the download, not the load
         # compressed into its fina place.   There is a race condition in multiple loads() of the same thing. CONSIDER: fixing that via a second temporary file
