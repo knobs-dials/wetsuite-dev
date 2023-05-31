@@ -61,7 +61,7 @@ class SRUBase(object):
             - if readable==True (default), it will ease human readability:
                 - strips namespaces
                 - reindent 
-            The XML is a unicode string (for consistency with ourselves)
+            The XML is a unicode string (for consistency with other parts of this codebase)
         '''
         url = self._url() 
         url += '&operation=explain'
@@ -77,8 +77,9 @@ class SRUBase(object):
 
 
     def explain_parsed(self):
-        ''' Does an explain operation
-            Returns a dict with some of the more interesting details
+        ''' Does an explain operation,
+            Returns a dict with some of the more interesting details.
+            
             TODO: actually read the standard instead of assuming things.
         '''
         url = self._url() 
@@ -93,7 +94,6 @@ class SRUBase(object):
         r = requests.get( url )
         tree = wetsuite.helpers.etree.fromstring( r.content )
         tree = wetsuite.helpers.etree.strip_namespace(tree) # easier without namespaces
-        #tree = wetsuite.helpers.etree.indent(tree) # debug
 
         explain = tree.find('record/recordData/explain')
 
@@ -151,19 +151,20 @@ class SRUBase(object):
 
 
     def num_records(self):
-        ''' 
-        After you do a search_retrieve, this should be set to a number.
-        
-        This function may change.
+        ''' After you do a search_retrieve, this should be set to a number.
+            
+            This function may change.
         '''
+        if self.numberOfRecords is None:
+            raise ValueError("num_records is not filled in before you do a search")
         return self.numberOfRecords
 
 
     def search_retrieve(self, query:str, start_record=None, maximum_records=None, callback=None, verbose=False):
         ''' Fetches a range of results for a particular query. 
-            
             Returns each result record as a separate ElementTree object.
-            Exactly what this contains varies per repo, but you may well _want_ this raw because it can contain metadata not easily fetched from the results themselves.
+
+            Exactly what record contains varies per repo, but you may well _want_ this raw because it can contain metadata not easily fetched from the results themselves.
 
             You mat want to fish out the number of results (TODO: make that easier)
             
@@ -241,22 +242,23 @@ class SRUBase(object):
 
 
     def search_retrieve_many(self, query:str, at_a_time:int=10, start_record:int=1, up_to:int=250, callback=None, wait_between_sec:float=0.5, verbose=False):
-        ''' While search_retrieve() could be used directly to e.g. see if there are results at all,
-            it is really a helpfer for this funtion, which adds "fetch all results in chunks",
-            by calling search_retrieve repeatedly.
+        ''' This function builds on search_retrieve() to "fetch _many_ results results in chunks", by calling search_retrieve() repeatedly.
+            (search_retrieve() will have a limit on how many to search at once, though is still useful to see e.g. if there are results at all)
 
-            Like search_retrueve, it (eventually) returns each result record as an elementTree objects,
-            and if callback is not None, it is called on each of those.
-            This can be more convenient way of dealing with many results while they come in,
+            Like search_retrieve, it (eventually) returns each result record as an elementTree objects,
+               (this can be more convenient if you an to handle the results as a whole)
+            and if callback is not None, this will be called on each result _during_ the fetching process.
+               (this can be more convenient way of dealing with many results while they come in)
 
             Notes:
-            - up_to is the absolute offset, e.g. start_offset=200, up_to=250 gives you records 200..250, not 200..450
+            - up_to  is the absolute offset, e.g. start_offset=200,up_to=250 gives you records 200..250,  not 200..450
 
-            - since we fetch in chunks, we may fetch more records than you asked for, by up to at_a_time amount of entries. We could be slightly nicer about that.
-
-            - wait_between_sec is a backoff sleeps between each search chunk, to avoid hammering a server too much. 
+            - wait_between_sec  is a backoff sleeps between each search chunk, to avoid hammering a server too much. 
               you can lower this where you know this is overly cautious
               note that we skip this sleep if one fetch was enough
+
+            - since we fetch in chunks, we may overshoot in the last fetch, by up to at_a_time amount of entries
+              The code should avoid returning those.
 
             CONSIDER: 
             - maybe yield something including numberOfRecords before yielding results?
