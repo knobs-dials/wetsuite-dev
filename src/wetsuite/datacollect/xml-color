@@ -94,10 +94,10 @@ if __name__ == '__main__':
         tree = etree.fromstring(  open(filename,'rb').read()  )
         
         if not args.show_namespaces:
-            etree.strip_namespace_inplace(tree)
+            tree = etree.strip_namespace(tree)
         
         if args.pretty:
-            etree.indent_inplace(tree)
+            tree = etree.indent(tree)
 
         print( color_print( tree, show_attribs=args.show_attribs ) )
 

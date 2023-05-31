@@ -18,7 +18,7 @@ if __name__ == '__main__':
         tree = wetsuite.helpers.etree.fromstring(  open(filename,'rb').read()  )
 
         if not args.keep_namespaces:      
-            wetsuite.helpers.etree.strip_namespace_inplace(tree)
+            tree = wetsuite.helpers.etree.strip_namespace(tree)
 
         if args.under is not None:
             start = tree.find( args.under ) # maybe findall makes more sense?

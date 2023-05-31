@@ -1,11 +1,10 @@
 #!/usr/bin/python3
-'''
-    Walks through XML and outputs all text node contents.
+''' Walks through XML and outputs all text node contents.
 
     Quick and dirty way to get some text from relatively-plain-document XML, 
     when you do not yet have code specific to the schema.
 '''
-import sys, collections, argparse
+import collections, argparse
 from wetsuite.helpers import etree
 
 if __name__ == '__main__':
@@ -18,7 +17,7 @@ if __name__ == '__main__':
         count = collections.defaultdict( int )
         tree = etree.fromstring(  open(filename,'rb').read()  )
         
-        etree.strip_namespace_inplace(tree)
+        tree = etree.strip_namespace(tree)
 
         under = args.under    # e.g. 'wetgeving/wet-besluit/wettekst'
 
