@@ -1,5 +1,7 @@
 
 # Do tests.   Also calculate amount of test coverage, and wrangle that percentage into a file.
 
-pytest-3 --cov=wetsuite tests/ | tee >(cat >&2) | grep TOTAL | tr -s ' ' ' ' | cut -d ' ' -f 4   > coverage.txt
+pytest-3 --cov=wetsuite | tee >(cat >&2) | grep TOTAL | tr -s ' ' ' ' | cut -d ' ' -f 4   > coverage.txt
+# --cov-report html:coverage-report tests/
+
 
