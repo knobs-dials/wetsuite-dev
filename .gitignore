@@ -3,3 +3,16 @@ __pycache__/
 *~
 src/wetsuite/coverage.txt
 src/wetsuite/datacollect/db.sql
+src/wetsuite/datacollect/tweedekamer_nl/*.xml
+src/wetsuite/datacollect/tweedekamer_nl/*.json
+src/wetsuite/tests/coverage.txt
+src/wetsuite/unsorted/*.txt
+src/wetsuite/unsorted/spacy-bench/cpu/results.*
+examples/*.json
+src/wetsuite/datacollect/*.json
+src/wetsuite/unsorted/pilots/*.csv
+src/wetsuite/datacollect/*.bz2
+src/wetsuite/unsorted/pilots/
+src/wetsuite/unsorted/spacy-bench/
+src/wetsuite/unsorted/spacy-bench/
+src/wetsuite/unsorted/wordlist.terms
