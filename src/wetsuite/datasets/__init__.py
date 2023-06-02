@@ -27,27 +27,39 @@ def hash(data: bytes):
 
 
 def wetsuite_dir():
-    ''' Returns two directories: 
-        - a directory in the user profile we can store things
-        - a directory inside the first that that to put dataset files in
+    ''' Figure out where we can store data.
+    
+        Returns a dict mentioning directories:
+          wetsuite_dir: a directory in the user profile we can store things
+          datasets_dir: a directory inside wetsuite_dir first that datasets.load() will put dataset files in
+          stores_dir:   a directory inside wetsuite_dir that localdata.open_store will put sqlite files in
+
         TODO: more checking, so we can give clearer errors
     '''
-    ### Figure out a path we can store data
-    # (assumes we can access our own homedir)
+    ret = {}
 
-    ## check directory
     home_dir = os.path.expanduser("~") # this works under windows, but it might be worth it to specifcally give a dir under %USERPROFILE%\AppData\Roaming
                                        # (how do we resolve that?) Pick up USERPROFILE from os.environ or is there a better way?
-    wetsuite_dir = os.path.join( home_dir,     '.wetsuite' )
-    datasets_dir = os.path.join( wetsuite_dir, 'datasets' )
-    if not os.path.exists( datasets_dir ):
-        os.makedirs( datasets_dir )
 
-    if not os.access(wetsuite_dir, os.W_OK):
-        raise OSError("We cannot write to our local store, %r"%data_dir)
-    if not os.access(datasets_dir, os.W_OK):
-        raise OSError("We cannot write to our local store of datasets, %r"%data_dir)
-    return wetsuite_dir, datasets_dir
+    ret['wetsuite_dir'] = os.path.join( home_dir, '.wetsuite' )
+    if not os.path.exists( ret['wetsuite_dir'] ):
+        os.makedirs( ret['wetsuite_dir'] )
+    if not os.access(ret['wetsuite_dir'], os.W_OK):
+        raise OSError("We cannot write to our local directory, %r"%ret['wetsuite_dir'])
+
+    ret['datasets_dir'] = os.path.join( ret['wetsuite_dir'], 'datasets' )
+    if not os.path.exists( ret['datasets_dir'] ):
+        os.makedirs( ret['datasets_dir'] )
+    if not os.access(ret['datasets_dir'], os.W_OK):
+        raise OSError("We cannot write to our local directory of datasets, %r"%ret['datasets_dir'])
+
+    ret['stores_dir'] = os.path.join( ret['wetsuite_dir'], 'stores' )
+    if not os.path.exists( ret['stores_dir' ] ):
+        os.makedirs( ret['stores_dir'] )
+    if not os.access(ret['stores_dir'], os.W_OK):
+        raise OSError("We cannot write to our local directory of datasets, %r"%ret['stores_dir'])
+    
+    return ret
 
 
 
