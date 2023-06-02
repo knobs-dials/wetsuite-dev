@@ -71,7 +71,6 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
         # Note: curs.execute its the regular DB-API way,  conn.execute is a shorthand  and gets a cursor temporarily
         self.conn.execute("PRAGMA auto_vacuum = INCREMENTAL") # TODO: see that that works
         if first:
-            print( "creating database %r"%self.path)
             self.conn.execute("CREATE TABLE IF NOT EXISTS kv (key text unique NOT NULL, value text)")
         self.conn.commit()
 
