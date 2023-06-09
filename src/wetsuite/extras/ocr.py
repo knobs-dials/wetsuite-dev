@@ -119,7 +119,7 @@ def bbox_width(bbox):
 
 
 def bbox_xy_extent(bbox):
-    ' returns min(x), max(x), min(y), max(y) for a single bounding box '
+    ' returns (min(x), max(x), min(y), max(y)) for a single bounding box '
     xs, ys = [], []
     for x,y in bbox:
         xs.append(x)

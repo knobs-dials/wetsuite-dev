@@ -15,13 +15,12 @@ from typing import List
 import matplotlib 
 matplotlib.use('Agg') 
 
-
 import wordcloud  #  if not installed, do  pip3 install wordcloud
                   # note that it draws in matplotlib, numpy, and PIL
 
 
-# wordcloud loads some english stopwords implicitly.
-# The function below requires you to be more explicit, in which case some prepared lists are handy:
+# the wordcloud module loads some english stopwords by default.
+# The functions added below requires you to be more explicit, in which case some prepared lists are handy:
 stopwords_en = [ # wordcloud.STOPWORDS loads:
     "a", "about", "above", "after", "again", "against", "all", "also", "am", "an", "and", "any", 
     "are", "aren't", "as", "at", "be", "because", "been", "before", "being", "below", "between", 
@@ -50,13 +49,9 @@ stopwords_nl = (
 
 
 def wordcloud_from_freqs(freqs: dict, width:int=1800, height:int=800, background_color='white', min_font_size=10, **kwargs):
-    ''' The most central function.
-    
-        Takes a {string: count} dict
-          probably from one of the helper functions),
-          and assumed to be filtered nicely already
+    ''' Takes a {string: count} dict, returns a PIL image.
 
-        Returns a PIL image.
+        That string:count ought to be cleaned up, so you probably want to use one of the count_ helper functions.
     '''
     wco = wordcloud.WordCloud( width=width,  height=height,  background_color=background_color,  min_font_size=min_font_size, **kwargs )
     im = wco.generate_from_frequencies( freqs )
@@ -65,7 +60,7 @@ def wordcloud_from_freqs(freqs: dict, width:int=1800, height:int=800, background
 
 
 def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  normalize_func=None, stopwords=[])  ->  dict:
-    ''' Takes a list of strings,  returns a { string: count } dict.
+    ''' Takes text that is already tokenized into a list of strings,  returns a { string: count } dict.
 
         ...with some extra processing.
 
@@ -131,40 +126,42 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
 
 
 def count_case_insensitive(strings: List[str],  min_count=1,  min_word_length=0,  stopwords=[])  ->  dict:
-    ''' Takes a list of strings,  returns a { string: count } dict.
-
-        Specifically: calls count_normalized()  with  normalize_func=lambda s:s.lower() 
+    ''' Calls count_normalized()  with  normalize_func=lambda s:s.lower() 
           which means it is case insensitive in counting strings, but it reports the most common capitalisation.
 
-        Giving a function to such a singular use is almost pointless, yet this seems like a common case and saves some typing.
+        Explicitly writing a function for such singular use is almost pointless, yet this seems like a common case and saves some typing.
     '''
     return count_normalized( strings, min_count=min_count, min_word_length=min_word_length, normalize_func=lambda s:s.lower(), stopwords=stopwords )
 
 
 
-def freqs_from_spacy_document(doc_or_sequence_of_docs, remove_stop=True, restrict_to_tags=('NOUN', 'PROPN', 'ADJ', 'ADV', 'VERB'), weigh_deps={'nsubj':5, 'obj':3} ) -> dict:
-    ''' Returns a string->count dict 
-        Tries to to be smarter about selecting useful words 
+def count_from_spacy_document(doc_or_sequence_of_docs, remove_stop=True, restrict_to_tags=('NOUN', 'PROPN', 'ADJ', 'ADV', 'VERB'), 
+                              add_ents=True, add_ncs=True,
+                              weigh_deps={'nsubj':5, 'obj':3} ) -> dict:
+    ''' Takes a spacy document, returns a string->count dict 
+        
+        Does a lot of fairly specific things (a bit too specific to smush into one function, really)
+          to be smart about removing low-content words, and focusing on terms.
+        
+        - restrict_to_tags  removes if not in this POS list - which defaults to nouns, adjectives, adverbs, and verbs (and removes a lot of fillter words)
+        - remove_stop removes according to Token.is_stop
 
-        remove_stop removes according to Token.is_stop
-        restrict_to_tags  removes if not in this POS list
+        - add_ents   - whether to add phrases from Doc.ents
+        - add_ncs    - whether to add phrases from Doc.noun_chunks
 
-        add_ents   - whether to add phrases from Doc.ents
-        add_ncs    - whether to add phrases from Doc.noun_chunks
-        weigh_deps - exists to weigh things words/ent/ncs stronger when they are/involve the sentence's subject or object
+        - weigh_deps - exists to weigh words/ent/ncs stronger when they are/involve the sentence's subject or object
 
         CONSIDER: make this a filter instead, so we can feed the result to count_normalized()
         CONSIDER: whether half of that can be part of some topic-modeling filtering.  And how filters might work around spacy.
     '''
     counts = collections.defaultdict(int)
 
-    if isinstance(doc_or_sequence_of_docs, collections.Sequence):
+    if isinstance(doc_or_sequence_of_docs, collections.Sequence): # that seems slightly more general than type in (tuple, list)
         things = doc_or_sequence_of_docs
     else:
         things = [doc_or_sequence_of_docs]
 
     for thing in things:
-
         for token in thing:
             if remove_stop and token.is_stop:
                 #print( "SKIP %r - is stopword"%token.text)
@@ -184,13 +181,13 @@ def freqs_from_spacy_document(doc_or_sequence_of_docs, remove_stop=True, restric
             else:
                 counts[ token.text ] += 1
         
-        if hasattr(thing, 'ents'): # TODO: tests
+        if add_ents  and  hasattr(thing, 'ents'): # TODO: tests
             for ent in  thing.ents:
                 #print( "ENT %s"%ent.text )
                 counts[ ent.text ] += 2
             # TODO: involve weigh_deps
 
-        if hasattr(thing, 'noun_chunks'): # TODO: tests
+        if add_ncs  and  hasattr(thing, 'noun_chunks'): # TODO: tests
             for nc in thing.noun_chunks:
                 #print( "NC %s"%nc.text )
                 counts[ nc.text ] += 2
