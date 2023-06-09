@@ -18,6 +18,8 @@ def download( url:str, tofile_path:str = None, show_progress:bool=None, chunk_si
         uses requests's stream=True, which seems chunked HTTP transfer, or just a TCP window? TOCHECK
 
         show_progress: whether to print/show output while downloading.
+
+        if the HTTP response code is >=400 (actually if !response.ok, see requests's documentation), we raise a ValueError, 
     '''
     if tofile_path is not None:
         f = open(tofile_path,'wb')
@@ -39,11 +41,13 @@ def download( url:str, tofile_path:str = None, show_progress:bool=None, chunk_si
             )
         return "\rDownloaded %8sB  %s"%(wetsuite.helpers.format.kmgtp( fetched, kilo=1024 ), bar)
 
-    response = requests.get(url, stream=True) # TODO: 
+    response = requests.get(url, stream=True,
+                            headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'}
+                            )
     total_length = response.headers.get('content-length')
 
     if not response.ok:
-        raise ValueError( response.status_code )
+        raise ValueError( str(response.status_code) )
 
     if total_length is not None: 
         total_length = int(total_length)
