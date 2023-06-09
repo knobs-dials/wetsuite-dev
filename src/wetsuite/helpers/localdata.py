@@ -1,13 +1,15 @@
 '''
     This is intended to provide a way to store collections of data on disk, in a in key-value store way.
-    See the docstring on the LocalKV class for more.
+    See the docstring on the LocalKV class for more details.
 
     How to use
-    - This module contain a global, docstore
-        OR 
     - You can create your own specific stores by doing something like:
-        mystore_path = os.path.join( wetsuite.datasets.wetsuite_dir()[0], 'docstore.db')
+        mystore_path = os.path.join( 'project_data', 'docstore.db')
         mystore = LocalKV( mystore_path )
+    OR
+    - use open_store( 'docstore.db' ), which places it in the wetsuite directory in your homedir
+      which should make it easier to always open the same thing without having to think about absolute paths 
+
     
     Notes:
     - Using an absolute, repeatable path like that is recommended 
@@ -45,10 +47,9 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
             db['foo'] = 'bar'
             db['foo']
 
-        As per basic sqlite behaviour multiple processes can read the same database,
-        but only one can write, and currently when you do any other readers would bork out on the fact it's locked (CONSIDER: having it retry).
-
-        CONSIDER: add expiry
+        As per basic sqlite behaviour, multiple processes can read the same database,
+        but only one can write, and when you leave a writer with uncommited data for any amount of time,
+        readers are likely to bork out on the fact it's locked (CONSIDER: have it retry / longer).
     '''
     def __init__(self, path, key_type=str, value_type=str):
         ''' Specify the path to the database file to open. 
@@ -58,10 +59,10 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
             You may like to use open_store() to have our code place it in the same place.
         '''
         self.path = path
-        self._in_transaction = False
         self._open()
         self.key_type = key_type
         self.value_type = value_type
+        self._in_transaction = False
 
 
     def _open(self):
@@ -86,6 +87,7 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
 
 
     def get(self, key):
+        ' gets value for key '
         self._checktype_key(key)
         with self.conn: # context manager for a commit
             curs = self.conn.cursor()
@@ -98,7 +100,12 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
 
 
     def put(self, key, value, commit=True):
-        ''' Note that if you use commit=False, we '''
+        ''' Sets a value for a key.
+            Types will be checked according to what you inited this class with.
+            
+            commit=False lets us do bulk commits, mostly when you want to a load of small changes without becoming IOPS bound.
+            If you care less about speed, and/or more about parallel access, you can ignore this.
+        '''
         self._checktype_key(key)
         self._checktype_value(value)
 
@@ -113,9 +120,9 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
 
 
     def delete(self, key, commit=True):
-        ''' delete item by key 
+        ''' delete item by key.
 
-            You should not expect the file to shrink until you also do a vacuum(), which will need to rewrite the file.
+            You should not expect the file to shrink until you do a vacuum()  (which will need to rewrite the file).
         '''
         self._checktype_key(key)
         curs = self.conn.cursor() # TODO: check that's correct when commit==False
@@ -134,7 +141,11 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
 
 
     def vacuum(self):
-        ''' After a lot of deletes you could compact the store with vacuum() - but note this rewrite the file so the more data you store, the longer this takes '''
+        ''' After a lot of deletes you could compact the store with vacuum() - but note this rewrite the file so the more data you store, the longer this takes 
+            Note that if we were left in a transaction (due to commit=False), ths is commit()ed first. 
+        '''
+        if self._in_transaction:
+            self.commit()
         self.conn.execute('vacuum')
     
 
@@ -224,9 +235,10 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
 
 
 def open_store(dbname, key_type=str, value_type=str):
-    ''' Returns a LocalKV, stored under the local directory wetsuite picks to store things in.
-        Give this a relative filename, e.g. 
+    ''' Opens a LocalKV in the local wetsuite directory, 
+        mostly so that you don't have to think about handing in a reproducable absolute path yourself, e.g.
           docs = open_store('docstore.db')
+        will open the same store regardless of the directory the interpreter is currently considered to be in.
     '''
     if os.sep in dbname:
         raise ValueError('This function is meant to within the wetsuite directory. If you want to use an absolute path, you can instantiate LocalKV directly.')
@@ -241,17 +253,21 @@ def open_store(dbname, key_type=str, value_type=str):
 
 
 def list_stores():
-    ''' List all files in the directories that open_store() put things in '''
+    ''' List all files in the directories that open_store() put things in 
+        CONSIDER: filter for things that actually look like stores (with basic file magic test)
+    '''
     dirs = wetsuite.datasets.wetsuite_dir()
     stores_dir = dirs['stores_dir']
-    # CONSIDER: filter for actually openable files, with basic file magic test?
     return os.listdir( stores_dir )
 
 
 def cached_fetch(store, url):
-    ''' Lets you use a LocalKV (str:bytes) to cache URL fetches
+    ''' Lets you use a str-to-bytes LocalKV to cache URL fetches
         Is little more than 'if URL is a key in the store, return its value. 
-                             if not,                       do wetsuite.helpers.net.download(url), store in store, and return.
+                             if URL not in store, do wetsuite.helpers.net.download(url), store in store, and return its value
+
+        May raise whatever requests may range, and counts on the wetsuite.helpers.net.download() behaviour to raise a ValueError
+          (when !response.ok, if the HTTP code is >=400)  to force us to deal with issues and not store error pages.
     '''
     import wetsuite.helpers.net
     if store.key_type is not str  or  store.value_type is not bytes:
@@ -259,10 +275,12 @@ def cached_fetch(store, url):
 
     ret = store.get(url)
     if ret is not None: # return cached version
+        #print("CACHED")
         return ret
     else: # fetch and cache
         data = wetsuite.helpers.net.download( url ) 
-        print( type(data) )
+        #print("FETCHED")
+        #print( type(data) )
         store.put( url, data )
         return data
 
