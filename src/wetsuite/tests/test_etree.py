@@ -24,6 +24,7 @@ def test_strip():
 
 
 def test_attribute_stripping():
+    ' test that namespaces are aolso stripped from attribute names '
     with_attr = fromstring( '<a xmlns:pre="foo"> <b pre:at="tr"/> </a>' )
     _strip_namespace_inplace( with_attr ) 
     assert tostring(with_attr) == b'<a> <b at="tr"/> </a>'  
@@ -34,7 +35,10 @@ def test_comment_robustness():
     _strip_namespace_inplace( fromstring('<a> <b /><!--comment--> </a>') )
 
 
-def test_processing_instruction_robustness(): # note: apparently an initial <?xml doesn't count as a processing expression
+def test_processing_instruction_robustness():
+    ''' test that we do not trip over processing instructions 
+        note: apparently an initial <?xml doesn't count as a processing expression
+    '''
     _strip_namespace_inplace( fromstring(b'<a><?xml-stylesheet type="text/xsl" href="style.xsl"?></a>') ) 
 
 
