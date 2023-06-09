@@ -102,6 +102,73 @@ def TEMPORARILY_DISABLED_test_multiread_and_locking( tmp_path ):
     kv6.items()
 
 
+
+
+
+def test_thread( tmp_path ):
+    ''' See whether (with the default autocommit behaviour) access is concurrentm
+        and not overly eager to time-and-error out - basically see if the layer we added forgot something.    
+    '''
+    import time, threading, logging
+    # It seems threads may share the module, but not connections
+    # https://docs.python.org/3/library/sqlite3.html#sqlite3.threadsafety
+    path = tmp_path / 'test_thr.db'
+
+    def get_sqlite3_thread_safety(): # https://ricardoanderegg.com/posts/python-sqlite-thread-safety/
+        " the sqlite module's threadsafety module is hardcoded for now, asking the library is more accurate "
+        import sqlite3
+        conn = sqlite3.connect(":memory:")
+        threadsafe_val = conn.execute( "SELECT *  FROM pragma_compile_options  WHERE compile_options LIKE 'THREADSAFE=%'" ).fetchone()[0]
+        conn.close()
+        threadsafe_val = int(threadsafe_val.split("=")[1])
+        return {0:0, 2:1, 1:3}[threadsafe_val] #sqlite's THREADSAFE values to DBAPI2 values
+
+
+    if get_sqlite3_thread_safety() in (1,3): # in both you can share the module, but only in 3 could you share a connection
+        start = time.time()
+        end = start + 10
+
+        def writer(end, path):
+            myid = threading.get_ident()%10000
+            mycount = 0
+            while time.time() < end:
+                mykv = wetsuite.helpers.localdata.LocalKV( path )
+                mykv.put( '%s_%s'%(myid, mycount), '01234567890'*500)
+                mycount+=1
+                #time.sleep(0.01) # it seems that without this it wil
+                #mykv.close()
+
+        #mykv = wetsuite.helpers.localdata.LocalKV( path )
+        #time.sleep(0.1)
+        # also leave this open as reader, why not
+
+        started = []
+        #writer(end, path)
+        for _ in range(10): # it seems to take a few dozen concurrent writers (on an SSD, that's probably relevant) to make it time itself out.
+            th = threading.Thread(target=writer, args=(end, path))
+            th.start()
+            started.append( th )
+            #time.sleep(0.1)
+
+        while time.time() < end: # main thread watches what the others are managing to do
+            #logging.warning( ' FILESIZE   '+str(os.stat(path).st_size) )
+            mykv = wetsuite.helpers.localdata.LocalKV( path )
+            #logging.warning( ' AMTO     '+str(len(mykv)) )
+            #logging.warning('%s'%mykv.keys())
+            mykv.close()
+            time.sleep(0.5)
+
+        for th in started:
+            th.join()
+
+    else: # thread-safety is 0
+        raise EnvironmentError('SQLite is compiled single-threaded, we can be fairly sure it  would fail')
+
+
+
+
+
+
 def test_vacuum( tmp_path ):
     # test that vacuum actually reduces file size
     path = tmp_path / 'test1.db'
