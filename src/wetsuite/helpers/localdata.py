@@ -25,7 +25,8 @@ import os
 
 import sqlite3
 
-import wetsuite.datasets
+import wetsuite.datasets     # to get wetsuite_dir
+import wetsuite.helpers.net
 
 
 class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
@@ -159,6 +160,7 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
         ret = self.get(key)
         if ret is None:
             raise KeyError()
+        return ret
         
     #def has_key(self, key)
     #    return self.get(key) is not None
@@ -261,7 +263,7 @@ def list_stores():
     return os.listdir( stores_dir )
 
 
-def cached_fetch(store, url):
+def cached_fetch(store, url, force_refetch=False):
     ''' Lets you use a str-to-bytes LocalKV to cache URL fetches
         Is little more than 'if URL is a key in the store, return its value. 
                              if URL not in store, do wetsuite.helpers.net.download(url), store in store, and return its value
@@ -269,9 +271,9 @@ def cached_fetch(store, url):
         May raise whatever requests may range, and counts on the wetsuite.helpers.net.download() behaviour to raise a ValueError
           (when !response.ok, if the HTTP code is >=400)  to force us to deal with issues and not store error pages.
     '''
-    import wetsuite.helpers.net
-    if store.key_type is not str  or  store.value_type is not bytes:
-        raise TypeError('cached_fetch() expects a str:bytes store, not a %r:%r'%(store.key_type.__name__, store.value_type.__name__))
+    if force_refetch == False:
+        if store.key_type is not str  or  store.value_type is not bytes:
+            raise TypeError('cached_fetch() expects a str:bytes store, not a %r:%r'%(store.key_type.__name__, store.value_type.__name__))
 
     ret = store.get(url)
     if ret is not None: # return cached version
