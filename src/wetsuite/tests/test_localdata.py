@@ -4,7 +4,7 @@ import wetsuite.helpers.localdata
 
 
 def test_crud():
-    kv = wetsuite.helpers.localdata.LocalKV(':memory:')
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', key_type=str, value_type=str)
 
     # dict-like
     with pytest.raises(KeyError):
@@ -21,7 +21,7 @@ def test_crud():
 
 
 def test_moreapi():
-    kv = wetsuite.helpers.localdata.LocalKV(':memory:') 
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str) 
     kv['a'] = 'b'
     kv['c'] = 'd'
     assert kv.keys()             == ['a', 'c']
@@ -36,7 +36,7 @@ def test_moreapi():
 
 def test_type():
     # default str:str
-    kv = wetsuite.helpers.localdata.LocalKV(':memory:')
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
     kv.put('1','2')
     with pytest.raises(TypeError, match=r'.*are allowed*'):
         kv.put(1,'2')
@@ -44,7 +44,7 @@ def test_type():
         kv.put('1',2)
 
     # str:bytes
-    kv = wetsuite.helpers.localdata.LocalKV(':memory:', value_type=bytes)
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, bytes)
     kv.put('a',b'b')
     with pytest.raises(TypeError, match=r'.*are allowed*'):
         kv.put('a','s')
@@ -62,10 +62,10 @@ def TEMPORARILY_DISABLED_test_multiread_and_locking( tmp_path ):
     # test that both see the same data
     #   even if one was opened later
     path = tmp_path / 'test1.db'
-    kv1 = wetsuite.helpers.localdata.LocalKV( path )
+    kv1 = wetsuite.helpers.localdata.LocalKV( path, str, str )
     kv1.put('a','b')
 
-    kv2 = wetsuite.helpers.localdata.LocalKV( path )
+    kv2 = wetsuite.helpers.localdata.LocalKV( path, str, str )
     kv1.put('c','d')
 
     assert kv1.items() == kv2.items()
@@ -75,30 +75,30 @@ def TEMPORARILY_DISABLED_test_multiread_and_locking( tmp_path ):
     # test that not committing leaves the database locked and other opens would fail   (defined sqlite3 behaviour)
     kv1.put('e','f', commit=False) # this would keep the database locked until 
     with pytest.raises(sqlite3.OperationalError, match=r'.*database is locked*'): # note this will take the default 5 secs to time out ()
-        kv3 = wetsuite.helpers.localdata.LocalKV( path )
+        kv3 = wetsuite.helpers.localdata.LocalKV( path, str, str )
         kv3.items()
 
     # check that commit does fix that
     kv1.commit()
-    kv4 = wetsuite.helpers.localdata.LocalKV( path )
+    kv4 = wetsuite.helpers.localdata.LocalKV( path, str, str )
     kv4.items()
 
     # check that a commit=true (default)  while in a transaction due to an earlier commit=false does a commit
     kv1.put('g','h', commit=False)
     kv1.put('i','j')
-    kv4 = wetsuite.helpers.localdata.LocalKV( path )
+    kv4 = wetsuite.helpers.localdata.LocalKV( path, str, str )
     kv4.items()
 
 
     # check that delete has the same behaviour
     kv1.delete('i', commit=False) # this would keep the database locked until 
     with pytest.raises(sqlite3.OperationalError, match=r'.*database is locked*'): # note this will take the default 5 secs to time out ()
-        kv5 = wetsuite.helpers.localdata.LocalKV( path )
+        kv5 = wetsuite.helpers.localdata.LocalKV( path, str, str )
         kv5.items()
 
     kv1.delete('g', commit=False) # this would keep the database locked until 
     kv1.delete('e') 
-    kv6 = wetsuite.helpers.localdata.LocalKV( path )
+    kv6 = wetsuite.helpers.localdata.LocalKV( path, str, str )
     kv6.items()
 
 
@@ -132,7 +132,7 @@ def test_thread( tmp_path ):
             myid = threading.get_ident()%10000
             mycount = 0
             while time.time() < end:
-                mykv = wetsuite.helpers.localdata.LocalKV( path )
+                mykv = wetsuite.helpers.localdata.LocalKV( path, str, str )
                 mykv.put( '%s_%s'%(myid, mycount), '01234567890'*500)
                 mycount+=1
                 #time.sleep(0.01) # it seems that without this it wil
@@ -152,7 +152,7 @@ def test_thread( tmp_path ):
 
         while time.time() < end: # main thread watches what the others are managing to do
             #logging.warning( ' FILESIZE   '+str(os.stat(path).st_size) )
-            mykv = wetsuite.helpers.localdata.LocalKV( path )
+            mykv = wetsuite.helpers.localdata.LocalKV( path, str, str )
             #logging.warning( ' AMTO     '+str(len(mykv)) )
             #logging.warning('%s'%mykv.keys())
             mykv.close()
@@ -172,7 +172,7 @@ def test_thread( tmp_path ):
 def test_vacuum( tmp_path ):
     # test that vacuum actually reduces file size
     path = tmp_path / 'test1.db'
-    kv = wetsuite.helpers.localdata.LocalKV( path )
+    kv = wetsuite.helpers.localdata.LocalKV( path, str, str )
     keys = []
     for i in range(1000):
         key = 'key%s'
@@ -191,11 +191,16 @@ def test_vacuum( tmp_path ):
 
 
 def test_cached_fetch():
-    kv = wetsuite.helpers.localdata.LocalKV(':memory:', value_type=bytes) 
-    assert b'<html' in wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/')
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, bytes) 
+    bytedata, fromcache = wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/')
+    assert fromcache==False
 
+    assert b'<html' in bytedata
 
-    kv = wetsuite.helpers.localdata.LocalKV(':memory:') 
+    bytedata, fromcache = wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/')
+    assert fromcache==True
+
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str) 
     with pytest.raises(TypeError, match=r'.*expects*'):
         wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/')
 
