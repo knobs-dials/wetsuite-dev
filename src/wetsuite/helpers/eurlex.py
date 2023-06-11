@@ -1,3 +1,6 @@
+import re, datetime
+
+import bs4
 
 
 def extract_html(htmlbytes):
@@ -6,10 +9,10 @@ def extract_html(htmlbytes):
         Written for JUDG pages, may need work for others.
 
         There are plenty of assumptions in this code that probably won't hold over time,
-        so you should probably use an API instead.
+        so for serious projects you should probably use a data API instead.
 
-        TODO: see how language sensitive this is.
-        CONSIDER: extract more link hrefs
+        TODO: see how language-sensitive this is.
+        CONSIDER: extract more link hrefs (would probably need to hand in page url to)
     '''
     def parse_datalist(under_dl_node):
         ' pick out the basic parts of a data list '
