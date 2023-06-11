@@ -1,6 +1,36 @@
-import re, datetime
+import re, datetime, urllib.parse
+
+import requests
 
 import bs4
+
+
+def fetch_JUDG():
+    ''' Returns some specifically structured
+    '''
+    # The proper way would be to use a library like sparqlwrapper
+    # but for now we can get away with things like:
+    query = '''PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
+      PREFIX annot: <http://publications.europa.eu/ontology/annotation#>
+      PREFIX skos:<http://www.w3.org/2004/02/skos/core#>
+      PREFIX dc:<http://purl.org/dc/elements/1.1/>
+      PREFIX xsd:<http://www.w3.org/2001/XMLSchema#>
+      PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+      PREFIX owl:<http://www.w3.org/2002/07/owl#>
+      select distinct ?work ?type ?celex ?date ?force 
+      WHERE {
+          ?work cdm:work_has_resource-type ?type. 
+          FILTER(?type=<http://publications.europa.eu/resource/authority/resource-type/JUDG>)
+          FILTER not exists{?work cdm:work_has_resource-type <http://publications.europa.eu/resource/authority/resource-type/CORRIGENDUM>
+      } 
+      OPTIONAL { ?work cdm:resource_legal_id_celex ?celex. } 
+      OPTIONAL { ?work cdm:work_date_document ?date. } 
+      OPTIONAL { ?work cdm:resource_legal_in-force ?force. } 
+      FILTER not exists{?work cdm:do_not_index "true"^^<http://www.w3.org/2001/XMLSchema#boolean>}. }'''
+
+    url = 'http://publications.europa.eu/webapi/rdf/sparql?default-graph-uri=&query='+urllib.parse.quote(query)+'&format=application%2Fsparql-results%2Bjson&timeout=0&debug=on&run=+Run+Query+'
+    resp = requests.get(url)
+    return resp.json()
 
 
 def extract_html(htmlbytes):
@@ -45,8 +75,7 @@ def extract_html(htmlbytes):
         ret['ecli'] = eid.text.split(':', 1)[1].strip()
 
     PPDates_Contents = soup.find(id='PPDates_Contents')
-    ret['dates']={}
-    parsed_dates = {}
+    ret['dates'] = {}
     for what, val in parse_datalist( PPDates_Contents.find('dl') ).items():
         if ';' in val:
             val = val.split(';')[0].strip()
@@ -66,22 +95,23 @@ def extract_html(htmlbytes):
 
 
     PPLinked_Contents = soup.find(id='PPLinked_Contents')
-    parsed = {}
+    parsed_link = {}
     for what, val in parse_datalist(PPLinked_Contents.find('dl')).items():
         if type(val) is bs4.element.ResultSet:
             parsedval = []
             for li in val:
                 a = li.find('a')
-                parsedval.append(   (  'CELEX:'+a.get('data-celex'), ''.join( li.findAll(text=True) ).strip()  )   )
-            parsed[what] = parsedval
+                data_celex = a.get('data-celex')
+                parsedval.append(   (  'CELEX:'+data_celex, ''.join( li.findAll(text=True) ).strip()  )   )
+            parsed_link[what] = parsedval
         else:
-            parsed[what] = val
-    ret['linked'] = parsed
+            parsed_link[what] = val
+    ret['linked'] = parsed_link
 
 
     # Doctrine
     PPDoc_Contents = soup.find(id='PPDoc_Contents')
-    parsed = {}
+    parsed_doctr = {}
     if PPDoc_Contents is not None:
         for what, val in parse_datalist(PPDoc_Contents.find('dl')).items():
             if type(val) is bs4.element.ResultSet:
@@ -89,15 +119,15 @@ def extract_html(htmlbytes):
                 for li in val:
                     a = li.find('a')
                     parsedval.append(  li.text  ) # TODO: check that doesn't need to be a join-findall too
-                parsed[what] = parsedval
+                parsed_doctr[what] = parsedval
             else:
-                parsed[what] = val
-    ret['doctrine'] = parsed
+                parsed_doctr[what] = val
+    ret['doctrine'] = parsed_doctr
 
 
     # Classifications
     PPClass_Contents = soup.find(id='PPClass_Contents')
-    parsed = {}
+    parsed_class = {}
     if PPClass_Contents is not None:
         for what, val in parse_datalist(PPClass_Contents.find('dl')).items():
             if type(val) is bs4.element.ResultSet:
@@ -108,15 +138,15 @@ def extract_html(htmlbytes):
                         parsedval.append(  list(s.strip()   for s in div.findAll(text=True)  if len(s.strip())>0 )  )
                     else:
                         parsedval.append( ''.join( li.findAll(text=True) ).strip() )  
-                parsed[what] = parsedval
+                parsed_class[what] = parsedval
             else:
-                parsed[what] = val
-    ret['classifications'] = parsed
+                parsed_class[what] = val
+    ret['classifications'] = parsed_class
 
 
     # Languages and formats available   (not always there)
     PP2Contents = soup.find(id='PP2Contents')
-    contents = []
+    parsed_contents = []
     if PP2Contents is not None:
         for ul in PP2Contents.findAll('ul'):
             format = None
@@ -131,8 +161,8 @@ def extract_html(htmlbytes):
                         if format == 'VIEW':
                             continue
                         # constructing the URL like that is cheating and may not always work. Ideally we'd urllib.parse.urljoin  it from the href, but then we must know the URL this was fetched from.
-                        contents.append( (lang, format, 'https://eur-lex.europa.eu/legal-content/%s/TXT/%s/?uri=CELEX:%s'%(lang, format, celex)) )
-    ret['contents'] = contents
+                        parsed_contents.append( (lang, format, 'https://eur-lex.europa.eu/legal-content/%s/TXT/%s/?uri=CELEX:%s'%(lang, format, celex)) )
+    ret['contents'] = parsed_contents
 
 
     #Document text  (not always there)
