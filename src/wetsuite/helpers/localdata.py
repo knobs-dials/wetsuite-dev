@@ -1,5 +1,4 @@
-'''
-    This is intended to provide a way to store collections of data on disk, in a in key-value store way.
+''' This is intended to provide a way to store collections of data on disk, in a in key-value store way.
     See the docstring on the LocalKV class for more details.
 
     How to use
@@ -20,6 +19,8 @@
         so you can get bulk writes to be more performant by using put() with commit=False parameter and doing an explicit commit() after
 
     TODO: test that keeping it open is a good idea.
+
+    CONSIDER: writing a ExpiringLocalKV that cleans up old entries
 '''
 import os 
 
@@ -29,13 +30,15 @@ import wetsuite.datasets     # to get wetsuite_dir
 import wetsuite.helpers.net
 
 
-class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
+class LocalKV:
     ''' A key-value store backed by a local filesystem.
         This is currently a fairly thin wrapper around SQLite - this may change.
 
-        Because SQLite is duck typed (it just stores whatever), 
-        we try to enforce the types going in -- by default str keys and str values.
-        You could change both - e.g. the cached_fetch function expects a str:bytes store
+        SQLite will still just store the type it gets, and this won't do conversions for you,
+        it only enforces the values that go in are of the type you said you would put in.
+        This will makes things more consistent, but is not a strict guarantee.
+        
+        You could change both key and value types - e.g. the cached_fetch function expects a str:bytes store
 
         Given
             db = LocalKv('path/to/dbfile')
@@ -48,16 +51,23 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
             db['foo'] = 'bar'
             db['foo']
 
-        As per basic sqlite behaviour, multiple processes can read the same database,
-        but only one can write, and when you leave a writer with uncommited data for any amount of time,
-        readers are likely to bork out on the fact it's locked (CONSIDER: have it retry / longer).
+        Notes:
+        - You probablty want to open the same store with the same, or you will still confuse yourself.
+          CONSIDER: storing typing in the file
+        - On concurrency: As per basic sqlite behaviour, multiple processes can read the same database,
+          but only one can write, and when you leave a writer with uncommited data for any amount of time,
+          readers are likely to bork out on the fact it's locked (CONSIDER: have it retry / longer).
     '''
-    def __init__(self, path, key_type=str, value_type=str):
+    def __init__(self, path, key_type, value_type):
         ''' Specify the path to the database file to open. 
 
-            Will be created if it does not yet exist so you proably want think to think about repeating the same path in absolute sense.
+            key_type and value_type do not have defaults, so that you think about how you are using these,
+            but we often use   str,str  and  str,bytes
+
+            The database file will be created if it does not yet exist 
+            so you proably want think to think about repeating the same path in absolute sense.
             (This is also often the answer to "why do I have an empty database")
-            You may like to use open_store() to have our code place it in the same place.
+            ...if you want to think about that less, consider using open_store().
         '''
         self.path = path
         self._open()
@@ -80,11 +90,11 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
     def _checktype_key(self, val):
         if not isinstance(val, self.key_type):
             raise TypeError('Only keys of type %s are allowed, you gave a %s'%(self.key_type.__name__, type(val).__name__))
-        
+
+
     def _checktype_value(self, val):
         if not isinstance(val, self.value_type):
             raise TypeError('Only values of type %s are allowed, you gave a %s'%(self.value_type.__name__, type(val).__name__))
-
 
 
     def get(self, key):
@@ -154,7 +164,6 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
         self.conn.close()
 
 
-
     # make it act dict-like - based on code from https://stackoverflow.com/questions/47237807/use-sqlite-as-a-keyvalue-store
     def __getitem__(self, key):
         ret = self.get(key)
@@ -165,8 +174,10 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
     #def has_key(self, key)
     #    return self.get(key) is not None
 
+
     def __setitem__(self, key, value):
         self.put(key, value)
+
 
     def __delitem__(self, key):
         # TODO: check whether we can ignore it not being there, or must raise KeyError for interface correctness
@@ -174,8 +185,10 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
         #    raise KeyError(key)
         self.conn.execute('DELETE FROM kv WHERE key = ?', (key,)) 
 
+
     def __contains__(self, key):
         return self.conn.execute('SELECT 1 FROM kv WHERE key = ?', (key,)).fetchone() is not None
+
 
     def __iter__(self): # TODO: check
         return self.iterkeys()
@@ -184,26 +197,32 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
     def __len__(self):
         return self.conn.execute('SELECT COUNT(*) FROM kv').fetchone()[0] # TODO: double check
 
+
     def iterkeys(self):
         curs = self.conn.cursor()
         for row in curs.execute('SELECT key FROM kv'):
             yield row[0]
 
+
     def keys(self): 
         return list( self.iterkeys() )
+
 
     def itervalues(self):
         curs = self.conn.cursor()
         for row in curs.execute('SELECT value FROM kv'):
             yield row[0]
 
+
     def values(self): 
         return list( self.itervalues() )
+
 
     def iteritems(self):
         curs = self.conn.cursor()
         for row in curs.execute('SELECT key, value FROM kv'):
             yield row[0], row[1]
+
 
     def items(self):
         return list( self.iteritems() )
@@ -215,32 +234,46 @@ class LocalKV:    # maybe inherit from dict for instanceof-like reasons?
 
 
 
-# class ExpiringLocalKV(LocalKV):
-#     ''' A vartiation of LocalKV that can remove items based on an expiration date '''
-#     def __init__(self):
-#         super().__init__()
+def cached_fetch(store, url:str, force_refetch:bool=False):
+    ''' Helper to use a str-to-bytes LocalKV to cache URL fetch results.
 
-#     def _open(self):
-#         print('open(%r)'%self.filename)
-#         first = not os.path.exists( self.filename )
-#         self.conn = sqlite3.connect( self.filename )
-#         curs = self.conn.cursor()
-#         curs.execute("PRAGMA auto_vacuum = INCREMENTAL") # TODO: see that that works
-#         if first:
-#             print( "creating database %r"%self.filename)
-#             curs.execute("CREATE TABLE IF NOT EXISTS kv (key text unique NOT NULL, value text, expiry integer)")
-#         curs.close()
-#         self.conn.commit()
+        Takes a store to get/put data from, and a url to fetch,
+        returns (data, came_from_cache)
 
-#     def clean()
+        May raise whatever requests may range, and counts on the wetsuite.helpers.net.download() behaviour to raise a ValueError
+          (when !response.ok, if the HTTP code is >=400)  to force us to deal with issues and not store error pages.
+
+        Is little more than 'if URL is a key in the store, return its value. 
+                             if URL not in store, do wetsuite.helpers.net.download(url), store in store, and return its value
+    '''
+    if store.key_type is not str  or  store.value_type is not bytes:
+        raise TypeError('cached_fetch() expects a str:bytes store, not a %r:%r'%(store.key_type.__name__, store.value_type.__name__))
+    # yes, the following could be a few lines shorter, but this is arguably a little more readable
+    if force_refetch == False:
+        ret = store.get(url)
+        if ret is not None: # return cached version
+            #print("CACHED")
+            return ret, True
+        else:
+            data = wetsuite.helpers.net.download( url ) 
+            #print("FETCHED")
+            store.put( url, data )
+            return data, False
+    else: # force_refetch == True
+        data = wetsuite.helpers.net.download( url ) 
+        #print("FORCE-FETCHED")
+        store.put( url, data )
+        return data, False
 
 
+def open_store(dbname, key_type, value_type):
+    ''' A helper that opens a LocalKV in the local wetsuite directory, 
+        mostly so that you don't have to think about handing in a reproducable absolute path yourself.
 
-def open_store(dbname, key_type=str, value_type=str):
-    ''' Opens a LocalKV in the local wetsuite directory, 
-        mostly so that you don't have to think about handing in a reproducable absolute path yourself, e.g.
+        Just a filename, e.g.
           docs = open_store('docstore.db')
         will open the same store regardless of the directory the interpreter is currently considered to be in.
+        It's suggested you use descriptive names so that you don't open existing stores without meaning to.
     '''
     if os.sep in dbname:
         raise ValueError('This function is meant to within the wetsuite directory. If you want to use an absolute path, you can instantiate LocalKV directly.')
@@ -261,31 +294,6 @@ def list_stores():
     dirs = wetsuite.datasets.wetsuite_dir()
     stores_dir = dirs['stores_dir']
     return os.listdir( stores_dir )
-
-
-def cached_fetch(store, url, force_refetch=False):
-    ''' Lets you use a str-to-bytes LocalKV to cache URL fetches
-        Is little more than 'if URL is a key in the store, return its value. 
-                             if URL not in store, do wetsuite.helpers.net.download(url), store in store, and return its value
-
-        May raise whatever requests may range, and counts on the wetsuite.helpers.net.download() behaviour to raise a ValueError
-          (when !response.ok, if the HTTP code is >=400)  to force us to deal with issues and not store error pages.
-    '''
-    if force_refetch == False:
-        if store.key_type is not str  or  store.value_type is not bytes:
-            raise TypeError('cached_fetch() expects a str:bytes store, not a %r:%r'%(store.key_type.__name__, store.value_type.__name__))
-
-    ret = store.get(url)
-    if ret is not None: # return cached version
-        #print("CACHED")
-        return ret
-    else: # fetch and cache
-        data = wetsuite.helpers.net.download( url ) 
-        #print("FETCHED")
-        #print( type(data) )
-        store.put( url, data )
-        return data
-
 
 
 
