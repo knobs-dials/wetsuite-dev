@@ -38,10 +38,29 @@ def wetsuite_dir():
     '''
     ret = {}
 
-    home_dir = os.path.expanduser("~") # this works under windows, but it might be worth it to specifcally give a dir under %USERPROFILE%\AppData\Roaming
-                                       # (how do we resolve that?) Pick up USERPROFILE from os.environ or is there a better way?
+    # Note: expanduser("~") works on all OSes including windows, 
+    #   these additional tests are mainly for the case of AD-managed workstations, to try to direct it to store it in a shared area
+    #   HOMESHARE is picked up (and preferred over USERPROFILE) because in this context, USERPROFILE might be a local, non-synced directory
+    #   even if most of its contents are junctions to places that _are_ 
+    
+    userprofile = os.environ.get('USERPROFILE') # we assume these are only filled when it's actually windows - we could test that too via os.name or platform.system()
+    homeshare   = os.environ.get('HOMESHARE')
+    chose_dir = None
+    if homeshare is not None:
+        r_via_hs = os.path.join(homeshare, 'AppData', 'Roaming')
+        if os.path.exists( r_via_hs ):
+            chose_dir = os.path.join( r_via_hs, '.wetsuite' )
+    elif userprofile is not None:
+        r_via_up = os.path.join(userprofile, 'AppData', 'Roaming')
+        if os.path.exists( r_via_up ):
+            chose_dir = os.path.join( r_via_up, '.wetsuite' )
 
-    ret['wetsuite_dir'] = os.path.join( home_dir, '.wetsuite' )
+    if chose_dir is None:  # probably linux or osx, or weird windows
+        home_dir = os.path.expanduser("~")
+        ret['wetsuite_dir'] = os.path.join( home_dir, '.wetsuite' )
+    else:
+        ret['wetsuite_dir'] = chose_dir
+    
     if not os.path.exists( ret['wetsuite_dir'] ):
         os.makedirs( ret['wetsuite_dir'] )
     if not os.access(ret['wetsuite_dir'], os.W_OK):
