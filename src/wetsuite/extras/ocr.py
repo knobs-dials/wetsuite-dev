@@ -12,8 +12,9 @@ import numpy
 
 _eocr_reader = None  # keep in memory to save time when you call it repeatedly
 
+
 def easyocr(image, pythontypes=True, use_gpu=True):
-    ''' Takes PIL image.
+    ''' Takes a single PIL image.
        
         Returns EasyOCR's results, which is a list of:
           [[topleft, topright, botright, botleft], text, confidence] 
