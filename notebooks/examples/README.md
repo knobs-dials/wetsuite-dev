@@ -9,16 +9,21 @@
 import wetsuite.datasets, random
 
 kv = wetsuite.datasets.load('kamervragen')
-# kv.data is a nested python structure so some wrangling is required:
+
+# As:
+print( kv.description )
+# will point out,  kv.data  is a nested python structure, so some informed wrangling is necessary:
 vraag_document = random.choice( list(kv.data.values()) )
-for number in vraag_document['vraagdata']:
-    vraag_n_text, _    = vraag_document['vraagdata'][number].get('vraag')
+for number in vraag_document['vraagdata']: 
+    vraag_n_text,    _ = vraag_document['vraagdata'][number].get('vraag')
     antwoord_n_text, _ = vraag_document['vraagdata'][number].get('antwoord')
 
     print(  'Q%-5s  %s'%( number, vraag_n_text   )  )
     print(  'A%-5s  %s'%( number, antwoord_n_text)  )
     print('---')
 ```
+
+See the [dataset_kamervragen](dataset_kamervragen.ipynb) notebook for more on that data.
 
 
 ### Search
@@ -71,6 +76,7 @@ ksa = wetsuite.datasets.load('kansspelbeschikkingen')
 TODO: finish
 ```
 
+Turns out sometimes even just counts will give you an idea of what a document focuses on.
 
 
 
@@ -93,19 +99,38 @@ TODO: finish
 ```
 
 
-#### OCR
+#### PDF
+
+PDFs are common enough, so we can extract the text it says it contains. 
 
 ```python
 import wetsuite.helpers.net
-import wetsuite.extras.pdf2txt
 
 pdfbytes = wetsuite.helpers.net.download('https://open.overheid.nl/documenten/ronl-5439f4bf9849a53e634389ebbb5e4f5740c4f84f/pdf')
 
-text = wetsuite.extras.pdf2txt.pdf2txt_ocr( pdfbytes )
+text_per_page = wetsuite.datacollect.pdf.page_text( pdfbytes )
+
+# However, it turns out there are many PDFs that (partially or fully) contain _images of text_. To check, you can e.g. 
+chars_per_page, num_pages_with_text, num_pages = wetsuite.datacollect.pdf.count_pages_with_text(pdfbytes, char_threshold=150)
+print(f'{num_pages_with_text} out of {num_pages} pages contain reasonable amount of text\n  characters per page: {chars_per_page}')
+# which will point out that:
+#  7 out of 20 pages contain reasonable amount of text
+#    characters per page: [1477, 2699, 707, 602, 2365, 2582, 399, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 ```
 
-Note: while `pdf2txt_ocr()` is good enough for bag-of-words models,
-it will not care as much about clean document structure as you do.
+So in this case, we move on to...
+
+#### OCR
+
+```python
+import wetsuite.extras.pdf_text
+
+all_text = wetsuite.extras.pdf_text.pdf_text_ocr( pdfbytes )
+```
+
+Note: `pdf_text_ocr()` will not care as much about clean document structure as you do.
+
+It is good enough for bag-of-words models, but a little messy for structured analysis.
 See [datacollect_ocr](datacollect_ocr.ipynb) 
 to get some more insight on why, and how you might improve that.
 
