@@ -5,7 +5,7 @@
     but for a bag-of-words method this may be enough.
 '''
 
-def pdf2txt_embedded(bytedata:bytes):
+def pdf_text_embedded(bytedata: bytes):
     ''' Takes a PDF and return pageless plain text, 
         whatever the PDF itself says is there, which, WARNING: may be nothing because it's actually an image.
 
@@ -19,7 +19,7 @@ def pdf2txt_embedded(bytedata:bytes):
     return '\n\n'.join(ret)
     
 
-def pdf2txt_ocr(bytedata:bytes):
+def pdf_text_ocr(bytedata: bytes):
     ''' Takes a PDF and return pageless plain text, entirely with OCR.
 
         This is 
