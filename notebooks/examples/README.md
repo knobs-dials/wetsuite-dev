@@ -3,6 +3,9 @@
 
 
 ## Datasets
+Ideally, data we already provide is a basis for you to go on. 
+For example:
+
 ### Kamervragen
 
 ```python
@@ -23,51 +26,13 @@ for number in vraag_document['vraagdata']:
     print('---')
 ```
 
-See the [dataset_kamervragen](dataset_kamervragen.ipynb) notebook for more on that data.
-
-
-## Search
-
-Various goverment systems offer live search, in website and/or data form.
-
-While we try to ease searching these from code, each has its own limitations,
-and its own idiosyncracies, which we cannot solve for you.
-
-That said, since we do have and offer data, we do experiment with our own
-search of such, and may explain how to build your own.
-
-### Search by keyword (in CVDR)
-
-```python
-import wetsuite
-
-TODO: finish
-
-result = wetsuite.datasearch.search(category='cvdr', keywords=['...'], source='Amsterdam')
-        # alternative: wetsuite.search(query='IN: cvdr ')
-
-print(result)
-
-for id in result[:10]:
-    doc = wetsuite.dataseach.fetch_document_by(id)
-    doc.save('local/path')
-
-```
-
-### Search by document type
-
-```python
-import wetsuite
-
-
-```
+See [dataset_kamervragen](dataset_kamervragen.ipynb) for more on that data.
 
 
 
 ## Working on text
 
 ### Extract plain text fragments (from BWB)
-
 ```python
 
 # also as an illustration of the Document class
@@ -76,10 +41,8 @@ import wetsuite
 ```
 
 ### Word cloud (kansspelbeschikkingen)
-
-World clouds are a _very_ similar bag-of-words visualisation, 
-yet sometimes it turns out something as simple as this gives
-you an idea of what a document focuses on.
+Word clouds are a simple bag-of-words visualisation, yet sometimes 
+it is enough to give a basic idea of what a document focuses on.
 
 ```python
 import wetsuite.datasets, wetsuite.helpers.spacy, wetsuite.extras.word_cloud
@@ -99,8 +62,8 @@ for case_details in ks.data[:5]:
 
 
 
-### Entity extraction (with spaCy)
 
+### Entity extraction (with spaCy)
 ```python
 
 
@@ -109,6 +72,19 @@ for case_details in ks.data[:5]:
  
 
 ### Relation extraction (with spaCy)
+```python
+
+
+
+```
+
+
+### Topic modeling
+
+The widest sense of topic modeling is an iterative, interpreting, 
+somewhat creative process (unless it's referring to pre-trained labeling).
+
+That said...
 
 ```python
 
@@ -117,8 +93,50 @@ for case_details in ks.data[:5]:
 ```
 
 
-### PDF
 
+## Search
+Various goverment systems offer live search, in website and/or data form.
+
+Each has its own limitations, features, and idiosyncracies.
+
+Little effort has been made yet to make the interface for each at least somewhat similar and/or pass through data unparsed.
+This will be refined later.
+
+Also, since we have datasets, we provisionally provide a search of such,
+and if there is interest may may later explain how to set up your own.
+
+
+### Search by keyword (in CVDR)
+```python
+
+import pprint, wetsuite.datacollect.koop_repositories, wetsuite.helpers.koop_parse
+
+cvdr = wetsuite.datacollect.koop_repositories.CVDR()
+for hit_et in cvdr.search_retrieve_many( 'body any fish', up_to=50 ):
+    pprint.pprint(  wetsuite.helpers.koop_parse.cvdr_meta( hit_et, flatten=True )  )
+```
+
+See [datacollect_koop_repos](datacollect_koop_repos.ip[ynb) for more details.
+
+
+### Search recent law changes (in BWB)
+```python
+
+import pprint, wetsuite.datacollect.koop_repositories, wetsuite.helpers.koop_parse
+
+bwb = wetsuite.datacollect.koop_repositories.BWB()
+for hit_et in bwb.search_retrieve_many( 'dcterms.modified >= 2023-03-01', up_to=50 ):
+    pprint.pprint( wetsuite.helpers.koop_parse.bwb_searchresult_meta( hit_et ) )
+```
+
+
+## Data collection
+
+Often enough, existing datasets aren't quite enough and you will have 
+collect and organize some yourself.
+
+
+### PDF
 PDFs are common enough, so we can extract the text it says it contains. 
 
 ```python
@@ -153,18 +171,8 @@ See [datacollect_ocr](datacollect_ocr.ipynb)
 to get some more insight on why, and how you might improve that.
 
 
-### Topic modeling
-
-The widest sense of topic modeling is an iterative, interpreting, 
-somewhat creative process (unless it's referring to pre-trained labeling).
-
-That said...
-
-```python
 
 
-
-```
 
 
 
