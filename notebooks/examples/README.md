@@ -1,9 +1,9 @@
 
-## Minimal examples as code fragments
+# Minimal examples as code fragments
 
 
-### Datasets
-#### Kamervragen
+## Datasets
+### Kamervragen
 
 ```python
 import wetsuite.datasets, random
@@ -26,17 +26,17 @@ for number in vraag_document['vraagdata']:
 See the [dataset_kamervragen](dataset_kamervragen.ipynb) notebook for more on that data.
 
 
-### Search
+## Search
 
-#### Search by document type
+Various goverment systems offer live search, in website and/or data form.
 
-```python
-import wetsuite
+While we try to ease searching these from code, each has its own limitations,
+and its own idiosyncracies, which we cannot solve for you.
 
+That said, since we do have and offer data, we do experiment with our own
+search of such, and may explain how to build your own.
 
-```
-
-#### Search by keyword (in CVDR)
+### Search by keyword (in CVDR)
 
 ```python
 import wetsuite
@@ -54,10 +54,19 @@ for id in result[:10]:
 
 ```
 
+### Search by document type
 
-### Working on text
+```python
+import wetsuite
 
-#### Extract plain text fragments (from BWB)
+
+```
+
+
+
+## Working on text
+
+### Extract plain text fragments (from BWB)
 
 ```python
 
@@ -66,22 +75,31 @@ for id in result[:10]:
 
 ```
 
-#### Word cloud (kansspelbeschikkingen)
+### Word cloud (kansspelbeschikkingen)
+
+World clouds are a _very_ similar bag-of-words visualisation, 
+yet sometimes it turns out something as simple as this gives
+you an idea of what a document focuses on.
 
 ```python
-import wetsuite.datasets, random
+import wetsuite.datasets, wetsuite.helpers.spacy, wetsuite.extras.word_cloud
 
-ksa = wetsuite.datasets.load('kansspelbeschikkingen')
-
-TODO: finish
+ks = wetsuite.datasets.load('kansspelautoriteit')
+# again, most lines are wrangling of structured data
+for case_details in ks.data[:5]:
+    case_phrases = [] # we try to only get out nouns / noun phrases.  Using all words would go a lot faster  yet would include a lot of empty function words
+    for doc_details in case_details['docs']:
+        for page in doc_details['pages']:
+            for fragment in page['body_text']:
+                case_phrases.extend( wetsuite.helpers.spacy.nl_noun_chunks( fragment ) )
+    counts = wetsuite.extras.word_cloud.count_normalized( case_phrases, stopwords_i=['de kansspelautoriteit', 'artikel', 'zij','die', 'de'] )
+    im = wetsuite.extras.word_cloud.wordcloud_from_freqs( counts )
+    display( im )  # display() exists in the context of python notebooks, elsewhere you might e.g. do   im.save( '%s.png'%case_details['name'] ) 
 ```
 
-Turns out sometimes even just counts will give you an idea of what a document focuses on.
 
 
-
-
-#### Entity extraction (with spaCy)
+### Entity extraction (with spaCy)
 
 ```python
 
@@ -90,7 +108,7 @@ Turns out sometimes even just counts will give you an idea of what a document fo
 ```
  
 
-#### Relation extraction (with spaCy)
+### Relation extraction (with spaCy)
 
 ```python
 
@@ -99,7 +117,7 @@ Turns out sometimes even just counts will give you an idea of what a document fo
 ```
 
 
-#### PDF
+### PDF
 
 PDFs are common enough, so we can extract the text it says it contains. 
 
@@ -120,7 +138,7 @@ print(f'{num_pages_with_text} out of {num_pages} pages contain reasonable amount
 
 So in this case, we move on to...
 
-#### OCR
+### OCR
 
 ```python
 import wetsuite.extras.pdf_text
@@ -135,7 +153,7 @@ See [datacollect_ocr](datacollect_ocr.ipynb)
 to get some more insight on why, and how you might improve that.
 
 
-#### Topic modeling
+### Topic modeling
 
 The widest sense of topic modeling is an iterative, interpreting, 
 somewhat creative process (unless it's referring to pre-trained labeling).
@@ -150,7 +168,7 @@ That said...
 
 
 
-## More detailed examples as notebooks
+# More detailed examples as notebooks
 
 These are python notebooks, which are a relatively visual environment, and you can work on a copy of a notebook to ease some interactive experimentation. 
 It also lets us demonstrate code, with annotation.  
