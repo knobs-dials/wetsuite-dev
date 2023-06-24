@@ -42,7 +42,7 @@ for number in vraag_document['vraagdata']:
     print('---')
 ```
 
-See [dataset_kamervragen](dataset_kamervragen.ipynb) for more on that data.
+See [dataset_kamervragen](notebooks/examples/dataset_kamervragen.ipynb) for more on that data.
 
 
 
@@ -55,6 +55,7 @@ See [dataset_kamervragen](dataset_kamervragen.ipynb) for more on that data.
 
 
 ```
+
 
 ### Word cloud (kansspelbeschikkingen)
 Word clouds are a simple bag-of-words visualisation, yet sometimes 
@@ -78,7 +79,6 @@ for case_details in ks.data[:5]:
 
 
 
-
 ### Entity extraction (with spaCy)
 ```python
 
@@ -93,6 +93,8 @@ for case_details in ks.data[:5]:
 
 
 ```
+
+
 
 
 ### Topic modeling
@@ -183,7 +185,7 @@ all_text = wetsuite.extras.pdf_text.pdf_text_ocr( pdfbytes )
 Note: `pdf_text_ocr()` will not care as much about clean document structure as you do.
 
 It is good enough for bag-of-words models, but a little messy for structured analysis.
-See [datacollect_ocr](datacollect_ocr.ipynb) 
+See [datacollect_ocr](notebooks/examples/datacollect_ocr.ipynb) 
 to get some more insight on why, and how you might improve that.
 
 
