@@ -633,7 +633,6 @@ def true_colf(s, r,g,b):
      return _add_color_if_supported(s,RGBCOL)
 
 
-
 def redgreen(s, frac):
      ' turns a fraction in 0..1 to red..green '
      r = min(255,max(0, int( (255-(255*frac)) ) ))
@@ -643,16 +642,28 @@ def redgreen(s, frac):
      return _add_color_if_supported(s,RGBCOL)
 
 
+def blend(s, frac, rgb1, rgb2):
+     r = int(  min(255,max(0,  255*( (1-frac)*rgb1[0] + frac*rgb2[0] ) ))  )
+     g = int(  min(255,max(0,  255*( (1-frac)*rgb1[1] + frac*rgb2[1] ) ))  )
+     b = int(  min(255,max(0,  255*( (1-frac)*rgb1[2] + frac*rgb2[2] ) ))  )
+     #print(r,g,b)
+     RGBCOL = '\x1b[38;2;%s;%s;%sm'%(r,g,b)
+     return _add_color_if_supported(s,RGBCOL)
 
-def hash_color(s, rgb=False, append=RESET, hash_instead=None):
+
+def hash_color(s, rgb=False, append=RESET, prepend='', hash_instead=None, on=None):
     ''' return string wrapped in a (non-black basic shell) color (and RESET after) based on the string
 
         If you want to color an entire string based on just a part of it, hand the part into hash_instead
-
-        TODO: a way to avoid very dark (or very light) colors
-
+     
         If rgb==False, uses the basic set of ~8 colors and brightness.
-        If rgb==True,  uses true color
+        If rgb==True,  uses true color  (recommended if you can)
+
+        if on == 'dark' suggests we're drawing on dark background, so stays away from very dark rgb values
+        if on == 'light', we stay away from very light rgb values
+        by default we don't care, which might be good for area fills
+
+        TODO: variant that gives just the escapes, so we can avoid calling this a lot
     '''
     import hashlib
     m = hashlib.sha256()
@@ -661,18 +672,29 @@ def hash_color(s, rgb=False, append=RESET, hash_instead=None):
     else:
         m.update(s.encode('utf8'))
     dig = m.digest()
+    
     if type(dig[0]) is not int: # quick and dirty way of dealing with py2/3 difference
-        dig = list( ord(ch) for ch in dig)
+        dig = list( ord(ch)  for ch in dig)
     
     if rgb:
-        r = max(20, dig[0])
-        g = max(20, dig[1])
-        b = max(20, dig[2])
-        return true_colf(s, r,g,b)
+        if on=='dark':
+            r = min(255, max(0, 40+0.8*dig[0]))
+            g = min(255, max(0, 40+0.8*dig[1]))
+            b = min(255, max(0, 40+0.8*dig[2]))
+        elif on=='light':
+            r = min(255, max(0, 0.8*dig[0]))
+            g = min(255, max(0, 0.8*dig[1]))
+            b = min(255, max(0, 0.8*dig[2]))
+        else:
+            r = dig[0]
+            g = dig[1]
+            b = dig[2]
+            
+        return prepend+true_colf(s, r,g,b)
     else:
         choosefrom = [ BRIGHTBLACK,RED, BRIGHTRED, GREEN, BRIGHTGREEN,
                        YELLOW, BRIGHTYELLOW, BLUE, BRIGHTBLUE, MAGENTA,
                        BRIGHTMAGENTA, CYAN, BRIGHTCYAN, GREY, WHITE     ]
         choice = choosefrom[ sum(ch for ch in dig)%len(choosefrom) ]
-        return '%s%s%s'%(choice,s,append)
+        return prepend+'%s%s%s'%(choice,s,append)
 
