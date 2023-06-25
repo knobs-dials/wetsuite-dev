@@ -1,4 +1,4 @@
-''' This is intended to provide a way to store collections of data on disk, in a in key-value store way.
+''' This is intended to provide an easier way way to store collections of data on disk, in a in key-value store way.
     See the docstring on the LocalKV class for more details.
 
     How to use
@@ -21,6 +21,7 @@
     TODO: test that keeping it open is a good idea.
 
     CONSIDER: writing a ExpiringLocalKV that cleans up old entries
+    CONSIDER: writing variants that do convert specific data, letting you e.g. set/fetch dicts, or anything else you could pickle
 '''
 import os 
 
@@ -41,22 +42,24 @@ class LocalKV:
         You could change both key and value types - e.g. the cached_fetch function expects a str:bytes store
 
         Given
-            db = LocalKv('path/to/dbfile')
+            db = LocalKv('path/to/dbfile')      # (note that open_store() may be more convenient)
         Basic use is:
             db.put('foo', 'bar')
             db.get('foo')
-            # this way also exposes some sqlite things (commit, vacuum) for when you know how to use them.
 
-        the dict way is a little simpler:
+        the dict way is a little less typing:
             db['foo'] = 'bar'
             db['foo']
 
         Notes:
-        - You probablty want to open the same store with the same, or you will still confuse yourself.
-          CONSIDER: storing typing in the file
+        - It is a good idea to open the store with the same typing each  or you will still confuse yourself.
+            CONSIDER: storing typing in the file 
+        - doing it via functions is a little more typing yet also exposes some sqlite things (using transactions, vacuum) for when you know how to use them.
+            and is arguably clearer than 'this particular dict-like happens to get stored magically'
         - On concurrency: As per basic sqlite behaviour, multiple processes can read the same database,
-          but only one can write, and when you leave a writer with uncommited data for any amount of time,
+          but only one can write, and when you leave a writer with uncommited data for nontrivial amounts of time,
           readers are likely to bork out on the fact it's locked (CONSIDER: have it retry / longer).
+          This is why by default we leave it on autocommit, even though that can be slower.
     '''
     def __init__(self, path, key_type, value_type):
         ''' Specify the path to the database file to open. 
@@ -71,6 +74,11 @@ class LocalKV:
         '''
         self.path = path
         self._open()
+        # here in part to remind us that we _could_ be using converters  https://docs.python.org/3/library/sqlite3.html#sqlite3-converters
+        if key_type not in (str, bytes, int):
+            raise ValueError("We are currently a little overly paranoid about what to allow as key types (%r not allowed)"%key_type.__name)
+        if value_type not in (str, bytes, int, float):
+            raise ValueError("We are currently a little overly paranoid about what to allow as value types (%r not allowed)"%value_type.__name)
         self.key_type = key_type
         self.value_type = value_type
         self._in_transaction = False
@@ -240,11 +248,15 @@ def cached_fetch(store, url:str, force_refetch:bool=False):
         Takes a store to get/put data from, and a url to fetch,
         returns (data, came_from_cache)
 
-        May raise whatever requests may range, and counts on the wetsuite.helpers.net.download() behaviour to raise a ValueError
-          (when !response.ok, if the HTTP code is >=400)  to force us to deal with issues and not store error pages.
+        May raise 
+        - whatever requests.get may range
+        - ValueError when !response.ok, or if the HTTP code is >=400
+          (which is behaviour from wetsuite.helpers.net.download())
+          ...to force us to deal with issues and not store error pages.
 
-        Is little more than 'if URL is a key in the store, return its value. 
-                             if URL not in store, do wetsuite.helpers.net.download(url), store in store, and return its value
+        Is little more than 
+        - if URL is a key in the store, return its value
+        - if URL not in store,          do wetsuite.helpers.net.download(url), store in store, and return its value
     '''
     if store.key_type is not str  or  store.value_type is not bytes:
         raise TypeError('cached_fetch() expects a str:bytes store, not a %r:%r'%(store.key_type.__name__, store.value_type.__name__))
