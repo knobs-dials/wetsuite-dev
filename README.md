@@ -162,9 +162,7 @@ PDFs are common enough, so we can extract the text it says it contains.
 import wetsuite.helpers.net
 
 pdfbytes = wetsuite.helpers.net.download('https://open.overheid.nl/documenten/ronl-5439f4bf9849a53e634389ebbb5e4f5740c4f84f/pdf')
-
 text_per_page = wetsuite.datacollect.pdf.page_text( pdfbytes )
-
 # However, it turns out there are many PDFs that (partially or fully) contain _images of text_. To check, you can e.g. 
 chars_per_page, num_pages_with_text, num_pages = wetsuite.datacollect.pdf.count_pages_with_text(pdfbytes, char_threshold=150)
 print(f'{num_pages_with_text} out of {num_pages} pages contain reasonable amount of text\n  characters per page: {chars_per_page}')
