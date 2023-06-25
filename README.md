@@ -58,6 +58,24 @@ See [dataset_kamervragen](notebooks/examples/dataset_kamervragen.ipynb) for more
 ```
 
 
+
+
+### Entity extraction (with spaCy)
+```python
+
+
+
+```
+ 
+
+### Relation extraction (with spaCy)
+```python
+
+
+
+```
+
+
 ### Word cloud (kansspelbeschikkingen)
 Word clouds are a simple bag-of-words visualisation, yet sometimes 
 it is enough to give a basic idea of what a document focuses on.
@@ -77,24 +95,6 @@ for case_details in ks.data[:5]:
     im = wetsuite.extras.word_cloud.wordcloud_from_freqs( counts )
     display( im )  # display() exists in the context of python notebooks, elsewhere you might e.g. do   im.save( '%s.png'%case_details['name'] ) 
 ```
-
-
-
-### Entity extraction (with spaCy)
-```python
-
-
-
-```
- 
-
-### Relation extraction (with spaCy)
-```python
-
-
-
-```
-
 
 
 
