@@ -134,7 +134,7 @@ for hit_et in cvdr.search_retrieve_many( 'body any fish', up_to=50 ):
     pprint.pprint(  wetsuite.helpers.koop_parse.cvdr_meta( hit_et, flatten=True )  )
 ```
 
-See [datacollect_koop_repos](datacollect_koop_repos.ip[ynb) for more details.
+See [datacollect_koop_repos](notebooks/examples/datacollect_koop_repos.ipynb) for more details.
 
 
 ### Search recent law changes (in BWB)

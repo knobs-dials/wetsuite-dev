@@ -11,7 +11,7 @@ setup(
     packages=['wetsuite.datasets', 'wetsuite.helpers', 'wetsuite.phrases', 'wetsuite.datacollect', 'wetsuite.extras'],
     package_dir={"": "src"},
     python_requires=">=3",
-    install_requires=['requests', 'numpy >= 1.11.1', 'matplotlib >= 1.5.1', 'spacy', 'spacy-transformers', 'python-dateutil' ],
+    install_requires=['lxml', 'requests', 'numpy >= 1.11.1', 'matplotlib >= 1.5.1', 'spacy', 'spacy-transformers', 'python-dateutil' ],
     extras_require={
         'spacy-cpu':'spacy',
         'spacy-cuda80':'spacy[cuda80]',
@@ -20,6 +20,7 @@ setup(
         'spacy-cuda111':'spacy[cuda111]','spacy-cuda112':'spacy[cuda112]','spacy-cuda113':'spacy[cuda113]','spacy-cuda114':'spacy[cuda114]','spacy-cuda115':'spacy[cuda115]','spacy-cuda116':'spacy[cuda116]','spacy-cuda117':'spacy[cuda117]',
         'fastlang': ['spacy_fastlang','fasttext'],
         'ocr':'easyocr',
+        'extras':['wordcloud'],
         # all?
     },
 )
