@@ -47,10 +47,7 @@ class LocalKV:
             db.put('foo', 'bar')
             db.get('foo')
 
-        the dict way is a little less typing:
-            db['foo'] = 'bar'
-            db['foo']
-
+        
         Notes:
         - It is a good idea to open the store with the same typing each  or you will still confuse yourself.
             CONSIDER: storing typing in the file 
@@ -60,6 +57,12 @@ class LocalKV:
           but only one can write, and when you leave a writer with uncommited data for nontrivial amounts of time,
           readers are likely to bork out on the fact it's locked (CONSIDER: have it retry / longer).
           This is why by default we leave it on autocommit, even though that can be slower.
+
+        - It wouldn't be hard to also make it act like a dict, 
+          but it's arguably a leaky abstractions with various issues much like ORMs have.
+          That said, for now it has keys(), values(), and items(), and their iter variants,
+          because those can at least have docstrings to warn you.
+
     '''
     def __init__(self, path, key_type, value_type):
         ''' Specify the path to the database file to open. 
@@ -106,16 +109,19 @@ class LocalKV:
 
 
     def get(self, key):
-        ' gets value for key '
+        ''' Gets value for key. 
+            The key type is checked against how you constructed this localKV class (doesn't guarantee it matches what's in the database)
+            If not present, this will raise KeyError 
+        '''
         self._checktype_key(key)
-        with self.conn: # context manager for a commit
-            curs = self.conn.cursor()
-            curs.execute("SELECT value FROM kv WHERE key=?", (key,) )
-            row = curs.fetchone()
-            if row is None:
-                return None
-            else:
-                return row[0]
+        curs = self.conn.cursor()
+        curs.execute("SELECT value FROM kv WHERE key=?", (key,) )
+        row = curs.fetchone()
+        if row is None:
+            raise KeyError()
+            #return None
+        else:
+            return row[0]
 
 
     def put(self, key, value, commit=True):
@@ -173,26 +179,24 @@ class LocalKV:
 
 
     # make it act dict-like - based on code from https://stackoverflow.com/questions/47237807/use-sqlite-as-a-keyvalue-store
-    def __getitem__(self, key):
-        ret = self.get(key)
-        if ret is None:
-            raise KeyError()
-        return ret
+    #def __getitem__(self, key):
+    #    ret = self.get(key)
+    #    if ret is None:
+    #        raise KeyError()
+    #    return ret
         
+    #def __setitem__(self, key, value):
+    #    self.put(key, value)
+
+
+    #def __delitem__(self, key):
+    #    # TODO: check whether we can ignore it not being there, or must raise KeyError for interface correctness
+    #    #if key not in self:
+    #    #    raise KeyError(key)
+    #    self.conn.execute('DELETE FROM kv WHERE key = ?', (key,)) 
+
     #def has_key(self, key)
     #    return self.get(key) is not None
-
-
-    def __setitem__(self, key, value):
-        self.put(key, value)
-
-
-    def __delitem__(self, key):
-        # TODO: check whether we can ignore it not being there, or must raise KeyError for interface correctness
-        #if key not in self:
-        #    raise KeyError(key)
-        self.conn.execute('DELETE FROM kv WHERE key = ?', (key,)) 
-
 
     def __contains__(self, key):
         return self.conn.execute('SELECT 1 FROM kv WHERE key = ?', (key,)).fetchone() is not None
@@ -203,7 +207,7 @@ class LocalKV:
 
 
     def __len__(self):
-        return self.conn.execute('SELECT COUNT(*) FROM kv').fetchone()[0] # TODO: double check
+        return self.conn.execute('SELECT COUNT(*) FROM kv').fetchone()[0]  # TODO: double check
 
 
     def iterkeys(self):
@@ -262,11 +266,11 @@ def cached_fetch(store, url:str, force_refetch:bool=False):
         raise TypeError('cached_fetch() expects a str:bytes store, not a %r:%r'%(store.key_type.__name__, store.value_type.__name__))
     # yes, the following could be a few lines shorter, but this is arguably a little more readable
     if force_refetch == False:
-        ret = store.get(url)
-        if ret is not None: # return cached version
+        try:
+            ret = store.get(url)
             #print("CACHED")
             return ret, True
-        else:
+        except KeyError as ke:
             data = wetsuite.helpers.net.download( url ) 
             #print("FETCHED")
             store.put( url, data )

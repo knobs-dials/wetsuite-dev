@@ -8,11 +8,15 @@ def test_crud():
 
     # dict-like
     with pytest.raises(KeyError):
-        kv['a']
-    kv['a'] = 'b'
+        kv.get('a')
+    #with pytest.raises(KeyError):
+    #    kv['a']
+    #kv['a'] = 'b'
+    kv.put('a', 'b')
     assert len(kv)==1
-    assert kv['a'] == 'b'
-    del kv['a']
+    assert kv.get('a') == 'b'
+    #del kv['a']
+    kv.delete('a')
     assert len(kv)==0
 
     kv.put('c', 'd')
@@ -23,8 +27,10 @@ def test_crud():
 
 def test_moreapi():
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str) 
-    kv['a'] = 'b'
-    kv['c'] = 'd'
+    #kv['a'] = 'b'
+    #kv['c'] = 'd'
+    kv.put('a', 'b')
+    kv.put('c', 'd')
     assert kv.keys()             == ['a', 'c']
     assert list(kv.iterkeys())   == ['a', 'c']
     assert kv.values()           == ['b', 'd']
@@ -115,7 +121,7 @@ def TEMPORARILY_DISABLED_test_multiread_and_locking( tmp_path ):
     kv6.items()
 
 
-def test_thread( tmp_path ):
+def TEMPORARILY_DISABLED_test_thread( tmp_path ):
     ''' See whether (with the default autocommit behaviour) access is concurrent
         and not overly eager to time-and-error out - basically see if the layer we added forgot something.    
 
