@@ -48,7 +48,7 @@ stopwords_nl = (
 )
 
 
-def wordcloud_from_freqs(freqs: dict, width:int=1800, height:int=800, background_color='white', min_font_size=10, **kwargs):
+def wordcloud_from_freqs(freqs: dict, width:int=1200, height:int=300, background_color='white', min_font_size=10, **kwargs):
     ''' Takes a {string: count} dict, returns a PIL image.
 
         That string:count ought to be cleaned up, so you probably want to use one of the count_ helper functions.
@@ -59,7 +59,7 @@ def wordcloud_from_freqs(freqs: dict, width:int=1800, height:int=800, background
 
 
 
-def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  normalize_func=None, stopwords=[])  ->  dict:
+def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  normalize_func=None, stopwords=[], stopwords_i=[])  ->  dict:
     ''' Takes text that is already tokenized into a list of strings,  returns a { string: count } dict.
 
         ...with some extra processing.
@@ -101,10 +101,13 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
         stop.update(stopwords_nl)
     else:
         stop.update(stopwords)
+    stop_lower = list(sws.lower()   for sws in stopwords_i)
 
     count = collections.defaultdict(lambda: collections.defaultdict(int)) # { lower_form: { real_form: count } }
     for string in strings:
         if string in stop:
+            continue
+        if string.lower() in stop_lower:
             continue
         
         norm_string = string
