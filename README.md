@@ -42,7 +42,7 @@ for number in vraag_document['vraagdata']:
     print('---')
 ```
 
-See [dataset_kamervragen](dataset_kamervragen.ipynb) for more on that data.
+See [dataset_kamervragen](notebook/examples/dataset_kamervragen.ipynb) for more on that data.
 
 
 
