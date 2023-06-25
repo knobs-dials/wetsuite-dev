@@ -4,7 +4,7 @@ Wetsuite is a project aimed at applying natural language processing and other an
 focusing on providing the data and tools and other infrastructure to make it easier for researchers to do so.
 
 
-...this, so far, is far form done, an mostly a repository to test installs from github. 
+...this, so far, is an early repository test to test installs from github. 
 
 This repository is split into:
 - `notebooks` groups - which are introduced below
