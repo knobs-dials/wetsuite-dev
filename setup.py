@@ -20,6 +20,7 @@ setup(
         'spacy-cuda111':'spacy[cuda111]','spacy-cuda112':'spacy[cuda112]','spacy-cuda113':'spacy[cuda113]','spacy-cuda114':'spacy[cuda114]','spacy-cuda115':'spacy[cuda115]','spacy-cuda116':'spacy[cuda116]','spacy-cuda117':'spacy[cuda117]',
         'fastlang': ['spacy_fastlang','fasttext'],
         'ocr':'easyocr',
+        'extras':['wordcloud'],
         # all?
     },
 )
