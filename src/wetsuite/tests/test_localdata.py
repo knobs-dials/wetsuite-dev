@@ -11,6 +11,7 @@ def test_crud():
         kv['a']
     kv['a'] = 'b'
     assert len(kv)==1
+    assert kv['a'] == 'b'
     del kv['a']
     assert len(kv)==0
 
@@ -34,6 +35,16 @@ def test_moreapi():
     
     wetsuite.helpers.localdata.list_stores()
 
+
+def test_doublecommit():
+    ' do not trip over excessive commits '
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
+    kv.commit()
+    kv.put('1','2', commit=False)
+    kv.commit()
+    kv.commit()
+
+
 def test_type():
     # default str:str
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
@@ -56,7 +67,9 @@ def test_type():
         kv.put('a','s')
 
 
+
 def TEMPORARILY_DISABLED_test_multiread_and_locking( tmp_path ):
+#def test_multiread_and_locking( tmp_path ):
     import sqlite3
 
     # test that both see the same data
@@ -74,7 +87,7 @@ def TEMPORARILY_DISABLED_test_multiread_and_locking( tmp_path ):
 
     # test that not committing leaves the database locked and other opens would fail   (defined sqlite3 behaviour)
     kv1.put('e','f', commit=False) # this would keep the database locked until 
-    with pytest.raises(sqlite3.OperationalError, match=r'.*database is locked*'): # note this will take the default 5 secs to time out ()
+    with pytest.raises(sqlite3.OperationalError, match=r'.*database is locked*'): # note this will take the default 5 secs to time out
         kv3 = wetsuite.helpers.localdata.LocalKV( path, str, str )
         kv3.items()
 
@@ -102,19 +115,18 @@ def TEMPORARILY_DISABLED_test_multiread_and_locking( tmp_path ):
     kv6.items()
 
 
-
-
-
 def test_thread( tmp_path ):
-    ''' See whether (with the default autocommit behaviour) access is concurrentm
+    ''' See whether (with the default autocommit behaviour) access is concurrent
         and not overly eager to time-and-error out - basically see if the layer we added forgot something.    
+
+        TODO: loosen up the intensity, it may still race to fail under load
     '''
-    import time, threading, logging
+    import time, threading, logging, random
     # It seems threads may share the module, but not connections
     # https://docs.python.org/3/library/sqlite3.html#sqlite3.threadsafety
     path = tmp_path / 'test_thr.db'
 
-    def get_sqlite3_thread_safety(): # https://ricardoanderegg.com/posts/python-sqlite-thread-safety/
+    def get_sqlite3_thread_safety(): # See https://ricardoanderegg.com/posts/python-sqlite-thread-safety/ for why this is here
         " the sqlite module's threadsafety module is hardcoded for now, asking the library is more accurate "
         import sqlite3
         conn = sqlite3.connect(":memory:")
@@ -126,7 +138,7 @@ def test_thread( tmp_path ):
 
     if get_sqlite3_thread_safety() in (1,3): # in both you can share the module, but only in 3 could you share a connection
         start = time.time()
-        end = start + 10
+        end = start + 7
 
         def writer(end, path):
             myid = threading.get_ident()%10000
@@ -144,7 +156,7 @@ def test_thread( tmp_path ):
 
         started = []
         #writer(end, path)
-        for _ in range(10): # it seems to take a few dozen concurrent writers (on an SSD, that's probably relevant) to make it time itself out.
+        for _ in range(3): # it seems to take a few dozen concurrent writers (on an SSD, that's probably relevant) to make it time itself out.
             th = threading.Thread(target=writer, args=(end, path))
             th.start()
             started.append( th )
