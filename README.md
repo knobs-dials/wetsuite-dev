@@ -132,7 +132,7 @@ for hit_et in cvdr.search_retrieve_many( 'body any fish', up_to=50 ):
     pprint.pprint(  wetsuite.helpers.koop_parse.cvdr_meta( hit_et, flatten=True )  )
 ```
 
-See [datacollect_koop_repos](datacollect_koop_repos.ip[ynb) for more details.
+See [datacollect_koop_repos](notebooks/examples/datacollect_koop_repos.ipynb) for more details.
 
 
 ### Search recent law changes (in BWB)
@@ -183,7 +183,7 @@ all_text = wetsuite.extras.pdf_text.pdf_text_ocr( pdfbytes )
 Note: `pdf_text_ocr()` will not care as much about clean document structure as you do.
 
 It is good enough for bag-of-words models, but a little messy for structured analysis.
-See [datacollect_ocr](datacollect_ocr.ipynb) 
+See [datacollect_ocr](notebooks/examples/datacollect_ocr.ipynb) 
 to get some more insight on why, and how you might improve that.
 
 
