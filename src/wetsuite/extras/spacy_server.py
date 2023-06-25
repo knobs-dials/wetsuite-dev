@@ -117,41 +117,8 @@ if __name__ == '__main__':
         reqvars  =  paste.request.parse_formvars(environ, include_get_vars=True)
         q        =  reqvars.get('q', None)
         want_svg = (reqvars.get('want_svg', 'n') == 'y')
-        #print("want svg: %s"%want_svg)
-        
-        # if reqvars.get('as_object', 'n') == 'y':
-        #     with nlp_lock:
-        #         doc = nlp( q )
-        #     #start = time.time()
-        #     output = [ doc.to_bytes() ]
-        #     #print("as_object took %.2fms"%( 1000.*(time.time() - start) ) )
-        #     #print("as_object size: %d"%len(output[0]))
-        #     status='200 OK'
-        #     response_headers.append( ('Content-type',   'application/octet-stream') )
-        # elif reqvars.get('as_docbin', 'n') == 'y':
-        #     with nlp_lock:
-        #         doc = nlp( q )
-        #     #start = time.time()
-        #     doc_bin = spacy.tokens.DocBin()
-        #     doc_bin.add(doc)
-        #     output = [ doc_bin.to_bytes() ]
-        #     #print("as_docbin took %.2fms"%( 1000.*(time.time() - start) ) )
-        #     #print("as_docbin size: %d"%len(output[0]))
-        #     status='200 OK'
-        #     response_headers.append( ('Content-type',   'application/octet-stream') )
-        # elif reqvars.get('as_pickle', 'n') == 'y':
-        #     with nlp_lock:
-        #         doc = nlp( q )
-        #     #start = time.time()
-        #     output = [ pickle.dumps(doc) ]
-        #     #print("pickle took %.2fms"%( 1000.*(time.time() - start) ) )
-        #     #print("pickle size: %d"%len(output[0]))
-        #     status='200 OK'
-        #     response_headers.append( ('Content-type',   'application/octet-stream') )
-        # else:
 
-        # Currently the output is a JSON object
-        ret = {} 
+        ret = {} # will be sent as JSON
         if q in (None,''):
             q = 'You gave us no input.'
 
