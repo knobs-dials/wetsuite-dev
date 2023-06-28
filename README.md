@@ -77,7 +77,7 @@ pprint.pprint( merged )
 #  ]
 ```
 
-We are still thinking about how a balance between more convenient, controllable, and complete.
+We are still thinking about how a balance between more convenient, controllable (the above relies on some defaults we don't explain here), and complete.
 
 See [datacollect_koop_docstructure_bwb](notebooks/examples/datacollect_koop_docstructure_bwb.ipynb) for more details on the underlying structure.
 
