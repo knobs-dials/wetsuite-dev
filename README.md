@@ -82,6 +82,24 @@ We are still thinking about how a balance between more convenient, controllable,
 See [datacollect_koop_docstructure_bwb](notebooks/examples/datacollect_koop_docstructure_bwb.ipynb) for more details on the underlying structure.
 
 
+
+
+### Entity extraction (with spaCy)
+```python
+
+
+
+```
+ 
+
+### Relation extraction (with spaCy)
+```python
+
+
+
+```
+
+
 ### Word cloud (kansspelbeschikkingen)
 Word clouds are a simple [bag-of-words](https://en.wikipedia.org/wiki/Bag-of-words_model)-style visualisation,
 yet sometimes it is enough to give a basic idea of what a document focuses on.
@@ -101,24 +119,6 @@ for case_details in ks.data[:5]:
     im = wetsuite.extras.word_cloud.wordcloud_from_freqs( counts )
     display( im )  # display() exists in the context of python notebooks, elsewhere you might e.g. do   im.save( '%s.png'%case_details['name'] ) 
 ```
-
-
-
-### Entity extraction (with spaCy)
-```python
-
-
-
-```
- 
-
-### Relation extraction (with spaCy)
-```python
-
-
-
-```
-
 
 
 
@@ -186,9 +186,7 @@ PDFs are common enough, so we can extract the text it says it contains.
 import wetsuite.helpers.net
 
 pdfbytes = wetsuite.helpers.net.download('https://open.overheid.nl/documenten/ronl-5439f4bf9849a53e634389ebbb5e4f5740c4f84f/pdf')
-
 text_per_page = wetsuite.datacollect.pdf.page_text( pdfbytes )
-
 # However, it turns out there are many PDFs that (partially or fully) contain _images of text_. To check, you can e.g. 
 chars_per_page, num_pages_with_text, num_pages = wetsuite.datacollect.pdf.count_pages_with_text(pdfbytes, char_threshold=150)
 print(f'{num_pages_with_text} out of {num_pages} pages contain reasonable amount of text\n  characters per page: {chars_per_page}')
