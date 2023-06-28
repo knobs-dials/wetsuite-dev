@@ -48,8 +48,7 @@ See [dataset_kamervragen](notebooks/examples/dataset_kamervragen.ipynb) for more
 ## Working on text
 
 ### Extract plain text fragments (from BWB)
-Laws are heavily structured, with paragraaf in an artikel in a hoofdstuk - and with some variation in the amount and names of those higher-level layers, various lists, and more.
-
+Laws are heavily structured, with paragraphs and lists, in an artikel, in a hoofdstuk, and much more.
 When studying details and structures and references you need to dive into that structure.
 
 Yet broader tasks, like summarizing topics of overall parts, might benefit from flattening that to varied degrees, e.g. plain text per article, per hoofdstuk, or otherwise, ideally still with some reference to its origin.
@@ -75,9 +74,11 @@ pprint.pprint( merged )
 #  ]
 ```
 
-We are still thinking about how a balance between more convenient, controllable (the above relies on some defaults we don't explain here), and complete.
+The above relies on some defaults we don't explain here, also dealing with observed variation in those higher-level layers.
+See [datacollect_koop_docstructure_bwb](notebooks/examples/datacollect_koop_docstructure_bwb.ipynb) for more such details.
 
-See [datacollect_koop_docstructure_bwb](notebooks/examples/datacollect_koop_docstructure_bwb.ipynb) for more details on the underlying structure.
+We are still considering the balance between more convenient, controllable, and complete, so this code will likely change.
+
 
 
 
