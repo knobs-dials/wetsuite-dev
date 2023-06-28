@@ -30,9 +30,7 @@ import wetsuite.datasets, random
 
 kv = wetsuite.datasets.load('kamervragen')
 
-# As:
-print( kv.description )
-# will point out,  kv.data  is a nested python structure, so some informed wrangling is necessary:
+# As the text in   kv.description   will point out,  kv.data  is a nested python structure, so some informed wrangling is necessary:
 vraag_document = random.choice( list(kv.data.values()) )
 for number in vraag_document['vraagdata']: 
     vraag_n_text,    _ = vraag_document['vraagdata'][number].get('vraag')
