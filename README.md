@@ -50,17 +50,41 @@ See [dataset_kamervragen](notebooks/examples/dataset_kamervragen.ipynb) for more
 ## Working on text
 
 ### Extract plain text fragments (from BWB)
+Laws are heavily structured, with paragraaf in an artikel in a hoofdstuk - and with some variation in the amount and names of those higher-level layers, various lists, and more.
+
+When studying details and structures and references you need to dive into that structure.
+
+Yet broader tasks, like summarizing topics of overall parts, might benefit from flattening that to varied degrees, e.g. plain text per article, per hoofdstuk, or otherwise, ideally still with some reference to its origin.
+
+In that case, consider:
+
 ```python
+import wetsuite.helpers.net, wetsuite.helpers.etree, wetsuite.helpers.koop_parse,  pprint
+example_et = wetsuite.helpers.etree.fromstring(     # intentionally a very short example.
+    wetsuite.helpers.net.download( 'https://repository.officiele-overheidspublicaties.nl/bwb/BWBR0007878/1996-02-04_0/xml/BWBR0007878_1996-02-04_0.xml' )
+)
 
-# also as an illustration of the Document class
+alinea_dicts = wetsuite.helpers.koop_parse.alineas_with_selective_path( example_et ) # this gives a detailed inbetween state that can be merged in varied ways
+merged       = wetsuite.helpers.koop_parse.merge_alinea_data( alinea_dicts ) # th 
+pprint.pprint( merged )
 
-
+#   Gives something like:
+# [
+#   ([],                  ['Besluit: ',  'Deze regeling zal met de toelichting in de Staatscourant worden geplaatst. ']),
+#   ([('artikel', '1')],  ['De door de ondernemers voor het jaar 1996 vastgestelde tarieven worden goedgekeurd. ']),
+#   ([('artikel', 'II')], ['Deze regeling treedt in werking met ingang van de tweede dag na dagtekening'
+#                          'van de Staatscourant waarin zij wordt geplaatst en werkt terug tot en met 1 januari 1996. '])
+#  ]
 ```
+
+We are still thinking about how a balance between more convenient, controllable, and complete.
+
+See [datacollect_koop_docstructure_bwb](notebooks/examples/datacollect_koop_docstructure_bwb.ipynb) for more details on the underlying structure.
 
 
 ### Word cloud (kansspelbeschikkingen)
-Word clouds are a simple bag-of-words visualisation, yet sometimes 
-it is enough to give a basic idea of what a document focuses on.
+Word clouds are a simple [bag-of-words](https://en.wikipedia.org/wiki/Bag-of-words_model)-style visualisation,
+yet sometimes it is enough to give a basic idea of what a document focuses on.
 
 ```python
 import wetsuite.datasets, wetsuite.helpers.spacy, wetsuite.extras.word_cloud
