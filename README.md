@@ -139,13 +139,15 @@ That said...
 ## Search
 Various goverment systems offer live search, in website and/or data form.
 
-Each has its own limitations, features, and idiosyncracies.
+Each has its own limitations, features, and idiosyncracies, and potentially document structure.
+The most controlled way is often to learn and use each directly.
 
-Little effort has been made yet to make the interface for each at least somewhat similar and/or pass through data unparsed.
-This will be refined later.
+We can at least ease that process, with explorations and explanations, and code to ease access.
+More effort will be made once we decide the best course of action.
 
 Also, since we have datasets, we provisionally provide a search of such,
-and if there is interest may may later explain how to set up your own.
+as that should at least put a single interface on all data wet put in there.
+If there is interest may may later explain how to set up your own.
 
 
 ### Search by keyword (in CVDR)
