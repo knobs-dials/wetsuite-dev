@@ -1,0 +1,1 @@
+Run the tests in a container, mainly to avoid "works on the developer's machine but not yours" issues 
