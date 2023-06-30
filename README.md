@@ -30,9 +30,7 @@ import wetsuite.datasets, random
 
 kv = wetsuite.datasets.load('kamervragen')
 
-# As:
-print( kv.description )
-# will point out,  kv.data  is a nested python structure, so some informed wrangling is necessary:
+# As the text in   kv.description   will point out,  kv.data  is a nested structure, so some informed wrangling is necessary:
 vraag_document = random.choice( list(kv.data.values()) )
 for number in vraag_document['vraagdata']: 
     vraag_n_text,    _ = vraag_document['vraagdata'][number].get('vraag')
@@ -50,8 +48,7 @@ See [dataset_kamervragen](notebooks/examples/dataset_kamervragen.ipynb) for more
 ## Working on text
 
 ### Extract plain text fragments (from BWB)
-Laws are heavily structured, with paragraaf in an artikel in a hoofdstuk - and with some variation in the amount and names of those higher-level layers, various lists, and more.
-
+Laws are heavily structured, with paragraphs and lists, in an artikel, in a hoofdstuk, and much more.
 When studying details and structures and references you need to dive into that structure.
 
 Yet broader tasks, like summarizing topics of overall parts, might benefit from flattening that to varied degrees, e.g. plain text per article, per hoofdstuk, or otherwise, ideally still with some reference to its origin.
@@ -77,9 +74,11 @@ pprint.pprint( merged )
 #  ]
 ```
 
-We are still thinking about how a balance between more convenient, controllable, and complete.
+The above relies on some defaults we don't explain here, also dealing with observed variation in those higher-level layers.
+See [datacollect_koop_docstructure_bwb](notebooks/examples/datacollect_koop_docstructure_bwb.ipynb) for more such details.
 
-See [datacollect_koop_docstructure_bwb](notebooks/examples/datacollect_koop_docstructure_bwb.ipynb) for more details on the underlying structure.
+We are still considering the balance between more convenient, controllable, and complete, so this code will likely change.
+
 
 
 
@@ -140,13 +139,15 @@ That said...
 ## Search
 Various goverment systems offer live search, in website and/or data form.
 
-Each has its own limitations, features, and idiosyncracies.
+Each has its own limitations, features, and idiosyncracies, and potentially document structure.
+The most controlled way is often to learn and use each directly.
 
-Little effort has been made yet to make the interface for each at least somewhat similar and/or pass through data unparsed.
-This will be refined later.
+We can at least ease that process, with explorations and explanations, and code to ease access.
+More effort will be made once we decide the best course of action.
 
 Also, since we have datasets, we provisionally provide a search of such,
-and if there is interest may may later explain how to set up your own.
+as that should at least put a single interface on all data wet put in there.
+If there is interest may may later explain how to set up your own.
 
 
 ### Search by keyword (in CVDR)
