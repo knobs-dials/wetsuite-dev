@@ -3,21 +3,10 @@
 Wetsuite is a project aimed at applying natural language processing and other analysis to Dutch and EU governmental legal data,
 focusing on providing the data and tools and other infrastructure to make it easier for researchers to do so.
 
-
-...this, so far, is an early repository test to test installs from github. 
-
-This repository is split into:
-- `notebooks` groups - which are introduced below
-  - [examples](notebooks/examples/) - python notebooks that demonstrate the use of varied package tools,  datasets,  and related things
-  - [miscellany](notebooks/miscellany/) - things that are not core wetsuite functionality, but may be useful to people anyway, including examples of code in [extras/](src/wetsuite/extras/)
-
-- [src](src/wetsuite/) - the part of this project that you would install and use.   
-  Has its own [README](src/wetsuite/README.md)
-
+...this, so far, is an early repository test to test installs from github, not the primary source of this project 
 
 
 # Minimal examples as code fragments
-
 
 ## Datasets
 Ideally, data we already provide is a basis for you to go on. 
@@ -246,7 +235,18 @@ Once you care to use this as a library in more serious projects, consider instal
   - how to extact data from well-structured web pages
   - how to apply OCR
   - Some are actually all the code that generated a dataset.
-  
+
+
+# Repository
+
+This repository is split into:
+- `notebooks` groups - which are introduced below
+  - [examples](notebooks/examples/) - python notebooks that demonstrate the use of varied package tools,  datasets,  and related things
+  - [miscellany](notebooks/miscellany/) - things that are not core wetsuite functionality, but may be useful to people anyway, including examples of code in [extras/](src/wetsuite/extras/)
+
+- [src](src/wetsuite/) - the part of this project that you would install and use.   
+  Has its own [README](src/wetsuite/README.md)
+
 
 
 
