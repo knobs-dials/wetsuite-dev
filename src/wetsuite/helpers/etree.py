@@ -115,6 +115,11 @@ some_ns_prefixes = { # CONSIDER: renaming to something like _some_ns_prefixes_pr
     'http://www.openrdf.org/schema/sesame#':'sesame',
     'http://schemas.microsoft.com/ado/2007/08/dataservices':'ms-odata',
     'http://schemas.microsoft.com/ado/2007/08/dataservices/metadata':'ms-odata-meta',
+
+    'www.kadaster.nl/schemas/lvbag/gem-wpl-rel/gwr-producten-lvc/v20200601':'bag',
+    'www.kadaster.nl/schemas/lvbag/gem-wpl-rel/bag-types/v20200601':'bag-types',
+    #'www.kadaster.nl/schemas/lvbag/gem-wpl-rel/gwr-deelbestand-lvc/v20200601':'bag-o',
+    #'http://www.kadaster.nl/schemas/lvbag/extract-selecties/v20200601':'bag-s',
 }
 'some readable XML prefixes for friendlier display.  Purely for consistent pretty-printing in debug, will NOT be correct according to the document definition. '
 # It might be useful to find namespaces from many XML files, with something like:
@@ -155,34 +160,37 @@ def kvelements_to_dict(under, strip_text=True, ignore_tagnames=[]):
     return ret
 
 
-def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_tags=[], join:str=None): # , add_spaces=['extref',]
+def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_tags=[], join:str=None, stop_at=None): # , add_spaces=['extref',]
     ''' Returns all fragments of text contained in a subtree, as a list of strings.
 
         For example,  all_text_fragments( fromstring('<a>foo<b>bar</b></a>') ) == ['foo', 'bar']
 
         Note that this is a convenience function that lets you be pragmatic with creative HTML-like nesting,
         and perhaps should not be used for things that are strictly data.
-        
-        strip - is what to remove at the edges of each .text and .tail (handed to strip())
 
-        ignore_empty - removes strings that are empty when after that stripping
+        Arguments:        
+            strip - is what to remove at the edges of each .text and .tail (handed to strip())
 
-        ignore_tags - ignores direct/first .text content of named tags
-          does not ignore .tail,
-          does not ignore the subtree
+            ignore_empty - removes strings that are empty when after that stripping
 
-        TODO:
-        - add_spaces - an acknowledgment that in non-HTML, 
-            as weell as equally free-form documents like this project often handles, 
+            ignore_tags - ignores direct/first .text content of named tags
+            does not ignore .tail,
+            does not ignore the subtree
+
+            stop_at - should be None or a list of tag names. If a tag name is this, 
+            we stop walking the tree entirely.
+
+                    
+        TODO: more tests, I'm moderately sure strip doesn't do quite what it should.
+
+        TODO: add_spaces - an acknowledgment that in non-HTML, 
+            as well as equally free-form documents like this project often handles, 
             that element should be considered to split a word (e.g. p in HTML) or 
             that element probably doesn't split a word (e.g. em, sup in HTML)
 
-          Here you specify the things where we add spaces (maybe prepend to .text and .tail).
-          This is creative and not necessarily correct, but on average makes fewer weird mistakes
-          TODO: figure out a decent default from the various schemas
-
-
-        TODO: more tests, I'm moderately sure strip doesn't do quite what I think.
+            Here you specify the things where we add spaces (maybe prepend to .text and .tail).
+            This is creative and not necessarily correct, but on average makes fewer weird mistakes
+            TODO: figure out a decent default from the various schemas
     '''
     ret = []
     for elem in under.iter(): # walks the subtree
@@ -202,6 +210,9 @@ def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_ta
                 pass
             else:
                 ret.append( etss )
+        if stop_at is not None  and  elem.tag in stop_at: 
+            break
+
     if join is not None:
         ret = join.join( ret )
     return ret
