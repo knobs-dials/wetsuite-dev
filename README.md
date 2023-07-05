@@ -48,12 +48,15 @@ See [dataset_kamervragen](notebooks/examples/dataset_kamervragen.ipynb) for more
 ## Working on text
 
 ### Extract plain text fragments (from BWB)
-Laws are heavily structured, with paragraphs and lists, in an artikel, in a hoofdstuk, and much more.
-When studying details and structures and references you need to dive into that structure.
+Laws are of course structured, with paragraphs and lists, in an artikel, in a hoofdstuk, and much more.
 
-Yet broader tasks, like summarizing topics of overall parts, might benefit from flattening that to varied degrees, e.g. plain text per article, per hoofdstuk, or otherwise, ideally still with some reference to its origin.
+When studying details and structures and references you need to understand that structure, yet some broader tasks,
+such as summarizing topics of broad parts, would only care to get out the text. 
 
-In that case, consider:
+We aim to let you flatten text with some controllable granularity, e.g. plain text per article, per hoofdstuk,
+or otherwise, ideally still with some reference to its origin within the original data-document.
+
+Consider:
 
 ```python
 import wetsuite.helpers.net, wetsuite.helpers.etree, wetsuite.helpers.koop_parse,  pprint
@@ -78,8 +81,6 @@ The above relies on some defaults we don't explain here, also dealing with obser
 See [datacollect_koop_docstructure_bwb](notebooks/examples/datacollect_koop_docstructure_bwb.ipynb) for more such details.
 
 We are still considering the balance between more convenient, controllable, and complete, so this code will likely change.
-
-
 
 
 
