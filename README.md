@@ -3,21 +3,10 @@
 Wetsuite is a project aimed at applying natural language processing and other analysis to Dutch and EU governmental legal data,
 focusing on providing the data and tools and other infrastructure to make it easier for researchers to do so.
 
-
-...this, so far, is an early repository test to test installs from github. 
-
-This repository is split into:
-- `notebooks` groups - which are introduced below
-  - [examples](notebooks/examples/) - python notebooks that demonstrate the use of varied package tools,  datasets,  and related things
-  - [miscellany](notebooks/miscellany/) - things that are not core wetsuite functionality, but may be useful to people anyway, including examples of code in [extras/](src/wetsuite/extras/)
-
-- [src](src/wetsuite/) - the part of this project that you would install and use.   
-  Has its own [README](src/wetsuite/README.md)
-
+...this, so far, is an early repository test to test installs from github, not the primary source of this project 
 
 
 # Minimal examples as code fragments
-
 
 ## Datasets
 Ideally, data we already provide is a basis for you to go on. 
@@ -48,12 +37,15 @@ See [dataset_kamervragen](notebooks/examples/dataset_kamervragen.ipynb) for more
 ## Working on text
 
 ### Extract plain text fragments (from BWB)
-Laws are heavily structured, with paragraphs and lists, in an artikel, in a hoofdstuk, and much more.
-When studying details and structures and references you need to dive into that structure.
+Laws are of course structured, with paragraphs and lists, in an artikel, in a hoofdstuk, and much more.
 
-Yet broader tasks, like summarizing topics of overall parts, might benefit from flattening that to varied degrees, e.g. plain text per article, per hoofdstuk, or otherwise, ideally still with some reference to its origin.
+When studying details and structures and references you need to understand that structure, yet some broader tasks,
+such as summarizing topics of broad parts, would only care to get out the text. 
 
-In that case, consider:
+We aim to let you flatten text with some controllable granularity, e.g. plain text per article, per hoofdstuk,
+or otherwise, ideally still with some reference to its origin within the original data-document.
+
+Consider:
 
 ```python
 import wetsuite.helpers.net, wetsuite.helpers.etree, wetsuite.helpers.koop_parse,  pprint
@@ -78,8 +70,6 @@ The above relies on some defaults we don't explain here, also dealing with obser
 See [datacollect_koop_docstructure_bwb](notebooks/examples/datacollect_koop_docstructure_bwb.ipynb) for more such details.
 
 We are still considering the balance between more convenient, controllable, and complete, so this code will likely change.
-
-
 
 
 
@@ -245,7 +235,18 @@ Once you care to use this as a library in more serious projects, consider instal
   - how to extact data from well-structured web pages
   - how to apply OCR
   - Some are actually all the code that generated a dataset.
-  
+
+
+# Repository
+
+This repository is split into:
+- `notebooks` groups - which are introduced below
+  - [examples](notebooks/examples/) - python notebooks that demonstrate the use of varied package tools,  datasets,  and related things
+  - [miscellany](notebooks/miscellany/) - things that are not core wetsuite functionality, but may be useful to people anyway, including examples of code in [extras/](src/wetsuite/extras/)
+
+- [src](src/wetsuite/) - the part of this project that you would install and use.   
+  Has its own [README](src/wetsuite/README.md)
+
 
 
 
