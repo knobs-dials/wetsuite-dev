@@ -39,11 +39,11 @@ See [dataset_kamervragen](notebooks/examples/dataset_kamervragen.ipynb) for exam
 ### Extract plain text fragments (from BWB)
 Laws are of course structured, with paragraphs and lists, in an artikel, in a hoofdstuk, and much more.
 
-When studying details and structures and references you need to understand that structure, yet some broader tasks,
-such as summarizing topics of broad parts, would only care to get out the text. 
+When studying details and structures and references you may need to understand and use all that structure, 
+yet broader tasks such as summarizing topics of broad parts cares can be fed plain text.
 
-We aim to let you flatten text with some controllable granularity, e.g. plain text per article, per hoofdstuk,
-or otherwise, ideally still with some reference to its origin within the original data-document.
+We aim to let you flatten text with some controllable granularity, e.g. per article, per hoofdstuk,
+or otherwise, and ideally still with some reference to its origin within the original data-document.
 
 Consider:
 
