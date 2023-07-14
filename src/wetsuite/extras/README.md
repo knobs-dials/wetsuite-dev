@@ -5,7 +5,10 @@ Code that is not considered core functionality, and may not be supported, but wh
 
 ## pdf_text 
 
-Helps extract 
+Helps extract text that PDFs themselves report having.
+Actually a thin layer around [poppler](https://poppler.freedesktop.org/), which you could use directly yourself.
+
+If a PDF actually contains scanned images, you would move on to:
 
 ## ocr 
 
