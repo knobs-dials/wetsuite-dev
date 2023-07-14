@@ -1,6 +1,6 @@
 # Extras 
 
-Code that is not considered core functionality, and may not be supported, but which you may find use for nonetheless.
+Code that is not considered core functionality, and may not be guaranteed to work, or supported per se, but which you may find use for nonetheless, particularly in the copy-paste department.
 
 
 ## pdf_text 
