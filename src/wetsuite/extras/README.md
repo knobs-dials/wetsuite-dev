@@ -5,7 +5,7 @@ Code that is not considered core functionality, and may not be supported, but wh
 
 ## spacy_server
 
-This loads spacy and provides a basi "give me text, here is its parse" service served via HTTP.
+This loads spacy and provides a basic "give me text, here is its parse" service served via HTTP.
 
 This is mostly about the overhead of loading spacy and its models. 
 In batch use incurring it once at the stat is fine,
