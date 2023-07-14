@@ -3,6 +3,18 @@
 Code that is not considered core functionality, and may not be supported, but which you may find use for nonetheless.
 
 
+## pdf_text 
+
+Helps extract 
+
+## ocr 
+
+Mostly wraps existing OCR packages (currently just [EasyOCR](https://github.com/JaidedAI/EasyOCR)) 
+and tries to you help you extract text.
+
+See [datacollect_ocr.ipynb](../../../notebooks/examples/datacollect_ocr.ipynb) for some basic use examples.
+
+
 ## spacy_server
 
 This loads spacy and provides a basic "give me text, here is its parse" service served via HTTP.
