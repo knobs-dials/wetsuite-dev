@@ -1,0 +1,24 @@
+#!/usr/bin/python3
+import sys, os #, time, json, pprint
+import wetsuite.helpers.localdata
+
+
+if __name__ == '__main__':
+
+    for path in sys.argv[1:]:
+        if not os.path.exists( path ):
+            print( 'Specified path not found: %r'%path )
+            continue
+
+        if not wetsuite.helpers.localdata.is_file_a_store( path ):
+            print( 'Specified path does not seem to be an SQLite file create by us: %r'%path )
+            continue
+
+        print('== %r =='%path)
+        store = wetsuite.helpers.localdata.LocalKV(path, str, str) # the types are not actually used because we don't use put()
+        count = 0
+        for key in store.iterkeys():
+            print(key)
+            count += 1
+        sys.stderr.write('# Listed %d keys\n'%count)
+
