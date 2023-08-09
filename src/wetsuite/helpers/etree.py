@@ -169,7 +169,9 @@ def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_ta
         and perhaps should not be used for things that are strictly data.
 
         Arguments:        
-            strip - is what to remove at the edges of each .text and .tail (handed to strip())
+            strip - is what to remove at the edges of each .text and .tail 
+                    ...handed to strip(), and note that the default, None, is to strip whitespace
+                    if you want it to strip nothing at all, pass in '' (empty string)
 
             ignore_empty - removes strings that are empty when after that stripping
 
