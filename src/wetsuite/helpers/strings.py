@@ -1,8 +1,8 @@
 ' basic helper functions for text '
 import re, unicodedata
 
-def contains_any_of( haystack:str, needles, case_sensitive=True):
-    ' Returns whether one string contains at least one of the strings in the list you give it '
+def contains_any_of( haystack:str, needles, case_sensitive=True ):
+    ' Given a string and a list of strings,  returns whether the former contains at least one of the strings in the latter '
     if not case_sensitive:
         haystack = haystack.lower()
         needles = list(needle.lower()  for needle in needles)
@@ -14,8 +14,8 @@ def contains_any_of( haystack:str, needles, case_sensitive=True):
     return False
 
 
-def contains_all_of( haystack:str, needles, case_sensitive=True):
-    ' Returns whether one string contains all of the strings in the list you give it '
+def contains_all_of( haystack:str, needles, case_sensitive=True ):
+    ' Given a string and a list of strings,  returns whether the former contains all of the strings in the latter '
     if not case_sensitive:
         haystack = haystack.lower()
         needles = list(needle.lower()  for needle in needles)
@@ -27,9 +27,10 @@ def contains_all_of( haystack:str, needles, case_sensitive=True):
     return True
 
 
-def ordered_unique(strlist, case_sensitive=True, remove_none=True ):
+def ordered_unique( strlist, case_sensitive=True, remove_none=True ):
     ''' Makes values in a list of strings unique (take out later duplicates),
-        but unlike just set(strlist), this keep the order of what we keep.
+        
+        Unlike a plain set(strlist), it keep the order of what we keep.
 
         Can be made case insensitive. It then keeps the first casing it saw.
     '''
@@ -51,26 +52,27 @@ def ordered_unique(strlist, case_sensitive=True, remove_none=True ):
     return ret
 
 
-
-
 def findall_with_context(pattern:str, s:str, context_amt:int):
-    ''' A generator that yields tuples of (
+    ''' Matches substrings/regexpe, 
+        and for each match also gives some of the text context (on a character basis). 
+
+        Is a generator that yields tuples of (
         - string before, 
         - matched string 
         - match object   (may seem redundant, but you often want a distinction between what is matched and captured)
         - string after 
+
+        For example
     '''
     ret = []
     for match_object in re.finditer( pattern, s ):
         st, en = match_object.span()
         yield (
-            s[st-context_amt:st],
+            s[max(0, st-context_amt):st],
             s[st:en], 
             match_object,
             s[en:en+context_amt],
         )
-
-
 
 
 
@@ -171,7 +173,7 @@ for k, v in tigste10.items():
 re_tig = re.compile( '(%s)(%s)'%( '|'.join(tigste1), '|'.join(tigste10) ) )
 
 def interpret_ordinal_nl(s:str):
-    " Given ordinals, gives the integer it represents (for 0..99), e.g. 'eerste'-> 1 "
+    " Given ordinals, gives the integer it represents (for 0..99), e.g. interpret_ordinal_nl('eerste') -> 1 "
     s = remove_diacritics(s).strip() # remove_diacritics mostly to remove the dearesis (we could have hardcoded U+00EB to u+0065)
     if s in ordinal_nl_20:
         return ordinal_nl_20[s]
