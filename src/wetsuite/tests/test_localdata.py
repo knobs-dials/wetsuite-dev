@@ -5,17 +5,11 @@ import wetsuite.helpers.localdata
 
 def test_crud():
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', key_type=str, value_type=str)
-
-    # dict-like
     with pytest.raises(KeyError):
         kv.get('a')
-    #with pytest.raises(KeyError):
-    #    kv['a']
-    #kv['a'] = 'b'
     kv.put('a', 'b')
     assert len(kv)==1
     assert kv.get('a') == 'b'
-    #del kv['a']
     kv.delete('a')
     assert len(kv)==0
 
@@ -23,6 +17,17 @@ def test_crud():
     assert len(kv)==1
     kv.delete('c')
     assert len(kv)==0
+
+
+def test_metacrud():
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', key_type=str, value_type=str)
+    with pytest.raises(KeyError):
+        kv._get_meta('a')
+    kv._put_meta('a', 'b')
+    assert kv._get_meta('a') == 'b'
+    kv._delete_meta('a')
+    kv._put_meta('c', 'd')
+    kv._delete_meta('c')
 
 
 def test_moreapi():
