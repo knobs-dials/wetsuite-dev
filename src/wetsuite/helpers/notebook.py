@@ -5,14 +5,16 @@
 import sys
 
 def detect_env():
-    ''' Returns a dict with keys:
-        - ipython      - whether IPython is available
-        - interactive  - whether it's interactive (e.g. notebook, qtconsole, or regular python REPL)
-        - notebook     - whether it's a notebook (note: we count qtconsole)
+    ''' Returns a dict with keys that map to booleans:
+        - 'ipython'      - whether IPython is available    (which can happen when the module just happens to be installed)
+        - 'interactive'  - whether it's interactive        (e.g. notebook, qtconsole, or regular or ipython REPL)
+        - 'notebook'     - whether it's a notebook         (including colab, and we count qtconsole)
+
+        (when we see pytest, we fake all False, because that's probably closer -- probably better than noticing the IPython that pytest seems to mock)
     '''
     ret = {}
 
-    if "pytest" in sys.modules: # pytest seems to mock IPython, which confuses the below
+    if 'pytest' in sys.modules:  # pytest seems to mock IPython, which confuses the below
         ret['ipython']     = False 
         ret['interactive'] = False
         ret['notebook']    = False
@@ -44,6 +46,7 @@ def detect_env():
         else:
             pass
             raise ValueError("we probably want to understand %r"%ipyshell)
+        
     except ImportError: # no IPython, no notebook, but possibly interactive
         ret['ipython']     = False
         ret['notebook']     = False
@@ -61,7 +64,7 @@ def is_notebook():
 
 
 def is_ipython():
-    " returns whether IPython is available (see detect_env)  (note that this *can* be true if it is installed in dist-packages - you may often want is_ipython_interactive() instead)"
+    " returns whether IPython is available (see detect_env)  -  note that depending on what you're testing, you might want to combine this with is_interactive "
     return detect_env()['ipython']
 
 
@@ -73,7 +76,6 @@ def is_interactive():
 def is_ipython_interactive():
     env = detect_env()
     return env['ipython'] and detect_env()['interactive']
-
 
 
 
@@ -94,10 +96,10 @@ def progress_bar(max, description='', display=True, **kwargs):
         You should only call this after you know you are in an ipython environment - e.g. with is_ipython() / is_notebook()
         
         CONSIDER: prefer tqdm if installed, fall back quietly to ipywidgets.IntProgress?
-        But then we'd also need to absract out IntProgress's .value= versus tqdm's .update()
+                  but then we'd also need to abstract out IntProgress's .value= versus tqdm's .update()
     '''
     import IPython.display, ipywidgets 
-    prog = ipywidgets .IntProgress(max=max, description=description, **kwargs)
+    prog = ipywidgets.IntProgress(max=max, description=description, **kwargs)
     if display:
         IPython.display.display(prog)
     return prog
@@ -107,8 +109,8 @@ def progress_bar(max, description='', display=True, **kwargs):
 
 class etree_visualize_selection(object):
     ''' Produces a colorized representation of selection within an XML document.
-        (works only within IPython/jupyter style notebooks. works via a HTML representation.) 
-    '''    
+        (works only within IPython/jupyter style notebooks,  via a HTML representation.) 
+    '''
     def __init__(self, tree, xpath_or_elements, reindent:bool=True, mark_text:bool=True, mark_tail:bool=False, mark_subtree:bool=False):
         ''' Produces a colorized representation of selection within an XML document.
             (works only within IPython/jupyter style notebooks. works via a HTML representation.) 
@@ -190,14 +192,10 @@ class etree_visualize_selection(object):
 
 if is_notebook():
     # for debug: make the process easier to recognize for people wondering what's taking so much CPU. 
-    # Should probably be in a function, or otherwise conditional.
+    # Should probably be in a function, or otherwise conditional, NOT happen globally on import
     try:
         import setproctitle
         setproctitle.setproctitle( 'wetsuite-notebook' )
     except ImportError:
         pass
 
-
-
-#if __name__ == '__main__':
-#    print( detect_env() ) # should be three Falses
