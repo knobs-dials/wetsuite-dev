@@ -38,21 +38,23 @@ class DutchParserInfo(dateutil.parser.parserinfo):
     
 
 def parse(text, prefer_none_over_exception=True):
-    ''' Mostly just calls dateutil.parser.parse()
-          but understands a bit of Dutch on top of English - TODO: add French.
+    ''' Mostly just calls dateutil.parser.parse(),  a library that deals with more varied date formats
+          but understands a bit of Dutch on top of English 
+          TODO: add French.
 
         Takes a string that you know contains just a date,
         Returns that date as a datetime.
         
         We try to be a little more robust here - and will return None before we raise an exception.
     '''
-    for lang, trans in (
+    # use the first that doesn't fail
+    for lang, transform in (
         (DutchParserInfo(), lambda x:x),
-        (DutchParserInfo(), lambda x:x.split('+')[0]), # the + is for a specific malformed date I've seen. TODO: think about fallbacks more
+        (DutchParserInfo(), lambda x:x.split('+')[0]),   # the + is for a specific malformed date I've seen.  TODO: think about fallbacks more
         (None,              lambda x:x),
         (None,              lambda x:x.split('+')[0])):
         try:
-            return dateutil.parser.parse(trans(text), parserinfo=lang)
+            return dateutil.parser.parse(transform(text), parserinfo=lang)
         except dateutil.parser._parser.ParserError as pe:
             #print(pe)
             continue
@@ -71,20 +73,17 @@ _re_dutch_date_2  = re.compile(r'\b(%s) [0-9]{1,2},? [0-9]{2,4}\b'%_maand_res, r
 
 def find_dates_in_text(text:str, try_parsing=True):
     ''' Tries to fish out date-like strings from free-form text.  
-          Currently looks only for three specific patterns (1980-01-01, 1 jan 1980, jan 1 1980, the latter two in both Dutch and English),
-          and would not find anything else.
 
-        Focuses first on the text part, and is currently more restrictive (looks only for some specific patterns) which is a nice way of saying 'probably a bunch of false negatives'
-        though it then also hands it to parse()
+        Currently looks only for three specific patterns (1980-01-01, 1 jan 1980, jan 1 1980, the latter two in both Dutch and English),
+        aimed at some specific fields we know mainly/only contain dates, mostly to normalize those.
+        
+        Targeted at specific fields with relatively well formatted dates, because "try to find everthing, hope for the best" 
+        is likely to have false positives.
+        TODO: add such a freer mode in here anyway, just not as the default.
         
         Returns two lists:
         - a list of strings
         - each as a date, or None where dateutil didn't manage (it usually does, particularly if we pre-filter like this, but it's not a guarantee)
-
-        Tries to look for specific patterns, rather than hope for the best.
-
-        This is mainly intended for fields we know contain dates - running this on general text will probably give false positives.
-        For fields you know contain only dates, but are freeform, you probably may want just dateutil.parser.parse() instead.
     '''
     text_with_pos = []
     for testre in (_re_isolike_date, _re_dutch_date_1, _re_dutch_date_2):
