@@ -1,8 +1,8 @@
-import re
+import re, sys
 import urllib.parse
 
 import wetsuite.datacollect.koop_repositories
-
+import wetsuite.helpers.meta
 
 from lxml.etree import _Comment, _ProcessingInstruction   # CONSIDER: import these via wetsuite.helpers.etree ? 
 
@@ -11,11 +11,11 @@ from lxml.etree import _Comment, _ProcessingInstruction   # CONSIDER: import the
 def cvdr_meta(tree, flatten=False):
     ''' Takes an etree object that is either 
         - a search result's individual record  (in which case we're looking for ./recordData/gzd/originalData/meta
-        - CVDR content xml's root              (in which case it's ./meta)
+        - CVDR content xml's root              (in which case it's              ./meta)
         ...because both contain almost the same metadata almost the same way (the difference is enrichedData in the search results).
 
         Returns owmskern, owmsmantel, and cvdripm's elements merged into a single dict. 
-        If it's a search result, it will also mention the enrichedData.
+        If it's a search result, it will also mention its enrichedData.
 
         Because various elements can repeat - and various things frequently do (e.g. 'source'), each value is a list.
 
@@ -289,10 +289,44 @@ def cvdr_text(tree):
     return ret
 
 
-def cvdr_sourcerefs(tree): 
-    ''' Given the XML content document as an etree object, looks for the <source> tags, which are references to laws and other regulations (VERIFY)
+def cvdr_sourcerefs(tree, debug=False): 
+    ''' Given the CVDR XML content document as an etree object, 
+          looks for the <source> tags, which are references to laws and other regulations (VERIFY)
     
-        The references seem to be more convention-based than standardized.
+        Returns a list of 
+          (type, orig, specref, None, source_text)
+        where 
+        - type is currently one of 'BWB' or 'CVDR'
+        - URL-like reference
+        - just the identifier
+        - dict of parts parsed from URL, or None
+        - link text (name and often part to a reference)
+            seem to be more convention-based than standardized.
+
+        For example (mostly to point out there is _plenty_ of variation in most parts)
+         ('BWB', 
+          '1.0:c:BWBR0015703&artikel=6&g=2014-11-13', 
+          'BWBR0015703', 
+          {'artikel': ['6'], 'g': ['2014-11-13']}, 
+          'Participatiewet, art. 6')
+        or
+         ('BWB', 
+          'http://wetten.overheid.nl/BWBR0015703/geldigheidsdatum_15-05-2011#Hoofdstuk1_12', 
+          'BWBR0015703', 
+          {}, 
+          'Wet werk en bijstand, art. 8, lid 1')
+        or
+         ('CVDR', 
+          'CVDR://103202_1',
+          '103202_1',
+          None,
+          'Inspraakverordening Spijkenisse, art. 2')
+        or
+         ('CVDR', 
+          '1.1:CVDR229520-1',
+          '229520',
+          None, 
+          'Verordening voorzieningen maatschappelijke participatie 2012-A, artikel 4')
 
         This exists in part to normalize it a bit - yet this is more creative than a helper function probably should be.
     '''
@@ -314,11 +348,15 @@ def cvdr_sourcerefs(tree):
             orig = resourceIdentifier
             if resourceIdentifier.startswith('CVDR://'):
                 resourceIdentifier = resourceIdentifier[7:]
-            parsed = cvdr_parse_identifier(resourceIdentifier)
-            specref = parsed[1]
-            if specref is None:
-                specref = parsed[0]
-            ret.append( ('CVDR', orig, specref, None, source_text) )
+            try:
+                parsed = cvdr_parse_identifier(resourceIdentifier)
+                specref = parsed[1]
+                if specref is None:
+                    specref = parsed[0]
+                ret.append( ('CVDR', orig, specref, None, source_text) )
+            except ValueError as ve:
+                if debug:
+                    print( 'failed to parse CVDR in %s'%resourceIdentifier, file=sys.stderr)
 
             #print( '%r -> %r'%(orig, parsed ))
 
@@ -333,7 +371,8 @@ def cvdr_sourcerefs(tree):
                 version, typ, bwb, rest = m.groups()
                 params = cvdr_param_parse(rest)
                 ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
-                #print( 'BWB://-style   %r  %r'%(bwb, params) )
+                if debug:
+                    print( 'BWB://-style   %r  %r'%(bwb, params), file=sys.stderr )
 
         elif resourceIdentifier.startswith('http://') or resourceIdentifier.startswith('https://'):
             # http://wetten.overheid.nl/BWBR0013016
@@ -345,7 +384,8 @@ def cvdr_sourcerefs(tree):
                 params={}
                 if rest is not None:
                     params =  cvdr_param_parse(rest)
-                #print("http-wetten: %r %r"%(bwb, params))
+                if debug:
+                    print("http-wetten: %r %r"%(bwb, params), file=sys.stderr)
                 ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
 
             #else:
@@ -362,18 +402,20 @@ def cvdr_sourcerefs(tree):
 
         elif resourceIdentifier.startswith('jci') or 'v:BWBR' in resourceIdentifier or 'c:BWBR' in resourceIdentifier:
             try:
-                d = wetsuite.datacollect.meta.parse_jci( resourceIdentifier )
+                d = wetsuite.helpers.meta.parse_jci( resourceIdentifier )
             except ValueError as ve:
-                #print("ERROR: bad jci in %r"%ve, file=sys.stderr)
+                if debug:
+                    print("ERROR: bad jci in %r"%ve, file=sys.stderr)
                 continue
             bwb, params = d['bwb'], d['params']
-            #print("JCI: %r %r"%(bwb, params))
+            if debug:
+                print("JCI: %r %r"%(bwb, params))
             ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
 
         else:
             pass
-            #if len(resourceIdentifier.strip())>0:
-            #    print( 'UNKNOWN: %r %r'%(resourceIdentifier, source_text), file=sys.stderr )
+            if debug and len(resourceIdentifier.strip())>0:
+                print( 'UNKNOWN: %r %r'%(resourceIdentifier, source_text), file=sys.stderr )
             #    #print( wetsuite.helpers.etree.tostring(source) )
     return ret
 
@@ -437,11 +479,15 @@ def bwb_searchresult_meta(record): # TODO: rename bwb_meta to this in files
 def bwb_toestand_usefuls(tree):
     ''' Fetch interesting metadata from parsed toestand XML.    TODO: finish '''
     ret = {}
+
+    ret['bwb-id']                   = tree.get('bwb-id')
+
     wetgeving = tree.find('wetgeving') # TODO: also allow the alternative roots
     ret['intitule']               = wetgeving.findtext('intitule')
     ret['citeertitel']            = wetgeving.findtext('citeertitel')
     ret['soort']                  = wetgeving.get('soort')
     ret['inwerkingtredingsdatum'] = wetgeving.get('inwerkingtredingsdatum')
+
     # this might contain nothing we can't get better in wti or manifest?
     #wetgeving_metadata = wetgeving.find('meta-data')
     return ret
