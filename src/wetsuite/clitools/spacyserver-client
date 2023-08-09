@@ -61,8 +61,7 @@ if 1:
         oov = ''
         if is_oov:
             oov='Y'
-        #print( cols%(i, pos,, tag, text, stop, dep, showtok))
-
+        
         if pos in ('PUNCT',) or is_stop:
             text  = sc.darkgray( text  )
             lemma = sc.darkgray( lemma )
@@ -96,10 +95,14 @@ if 1:
 
         for toki in range(st, en):
             tok = tokens[toki]
+            text = tok['text']
+            pos  = tok['pos']
+            if pos in ('SPACE',):
+                continue
             sys.stdout.write( 
                 '%s/%s'%( 
-                    sc.white( tok['text'] ), 
-                    sc.hash_color(tok['pos'], rgb=True) 
+                    sc.white( text ), 
+                    sc.hash_color(pos, rgb=True) 
                 )
             )
             sys.stdout.write('  ')
