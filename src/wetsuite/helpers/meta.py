@@ -2,8 +2,7 @@
 
     Function name should give you some indication how what it belongs to and how specific it is.
 '''
-import re 
-import urllib.parse
+import re, collections, urllib.parse
 
 
 def parse_jci(s: str):
@@ -13,8 +12,8 @@ def parse_jci(s: str):
           {'version': '1.31', 'type': 'c', 'bwb': 'BWBR0012345', 'params': {'g': ['2005-01-01'], 'artikel': ['3.1']}}
 
         Notes:
-        - the code tries to be robust to a few non-standard things we've seen in real use.
-
+        - params is actually an an OrderedDict, so you can also fetch them in the order they appeared, for the cases where that matters.
+        - tries to be robust to a few non-standard things we've seen in real use
         - for type=='c' (single consolidation), expected params include
             g  geldigheidsdatum
             z  zichtdatum
@@ -22,9 +21,9 @@ def parse_jci(s: str):
             s  start of geldigheid
             e  end of geldigheid
             z  zichtdatum
-
         Precise interpretation, and generation of these links, is a little more involved,
-        in that versions made small semantic changes.
+        in that versions made small semantic changes to the meanings of some parts.
+
     """
     ret = {}
     m = re.match('(?:jci)?([0-9.]+):([a-z]):(BWB[RV][0-9]+)(.*)', s)
@@ -37,7 +36,7 @@ def parse_jci(s: str):
         ret['bwb']     = bwb
         # The jci standard doesn't seem to make it clear whether it's supposed to be a conformant URL or URN, so it's unsure whether there is specific parameter encoding.
         #   The below is somewhat manual, but might prove more robust then just   d['params']  = urllib.parse.parse_qs(rest)
-        params = {}
+        params = collections.OrderedDict()
         for param in rest.split('&'):
             pd = urllib.parse.parse_qs(param)
             for key in pd:
