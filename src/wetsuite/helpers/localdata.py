@@ -1,25 +1,27 @@
 ''' This is intended to provide an easier way way to store collections of data on disk, in a in key-value store way.
     See the docstring on the LocalKV class for more details.
 
+    
     How to use
     - You can create your own specific stores by doing something like:
-        mystore_path = os.path.join( 'project_data', 'docstore.db')
+        mystore_path = os.path.join( 'project_data_dir', 'docstore.db')  # OS-agnostic path join
         mystore = LocalKV( mystore_path )
     OR
     - use open_store( 'docstore.db' ), which places it in the wetsuite directory in your homedir
-      which should make it easier to always open the same thing without having to think about absolute paths 
 
-    
-    Notes:
-    - Using an absolute, repeatable path like that is recommended 
-        to avoid confusing yourself by unintentionally creating a database in each working directory.
-    - The global is a quick and dirty way to get a singleton, because SQLite doesn't like concurrent writes. 
-        CONSIDER: be a little more resistant to that via retries
-    - By default, writes are done autocommit style, because the driver defaults to that.
-        so you can get bulk writes to be more performant by using put() with commit=False parameter and doing an explicit commit() after
+    Why two ways?
+    The first gives you direct control 
+      ...but means you should think about the current working directory,
+      or using absolute paths, or you will probably confuse yourself 
+      by unintentionally creating a database in each working directory.
+    The latter just gives the same store for the same name
+      use mystore.path to find where it placed it
 
-    TODO: test that keeping it open is a good idea.
+          
+    Note that by default, writes are done autocommit style, because SQlite's driver defaults to that.
+      so you can get bulk writes to be more performant by using put() with commit=False parameter and doing an explicit commit() after.
 
+    CONSIDER: meta table for e.g. 'description'
     CONSIDER: writing a ExpiringLocalKV that cleans up old entries
     CONSIDER: writing variants that do convert specific data, letting you e.g. set/fetch dicts, or anything else you could pickle
 '''
@@ -59,11 +61,14 @@ class LocalKV:
           readers are likely to bork out on the fact it's locked (CONSIDER: have it retry / longer).
           This is why by default we leave it on autocommit, even though that can be slower.
 
-        - It wouldn't be hard to also make it act like a dict, 
-          but it's arguably a leaky abstractions with various issues much like ORMs have.
-          That said, for now it has keys(), values(), and items(), and their iter variants,
-          because those can at least have docstrings to warn you.
-
+        - It wouldn't be hard to also make it act like a dict, but we're trying to to avoid this to avoid a case of
+          "this is so hidden in the semantics that it what and how become really opaque " style leaky abstraction like various ORMs do,
+          so we at least make such behaviour specific calls (keys(), values(), and items(), and their iter variants),
+          because those can at least have docstrings to warn you, rather than the things that make it become part of the syntax. 
+          ...exceptions are
+            __len__        for amount of items                   CONSIDER: making that len()
+            __contains__   backing 'is this key in the store'),  CONSIDER: making that has_key() instead
+            __iter__       which is actually iterkeys()       so CONSIDER: removing it
     '''
     def __init__(self, path, key_type, value_type, read_only=False):
         ''' Specify the path to the database file to open. 
@@ -91,12 +96,13 @@ class LocalKV:
 
     def _open(self):
         #print('open(%r)'%self.filename)
-        first = not os.path.exists( self.path )
+        make_tables = not os.path.exists( self.path ) or self.path==':memory:' # will create that file, or are using an in-memory database
         self.conn = sqlite3.connect( self.path )
         # Note: curs.execute is the regular DB-API way,  conn.execute is a shorthand  and gets a cursor temporarily
-        self.conn.execute("PRAGMA auto_vacuum = INCREMENTAL") # TODO: see that that works
-        if first:
-            self.conn.execute("CREATE TABLE IF NOT EXISTS kv (key text unique NOT NULL, value text)")
+        self.conn.execute("PRAGMA auto_vacuum = INCREMENTAL")  # TODO: see that this does what I think it does
+        if make_tables:
+            self.conn.execute("CREATE TABLE IF NOT EXISTS meta (key text unique NOT NULL, value text)")
+            self.conn.execute("CREATE TABLE IF NOT EXISTS kv   (key text unique NOT NULL, value text)")
         self.conn.commit()
 
 
@@ -124,7 +130,6 @@ class LocalKV:
                 return None
             else:
                 raise KeyError("Key %r not found"%key)
-            #return None
         else:
             return row[0]
 
@@ -174,8 +179,72 @@ class LocalKV:
         self._in_transaction = False
 
 
+    # # TODO: test
+    # def truncate(self, key, vacuum=True):
+    #     ''' remove all kv entries.
+    #         If we were still in a transaction, we roll that back  first
+    #     '''
+    #     self._checktype_key(key)
+    #     curs = self.conn.cursor() # TODO: check that's correct when commit==False
+    #     if self._in_transaction:
+    #         self.rollback()
+    #         self._in_transaction = True
+    #     curs.execute('DELETE FROM kv')  # https://www.techonthenet.com/sqlite/truncate.php
+    #     if vacuum:
+    #         self.vacuum()
+
+
+    # # TODO: test
+    # def rollback(self):
+    #     ' roll back changes '
+    #     # maybe only if we were in a transaction?
+    #     self.conn.rollback()
+    #     self._in_transaction = False
+
+
+
+
+    def _get_meta(self, key:str, missing_as_none=False):
+        ''' For internal use, preferably don't use.
+            This is an extra str:str table in there that is intended to be separate, with some keys special to these classes.
+              ...you could abuse this for your own needs if you wish, but try not to.
+        '''
+        curs = self.conn.cursor()
+        curs.execute("SELECT value FROM meta WHERE key=?", (key,) )
+        row = curs.fetchone()
+        if row is None:
+            if missing_as_none:
+                return None
+            else:
+                raise KeyError("Key %r not found"%key)
+        else:
+            return row[0]
+
+
+    def _put_meta(self, key:str, value:str):
+        ''' For internal use, preferably don't use.   See also _get_meta() '''
+        if self.read_only:
+            raise RuntimeError('Attempted _put_meta() on a store that was opened read-only.  (you can subvert that but may not want to)')
+        curs = self.conn.cursor()
+        curs.execute('BEGIN')
+        curs.execute('INSERT INTO meta (key, value) VALUES (?, ?)  ON CONFLICT (key) DO UPDATE SET value=?', (key,value, value) )
+        self.commit()
+
+
+    def _delete_meta(self, key:str):
+        ''' For internal use, preferably don't use.   See also _get_meta() '''
+        if self.read_only:
+            raise RuntimeError('Attempted _put_meta() on a store that was opened read-only.  (you can subvert that but may not want to)')
+        curs = self.conn.cursor() # TODO: check that's correct when commit==False
+        curs.execute('DELETE FROM meta where key=?', ( key,) )
+        self.commit()
+        
+
+
     def vacuum(self):
-        ''' After a lot of deletes you could compact the store with vacuum() - but note this rewrite the file so the more data you store, the longer this takes 
+        ''' After a lot of deletes you could compact the store with vacuum().
+            However, note this rewrites the entire file, so the more data you store, the longer this takes.
+            
             Note that if we were left in a transaction (due to commit=False), ths is commit()ed first. 
         '''
         if self._in_transaction:
@@ -186,36 +255,7 @@ class LocalKV:
     def close(self):
         self.conn.close()
 
-
-    # make it act dict-like - based on code from https://stackoverflow.com/questions/47237807/use-sqlite-as-a-keyvalue-store
-    # Currently we are specifically _not_ doing that for potentially-leaky-abstraction reasons, but CONSIDER: adding them back
-    #def __getitem__(self, key):
-    #    ret = self.get(key)
-    #    if ret is None:
-    #        raise KeyError()
-    #    return ret
-        
-    #def __setitem__(self, key, value):
-    #    self.put(key, value)
-
-    #def __delitem__(self, key):
-    #    # TODO: check whether we can ignore it not being there, or must raise KeyError for interface correctness
-    #    #if key not in self:
-    #    #    raise KeyError(key)
-    #    self.conn.execute('DELETE FROM kv WHERE key = ?', (key,)) 
-
-    def __contains__(self, key):
-        return self.conn.execute('SELECT 1 FROM kv WHERE key = ?', (key,)).fetchone() is not None
-
-
-    def __iter__(self): # TODO: check
-        return self.iterkeys()
-
-
-    def __len__(self):
-        return self.conn.execute('SELECT COUNT(*) FROM kv').fetchone()[0]  # TODO: double check
-
-
+     
     def iterkeys(self):
         curs = self.conn.cursor()
         for row in curs.execute('SELECT key FROM kv'):
@@ -250,24 +290,62 @@ class LocalKV:
         return '<LocalKV(%r)>'%( os.path.basename(self.path), )
 
 
+    #def __getitem__(self, key):
+    #    ret = self.get(key)
+    #    if ret is None:
+    #        raise KeyError()
+    #    return ret
+        
+    #def __setitem__(self, key, value):
+    #    self.put(key, value)
+
+    #def __delitem__(self, key):
+    #    # TODO: check whether we can ignore it not being there, or must raise KeyError for interface correctness
+    #    #if key not in self:
+    #    #    raise KeyError(key)
+    #    self.conn.execute('DELETE FROM kv WHERE key = ?', (key,)) 
+
+    def __len__(self):
+        return self.conn.execute('SELECT COUNT(*) FROM kv').fetchone()[0]  # TODO: double check
+
+
+    def __contains__(self, key):
+        return self.conn.execute('SELECT 1 FROM kv WHERE key = ?', (key,)).fetchone() is not None
+
+
+    def __iter__(self): # TODO: check
+        return self.iterkeys()
+
+
 
 class PickleKV(LocalKV):
     ''' Like localKV, but 
         - typing fixed at str:bytes 
         - put() stores using pickle, get() unpickles
-        Will be a bit slower, but lets you e.g. store nested python structures, like dicts
+        Will be a bit slower, but lets you more transpoarently store e.g. nested python structures, like dicts
+
+        Note that
+         - pickle isn't the most interoperable choice  (json or msgpack would be preferable)
+         - pickle isn't the fastest choice             (msgpack would be preferable)
+         - pickle is chosen mostly in case we want to store a date or datetime (json and msgpack don't like those)
+
+        Currently only intended to be used by datasets, though feel free to 
     '''
     def __init__(self, path, protocol_version=3):
-        ' defaults to protocol 3 to support all of py3.x (though not 2) '
+        ''' defaults to pickle protocol 3 to support all of py3.x (though not 2)
+            consider getting/setting meta to check that an existing store actually _should_ be used like this
+        '''
         super(PickleKV, self).__init__( path, key_type=str, value_type=bytes )
         self.protocol_version = protocol_version
 
     def get(self, key:str):
+        " Note that unpickling could fail "
         value = super(PickleKV, self).get( key )
         unpickled = pickle.loads(value)
         return unpickled
         
     def put(self, key:str, value):
+        " See LocalKV.put().   Unlike that, value is not checked for type, just pickled. Which can fail. "
         pickled = pickle.dumps(value, protocol=self.protocol_version)
         super(PickleKV, self).put( key, pickled )
 
@@ -283,34 +361,40 @@ class PickleKV(LocalKV):
             yield row[0], pickle.loads( row[1] )
 
 
-class JSONKV(LocalKV):
-    ''' Like localKV, but 
-        - typing fixed at str:str 
-        - put() and get() will store as JSON
-        More interoperable, but won't store quite as many things as PickleKV
-    '''
-    def __init__(self, path):
-        super(JSONKV, self).__init__( path, key_type=str, value_type=str )
+# msgpack would be faster than pickle (and more interoperable) but an extra dependency
 
-    def get(self, key:str):
-        value = super(JSONKV, self).get( key )
-        dec = json.loads(value)
-        return dec
+# json is more interoperable, but slower and doesn't e.g. deal with date/datetime
+
+# class JSONKV(LocalKV):
+#     ''' Like localKV, but 
+#         - typing fixed at str:str 
+#         - put() and get() will store as JSON
+#         More interoperable, but won't store quite as many things as PickleKV
+#     '''
+#     def __init__(self, path):
+#         super(JSONKV, self).__init__( path, key_type=str, value_type=str )
+
+#     def get(self, key:str):
+#         value = super(JSONKV, self).get( key )
+#         dec = json.loads(value)
+#         return dec
         
-    def put(self, key:str, value):
-        enc = json.dumps(value)
-        super(JSONKV, self).put( key, enc )
+#     def put(self, key:str, value):
+#         " See LocalKV.put().   Unlike that, value is not checked for type, just dumped into JSON. Which can fail. "
+#         enc = json.dumps(value)
+#         super(JSONKV, self).put( key, enc )
 
 
-    def itervalues(self):
-        curs = self.conn.cursor()
-        for row in curs.execute('SELECT value FROM kv'):
-            yield json.loads( row[0] )
+#     def itervalues(self):
+#         curs = self.conn.cursor()
+#         for row in curs.execute('SELECT value FROM kv'):
+#             yield json.loads( row[0] )
 
-    def iteritems(self):
-        curs = self.conn.cursor()
-        for row in curs.execute('SELECT key, value FROM kv'):
-            yield row[0], json.loads( row[1] )
+#     def iteritems(self):
+#         curs = self.conn.cursor()
+#         for row in curs.execute('SELECT key, value FROM kv'):
+#             yield row[0], json.loads( row[1] )
+
 
 
 def cached_fetch(store, url:str, force_refetch:bool=False):
@@ -357,11 +441,13 @@ def open_store(dbname:str, key_type, value_type):
           docs = open_store('docstore.db')
         will open the same store regardless of the directory the interpreter is currently considered to be in.
         It's suggested you use descriptive names so that you don't open existing stores without meaning to.
+
+        for notes on key_type and value_type, see LocalKV.__init__()
     '''
     if os.sep in dbname:
         raise ValueError('This function is meant to take a name, not an absolute path.  If you prefer to determine an absolute path, you can instantiate LocalKV directly.')
     # CONSIDER: sanitize filename?
-    if dbname==':memory:':  # allow the sqlite special value of :memory: 
+    if dbname == ':memory:':  # allow the sqlite special value of :memory: 
         ret = LocalKV( dbname, key_type=key_type, value_type=value_type )
     else:
         dirs = wetsuite.datasets.wetsuite_dir()
@@ -371,8 +457,8 @@ def open_store(dbname:str, key_type, value_type):
 
 
 def list_stores():
-    ''' List all files in the directories that open_store() put things in 
-        CONSIDER: filter for things that actually look like stores (with basic file magic test)
+    ''' Lookin the directory that open_store() put things in, check which ones seem to be stores.
+        Returns a list of  (relative filename in there,  absolute path)
     '''
     dirs = wetsuite.datasets.wetsuite_dir()
     stores_dir = dirs['stores_dir']
@@ -381,13 +467,15 @@ def list_stores():
     for basename in os.listdir( stores_dir ):
         abspath = os.path.join( stores_dir, basename )
         if os.path.isfile( abspath ):
-            if is_file_a_store(abspath):
+            if is_file_a_store( abspath ):
                 ret.append( (basename, abspath) )
     return ret
 
 
 def is_file_a_store(path, skip_table_check=False):
-    ''' Checks that the path points to an sqlite(3) database, and has a table called 'kv' '''
+    ''' Checks that the path seems to point to one of our stores.
+        More specifailly: whether it is an sqlite(3) database, and has a table called 'kv'
+    '''
     is_sqlite3 = None
     with open(path, 'rb') as f:
         is_sqlite3 = (f.read(15) == b'SQLite format 3' )
@@ -406,6 +494,3 @@ def is_file_a_store(path, skip_table_check=False):
                 has_kv_table = True
         conn.close()
         return has_kv_table
-
-
-
