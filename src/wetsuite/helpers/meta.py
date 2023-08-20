@@ -21,9 +21,8 @@ def parse_jci(s: str):
             s  start of geldigheid
             e  end of geldigheid
             z  zichtdatum
-        Precise interpretation, and generation of these links, is a little more involved,
+        Note that precise interpretation, and generation of these links, is a little more involved,
         in that versions made small semantic changes to the meanings of some parts.
-
     """
     ret = {}
     m = re.match('(?:jci)?([0-9.]+):([a-z]):(BWB[RV][0-9]+)(.*)', s)
@@ -40,10 +39,13 @@ def parse_jci(s: str):
         for param in rest.split('&'):
             pd = urllib.parse.parse_qs(param)
             for key in pd:
+                out_key = key
+                if key.startswith('amp;'):    # this variation seems to be a fairly common mistake in general, so try to be robust to it
+                    out_key = key[4:]         #   ...though it may well be better to handle this earlier in the function
                 if key not in params:
-                    params[key] = pd[key]
+                    params[out_key] = pd[key]
                 else:
-                    params[key].extend( pd[key] )
+                    params[out_key].extend( pd[key] )
         ret['params'] = params
 
     return ret
