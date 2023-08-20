@@ -16,6 +16,7 @@
 import sys, os, json, hashlib, tempfile, bz2
 
 import wetsuite.helpers.net
+import wetsuite.helpers.localdata
 from wetsuite.helpers.notebook import is_interactive
 
 
@@ -33,6 +34,8 @@ def wetsuite_dir():
           wetsuite_dir: a directory in the user profile we can store things
           datasets_dir: a directory inside wetsuite_dir first that datasets.load() will put dataset files in
           stores_dir:   a directory inside wetsuite_dir that localdata.open_store will put sqlite files in
+
+          CONSIDER: a tmp_dir
 
         TODO: more checking, so we can give clearer errors
     '''
@@ -133,14 +136,15 @@ def load(dataset_name: str, verbose=None, force_refetch=False):
     if dataset_name not in _index:
         raise ValueError("Do not know dataset name %r"%dataset_name)
 
-    _, data_dir = wetsuite_dir()
+    ws_dir       = wetsuite_dir()['wetsuite_dir']
+    datasets_dir = wetsuite_dir()['datasets_dir']
 
 
     ## figure out path in that directory
     dataset_details = _index[dataset_name]
     data_url        = dataset_details['url']
     location_hash   = hash( data_url.encode('utf8') ) 
-    data_path = os.path.join( data_dir, location_hash )      # CONSIDER: using dataset_name instead of location_hash  (BUT that would mean restricting the characters allowed in there)
+    data_path       = os.path.join( datasets_dir, location_hash )      # CONSIDER: using dataset_name instead of location_hash  (BUT that would mean restricting the characters allowed in there)
     # right now the data_path is a single file per dataset, expected to be a JSON file. TODO: decide on whether that is our standard, or needs changing
 
     # If we don't have it in our cache, or a re-fetch was forced, then download it.
@@ -149,7 +153,7 @@ def load(dataset_name: str, verbose=None, force_refetch=False):
             print( "Downloading %r to %r"%(data_url, data_path), file=sys.stderr )
 
         # CONSIDER: using context manager variant if that's cleaner
-        tmp_handle, tmp_path = tempfile.mkstemp(prefix='download', dir=data_dir)
+        tmp_handle, tmp_path = tempfile.mkstemp(prefix='tmp_dataset_download', dir=ws_dir)
         os.close(tmp_handle)  # the open file handle is fairly secure, but here we only care about a non-clashing filename
 
         # download it to that temporary filename
@@ -160,30 +164,48 @@ def load(dataset_name: str, verbose=None, force_refetch=False):
         ## if it was compressed, decompress it in the cache - as part of the download, not the load
         # compressed into its fina place.   There is a race condition in multiple loads() of the same thing. CONSIDER: fixing that via a second temporary file
         # CONSIDER: it may be preferable to store it compressed, and decompress every load. Or at least make this a parameter
-        if data_url.endswith('.bz2'):
-            #print('Decompressing...', file=sys.stderr)
+        def decompress_stream(instream, outstream):
             uncompressed_data_bytes = 0
+            while True:
+                data = instream.read( 2*1048576 )
+                if len(data)==0:
+                    break
+                outstream.write(data)
+                uncompressed_data_bytes += len(data)
+                if verbose:
+                    print( "\rDecompressing... %3sB    "%(wetsuite.helpers.format.kmgtp( uncompressed_data_bytes, kilo=1024 ), ), end='', file=sys.stderr )
+            if verbose:
+                print('', file=sys.stderr)
+
+        if data_url.endswith('.xz'): # or file magic, b'\xfd7zXZ\x00\x00'
+            import lzma # standard library since py3.3, before that we could fall back to backports.lzma
+            with lzma.open(tmp_path) as compressed_file_object:
+                with open(data_path,'wb') as write_file_object:
+                    decompress_stream( compressed_file_object, write_file_object )
+            os.unlink( tmp_path )
+
+        elif data_url.endswith('.bz2'):
+            #print('Decompressing...', file=sys.stderr)
             with bz2.BZ2File(tmp_path, 'rb') as compressed_file_object:
                 with open(data_path,'wb') as write_file_object:
-                    while True:
-                        data = compressed_file_object.read( 2*1048576 )
-                        if len(data)==0:
-                            break
-                        write_file_object.write(data)
-                        uncompressed_data_bytes += len(data)
-                        if verbose:
-                            print( "\rDecompressing... %3sB"%(wetsuite.helpers.format.kmgtp( uncompressed_data_bytes, kilo=1024 ), ), end='', file=sys.stderr )
-                if verbose:
-                    print('', file=sys.stderr)
+                    decompress_stream( compressed_file_object, write_file_object )
             print('  done.', file=sys.stderr)
             os.unlink( tmp_path )
-        else: # assume it was uncompressed, just move it into place
-            os.rename( tmp_path, data_path )
+
         # CONSIDER: add gz and zip cases, because they're standard library anyway
 
+        else: # assume it was uncompressed, just move it into place
+            os.rename( tmp_path, data_path )
+
     ### Finally the real loading bit: read from disk, and return.
-    with open(data_path) as f:
-        return Dataset( dict_data=json.loads( f.read() ), name=dataset_name )
+    with open(data_path,'rb') as f:
+        first_bytes = f.read(15)
+        f.seek(0)
+        if first_bytes == b'SQLite format 3':
+            data = wetsuite.helpers.localdata.LocalKV( data_path, None, None, read_only=True )
+        else:
+            data = json.loads( f.read() )
+        return Dataset( dict_data=data, name=dataset_name )
         
 
 
@@ -219,6 +241,7 @@ def fetch_index():
 
             # just metadata, no text
             'gemeentes':            {  'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes.json',                    'version':'preliminary', 'short_description':'List of municipalities',    },
+            'test':                 {  'url':'https://wetsuite.knobs-dials.com/datasets/test.db.xz',                        'version':'preliminary', 'short_description':'List of municipalities',    },
             #'fracties_membership': {  }
         }
         
