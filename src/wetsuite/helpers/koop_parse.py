@@ -1,3 +1,9 @@
+''' Data and metadata parsing that is probably specific to KOOP's SRU repositories.
+
+    For more general things, see 
+    meta.py
+    patterns.py
+'''
 import re, sys
 import urllib.parse
 
@@ -52,12 +58,12 @@ def cvdr_meta(tree, flatten=False):
 
 
     # we want tree to be the node under which ./meta lives
+    # TODO: review, this looks unclear
     if tree.find('meta') is not None:
         meta_under = tree 
     else:
         meta_under = tree.find('recordData/gzd/originalData')
-
-        if tree is None:
+        if meta_under is None:
             raise ValueError("got XML that seems to be neither a document or a search result record")
 
 
@@ -141,21 +147,22 @@ def cvdr_parse_identifier(text:str, prepend_cvdr=False):
 
 
 def cvdr_param_parse(rest:str):
-    ''' Picks the parameters from a juriconnect style identifier string.   Used by cvdr_refs.  Duplicates code in meta.py - TODO: centralize that '''
+    ''' Picks the parameters from a juriconnect (jci) style identifier string.   Used by cvdr_refs.  Duplicates code in meta.py - TODO: centralize that '''
     params = {}
     for param in rest.split('&'):
         pd = urllib.parse.parse_qs(param)
         for key in pd:
+            out_key = key
+            if key.startswith('amp;'):    # this variation seems to be a fairly common mistake in general, so try to be robust to it
+                out_key = key[4:]         #   ...though it may well be better to handle this earlier in the function
             val = pd[key]
-            print( key, val)
             if key=='artikel':
                 val = val.lstrip('artikel.')
             if key not in params:
-                params[key] = val
+                params[out_key] = val
             else:
-                params[key].extend( val )
+                params[out_key].extend( val )
     return params
-
 
 
 def cvdr_text(tree):
@@ -294,7 +301,7 @@ def cvdr_sourcerefs(tree, debug=False):
           looks for the <source> tags, which are references to laws and other regulations (VERIFY)
     
         Returns a list of 
-          (type, orig, specref, None, source_text)
+          (type, orig, specref, parts, source_text)
         where 
         - type is currently one of 'BWB' or 'CVDR'
         - URL-like reference
