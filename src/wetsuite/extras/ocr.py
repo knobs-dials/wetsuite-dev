@@ -13,7 +13,7 @@ import numpy
 _eocr_reader = None  # keep in memory to save time when you call it repeatedly
 
 
-def easyocr(image, pythontypes=True, use_gpu=True):
+def easyocr(image, pythontypes=True, use_gpu=True, languages=['nl','en']):
     ''' Takes a single PIL image.
        
         Returns EasyOCR's results, which is a list of:
@@ -21,8 +21,10 @@ def easyocr(image, pythontypes=True, use_gpu=True):
 
         Depends on easyocr being installed
 
-        if pythontypes==false, easyocr gives you numpy.int64 in bbox and numpy.float64 for cert,
-        if pythontypes==true (default), we make that python int and float
+        if pythontypes==False, easyocr gives you numpy.int64 in bbox and numpy.float64 for cert,
+        if pythontypes==True (default), we make that python int and float
+
+        langauges defaults to 'nl' and 'en'. You might occasionally add 'fr'.
 
         Will load easyocr's model on the first call, so try to do many calls from a single process 
         to reduce that overhead to just once.
@@ -38,8 +40,7 @@ def easyocr(image, pythontypes=True, use_gpu=True):
         if use_gpu:
             where = 'GPU'
         print("first use of ocr() - loading EasyOCR model (into %s)"%where, file=sys.stderr)
-        _eocr_reader = easyocr.Reader( ['nl','en'], gpu=use_gpu) 
-        #_ocr_reader = easyocr.Reader( ['nl','en'], gpu=False)
+        _eocr_reader = easyocr.Reader( languages, gpu=use_gpu) 
 
     if image.getbands() != 'L': # grayscale
         image = image.convert('L')
@@ -65,7 +66,8 @@ def easyocr_text(results):
     ''' take bounding boxed results and, right now, returns only the text as-is.
         We plan to be smarter than this, given time.
 
-        (there is some smarter code in kansspelautoriteit fetching script)
+        (there is some smarter code in kansspelautoriteit fetching script
+         CONSIDER centralizing that and/or 'natural reading order' code)
     '''
     ret = []
     for (topleft, topright, botright, botleft), text, confidence in results:
