@@ -1,0 +1,22 @@
+#!/usr/bin/python3
+import sys, os #, time, json, pprint
+import wetsuite.helpers.localdata
+
+
+if __name__ == '__main__':
+
+    for path in sys.argv[1:]:
+
+        if not os.path.exists( path ):
+            print( 'Specified path not found: %r'%path )
+            sys.exit(-2)
+
+        if not wetsuite.helpers.localdata.is_file_a_store( path ):
+            print( 'Specified path does not seem to be an SQLite file created by us: %r'%path )
+            sys.exit(-3)
+
+        store = wetsuite.helpers.localdata.LocalKV(path, str, str) # the types are not actually used because we don't use put()
+        curs = store.conn.cursor()
+        curs.execute('SELECT (freelist_count*page_size) as FreeSizeEstimate  FROM pragma_freelist_count, pragma_page_size')
+        print( curs.fetchone()[0], path )
+        store.close()
