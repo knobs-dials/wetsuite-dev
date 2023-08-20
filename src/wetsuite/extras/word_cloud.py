@@ -80,8 +80,8 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
            This is tested after normalization, so you can remove things in normalization too.
 
         - min_count:
-             if interger:  if the final count is < that count,  
-             if float:     if the final count is < this fraction times the maximum count we see
+             if integer, or float >1:  if the final count is < that count,  
+             if float  in 0 to 1.0 range:     if the final count is < this fraction times the maximum count we see
            ...then it is removed from the results
 
         - stopwords: 
@@ -132,10 +132,11 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
     for normform in count:
         variants_dict = sorted( count[normform].items(), key=lambda x:x[1], reverse=True )
         sum_count = sum( cnt  for _,cnt in variants_dict )
-        if type(min_count) is int or min_count>1:
+        if type(min_count) is int or min_count > 1:
             if sum_count >= min_count:
                 ret[ variants_dict[0][0] ] = sum_count
-        elif type(min_count) is float:
+        elif type(min_count) is float: 
+            # TODO: complain if not in 0.0 .. 1.0 range
             if sum_count >= min_count*max_count:
                 ret[ variants_dict[0][0] ] = sum_count
         else:
