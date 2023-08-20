@@ -1,24 +1,24 @@
 #!/bin/bash
 # Do tests.   Also calculate amount of test coverage, and wrangle that percentage into a file.
 
-# pytest-3 might be called pytest
+
+# in a py2+py3 system, pytest may be called pytest-3 for disambiguation, so prefer that 
 command_exists () {
     type "$1" &> /dev/null ;
 }
 
 if command_exists pytest-3 ; then
-  TESTCMD="pytest-3"
+  PYTESTCMD="pytest-3"
 else
   if command_exists pytest ; then
-    TESTCMD="pytest"
+    PYTESTCMD="pytest"
   else
      echo 'ERROR: could not find pytest.' >&2
      exit 1
   fi
 fi
 
-
-$TESTCMD --cov=wetsuite --cov-report html:coverage-report tests/ | tee >(cat >&2) | grep TOTAL | tr -s ' ' ' ' | cut -d ' ' -f 4   > coverage.txt
+$PYTESTCMD --cov=wetsuite --cov-report html:coverage-report tests/ | tee >(cat >&2) | grep TOTAL | tr -s ' ' ' ' | cut -d ' ' -f 4   > coverage.txt
 # --cov-report html:coverage-report tests/
 
 
