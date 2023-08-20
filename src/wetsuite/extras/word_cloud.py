@@ -60,7 +60,7 @@ def wordcloud_from_freqs(freqs: dict, width:int=1200, height:int=300, background
 
 
 def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  normalize_func=None, stopwords=[], stopwords_i=[])  ->  dict:
-    ''' Takes text that is already tokenized into a list of strings,  returns a { string: count } dict.
+    ''' Takes a list of strings, returns a { string: count } dict.
 
         ...with some extra processing.
 
@@ -80,9 +80,10 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
            This is tested after normalization, so you can remove things in normalization too.
 
         - min_count:
-           if the final count is < min_count, it does not show up in the results 
-           CONSIDER: top-n, or float as percentile or such
-            
+             if interger:  if the final count is < that count,  
+             if float:     if the final count is < this fraction times the maximum count we see
+           ...then it is removed from the results
+
         - stopwords: 
            - defaults to not remove anything
            - handing in a list uses yours instead. There's a stopwords_nl and stopwords_en here.
@@ -103,7 +104,8 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
         stop.update(stopwords)
     stop_lower = list(sws.lower()   for sws in stopwords_i)
 
-    count = collections.defaultdict(lambda: collections.defaultdict(int)) # { lower_form: { real_form: count } }
+    # count into { normalized_form: { real_form: count } }
+    count = collections.defaultdict(lambda: collections.defaultdict(int))
     for string in strings:
         if string in stop:
             continue
@@ -118,12 +120,26 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
             continue
         count[ norm_string ][ string ] += 1
     
+    # filter counts, choose preferred form
     ret = {}
-    for ls in count:
-        variants = sorted( count[ls].items(), key=lambda x:x[1], reverse=True )
-        sum_count = sum( cnt  for _,cnt in variants)
-        if sum_count >= min_count:
-            ret[ variants[0][0] ] = sum_count
+    #print( dict(count) )
+    # could do this with expression-fu but let's keep it readable
+    max_count = 0 
+    for normform in count:
+        for _, varamt in count[normform].items():
+            max_count = max(max_count, varamt)
+
+    for normform in count:
+        variants_dict = sorted( count[normform].items(), key=lambda x:x[1], reverse=True )
+        sum_count = sum( cnt  for _,cnt in variants_dict )
+        if type(min_count) is int or min_count>1:
+            if sum_count >= min_count:
+                ret[ variants_dict[0][0] ] = sum_count
+        elif type(min_count) is float:
+            if sum_count >= min_count*max_count:
+                ret[ variants_dict[0][0] ] = sum_count
+        else:
+            raise TypeError("Don't know what to do with %s"%type(min_count))
     return ret
 
 

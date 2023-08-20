@@ -25,6 +25,33 @@ def test_count_normalized():
     assert 'd' not in cs
 
 
+def test_count_normalized_min():
+    from wetsuite.extras.word_cloud import count_normalized
+
+    cs = count_normalized( 'a a a a b b b c'.split(), min_count=2 )
+    assert cs['a'] == 4
+    assert cs['b'] == 3
+    assert 'c' not in cs
+
+    cs = count_normalized( 'a a a a b b b c'.split(), min_count=2.0 )
+    assert cs['a'] == 4
+    assert cs['b'] == 3
+    assert 'c' not in cs
+
+    cs = count_normalized( 'a a a a b b b c'.split(), min_count=3.5 )
+    assert cs['a'] == 4
+    assert 'b' not in cs
+    assert 'c' not in cs
+
+    cs = count_normalized( 'a a a a b b b c'.split(), min_count=0.3 )
+    assert cs['a'] == 4
+    assert cs['b'] == 3
+    assert 'c' not in cs
+
+
+
+
+
 def test_wordcloud_from_freqs():
     # test that it runs (and doesn't trip over missing X11 stuff)
     from wetsuite.extras.word_cloud import wordcloud_from_freqs
