@@ -1,38 +1,66 @@
-' basic helper functions for text '
+' mostly-basic string helper functions '
 import re, unicodedata
+from typing import List
 
-def contains_any_of( haystack:str, needles, case_sensitive=True ):
-    ' Given a string and a list of strings,  returns whether the former contains at least one of the strings in the latter '
+def contains_any_of( haystack:str, needles:List[str], case_sensitive=True, regexp=False ):
+    ''' Given a string and a list of strings,  returns whether the former contains at least one of the strings in the latter
+        e.g. contains_any_of('microfishes', ['mikrofi','microfi','fiches']) == True
+
+        haystack is treated like a regular expression (the test is whether re.search for it is not None)
+
+        note that if you use regexp=True and case_sensitive=True, the regexp gets lowercased before compilation.
+        That may not always be correct
+    '''
+    reflags = 0
     if not case_sensitive:
-        haystack = haystack.lower()
-        needles = list(needle.lower()  for needle in needles)
+        if regexp:
+            reflags = re.I
+        else:
+            haystack = haystack.lower()
+            needles = list(needle.lower()  for needle in needles)
 
     for needle in needles:
-        if needle in haystack:
-            return True
-        
+        if regexp:
+            if re.search(needle, haystack, flags=reflags) is not None:
+                return True
+        else:
+            if needle in haystack:
+                return True
+            
     return False
 
 
-def contains_all_of( haystack:str, needles, case_sensitive=True ):
-    ' Given a string and a list of strings,  returns whether the former contains all of the strings in the latter '
+def contains_all_of( haystack:str, needles:List[str], case_sensitive=True, regexp=True ):
+    ''' Given a string and a list of strings,  returns whether the former contains all of the strings in the latter 
+        e.g. contains_all_of('AA (B/CCC)', ('AA', 'BB') ) == False
+    '''
+    reflags = 0
     if not case_sensitive:
-        haystack = haystack.lower()
-        needles = list(needle.lower()  for needle in needles)
+        if regexp:
+            reflags = re.I
+        else:
+            haystack = haystack.lower()
+            needles = list(needle.lower()  for needle in needles)
 
     for needle in needles:
-        if needle not in haystack:
-            return False
-
+        if regexp:
+            if re.search(needle, haystack, flags=reflags) is None:
+                return False
+        else:
+            if needle not in haystack:
+                return False
+            
     return True
 
 
 def ordered_unique( strlist, case_sensitive=True, remove_none=True ):
-    ''' Makes values in a list of strings unique (take out later duplicates),
-        
-        Unlike a plain set(strlist), it keep the order of what we keep.
+    ''' Makes strings in a list of strings unique,
+          and keep the first of each / take out later duplicates
+        So unlike a plain set(strlist), 
+          it keeps the order of what we keep.
 
         Can be made case insensitive. It then keeps the first casing it saw.
+        Can be made faster.
     '''
     ret = []
     retlow = []
@@ -79,11 +107,9 @@ def findall_with_context(pattern:str, s:str, context_amt:int):
 re_combining = re.compile(u'[\u0300-\u036f\u1dc0-\u1dff\u20d0-\u20ff\ufe20-\ufe2f]',re.U)
 " helps remove diacritics - list a number of combining (but not actually combin*ed*) character ranges in unicode, since you often want to remove these (after decomposition) " 
 
-
 def remove_diacritics(s: str):
-    """ Decomposes, removes combining characters, composes.
-
-        Example:   remove_diacritics( 'ol\xe9' ) == 'ole'
+    """ Unicode decomposes, remove combining characters, unicode compose.
+        e.g. remove_diacritics( 'ol\xe9' ) == 'ole'
     """
     #TODO: Figure out what the compose is doing, and whether it is necessary at all.
     return unicodedata.normalize('NFC', re_combining.sub('', unicodedata.normalize('NFD', s)) )
@@ -91,7 +117,7 @@ def remove_diacritics(s: str):
 
 
 def is_numeric(string: str):
-    ''' Does this string contain only a number (and optional whitespace around it) '''
+    ''' Does this string contain only a number?    That is, [0-9.,] and optional whitespace around it '''
     return  ( re.match(r'^\s*[0-9,.]+\s*$', string) is not None )
 
 
@@ -185,11 +211,13 @@ def interpret_ordinal_nl(s:str):
 
 
 def ordinal_nl(i:int):
-    " Give a number, gives the ordinal word for dutch number (0..99) e.g. 1 -> 'eerste' "
+    """ Give a number, gives the ordinal word for dutch number (0..99) 
+        e.g. 1 -> 'eerste' 
+    """
     i = int(i)
     if i < 0:
         raise ValueError("Values <0 make no sense")
-    elif i in ordinal_nl_20_rev: # same as  if i <= 20:
+    elif i in ordinal_nl_20_rev:  # first 20
         return ordinal_nl_20_rev[i]
     elif i <= 99:
         i1  = int( i%10 )
