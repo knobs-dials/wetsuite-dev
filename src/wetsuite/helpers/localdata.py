@@ -2,21 +2,20 @@
     See the docstring on the LocalKV class for more details.
 
     
-    How to use
+    How to use:
     - You can create your own specific stores by doing something like:
-        mystore_path = os.path.join( 'project_data_dir', 'docstore.db')  # OS-agnostic path join
+        mystore_path = os.path.join( project_data_dir, 'docstore.db')  # OS-agnostic path join
         mystore = LocalKV( mystore_path )
     OR
-    - use open_store( 'docstore.db' ), which places it in the wetsuite directory in your homedir
+        open_store( 'docstore.db' ), which places it in the wetsuite directory in your homedir
 
-    Why two ways?
-    The first gives you direct control 
-      ...but means you should think about the current working directory,
-      or using absolute paths, or you will probably confuse yourself 
-      by unintentionally creating a database in each working directory.
-    The latter just gives the same store for the same name
-      use mystore.path to find where it placed it
-
+    "Why two ways?"
+        The first gives you direct control, but
+            ...with relative paths it will create in whatever is the current working directory,
+               which makes it easy for you to confuse yourself with databases all over the place
+            ...with absolute paths you will easily make things less portable.
+        The latter just gives the same store for the same name
+            (if you want to know where exactly, use .path)
           
     Note that by default, writes are done autocommit style, because SQlite's driver defaults to that.
       so you can get bulk writes to be more performant by using put() with commit=False parameter and doing an explicit commit() after.
@@ -24,6 +23,12 @@
     CONSIDER: meta table for e.g. 'description'
     CONSIDER: writing a ExpiringLocalKV that cleans up old entries
     CONSIDER: writing variants that do convert specific data, letting you e.g. set/fetch dicts, or anything else you could pickle
+
+    
+    "Could I access these SQLite databases myself?"
+    Sure, particularly when just reading.
+    The code is only there for convenience, there is nothing special about them. Consider:
+      sqlite3 store.db 'select key,value from kv limit 1 ' | less
 '''
 import os, pickle, json
 
@@ -95,15 +100,14 @@ class LocalKV:
 
 
     def _open(self):
-        #print('open(%r)'%self.filename)
-        make_tables = not os.path.exists( self.path ) or self.path==':memory:' # will create that file, or are using an in-memory database
+        #make_tables = (self.path==':memory:')  or  ( not os.path.exists( self.path ) )  # will be creating that file, or are using an in-memory database ?
         self.conn = sqlite3.connect( self.path )
-        # Note: curs.execute is the regular DB-API way,  conn.execute is a shorthand  and gets a cursor temporarily
-        self.conn.execute("PRAGMA auto_vacuum = INCREMENTAL")  # TODO: see that this does what I think it does
-        if make_tables:
+        # Note: curs.execute is the regular DB-API way,  conn.execute is a shorthand that gets a temporary cursor
+        with self.conn:
+            self.conn.execute("PRAGMA auto_vacuum = INCREMENTAL")  # TODO: see that this does what I think it does
+            #if make_tables:
             self.conn.execute("CREATE TABLE IF NOT EXISTS meta (key text unique NOT NULL, value text)")
             self.conn.execute("CREATE TABLE IF NOT EXISTS kv   (key text unique NOT NULL, value text)")
-        self.conn.commit()
 
 
     def _checktype_key(self, val):
@@ -116,10 +120,11 @@ class LocalKV:
             raise TypeError('Only values of type %s are allowed, you gave a %s'%(self.value_type.__name__, type(val).__name__))
 
 
-    def get(self, key, missing_as_none:bool=False):
+    def get(self, key, missing_as_none:bool=False): 
         ''' Gets value for key. 
             The key type is checked against how you constructed this localKV class (doesn't guarantee it matches what's in the database)
             If not present, this will raise KeyError (by default) or return None (if you set missing_as_None=True)
+            (this is unlike a dict.get, which has a default=None)
         '''
         self._checktype_key(key)
         curs = self.conn.cursor()
@@ -250,7 +255,17 @@ class LocalKV:
         if self._in_transaction:
             self.commit()
         self.conn.execute('vacuum')
-    
+
+
+    # def size(self):
+    #     ' Returns the approximate amount of the contained data, in bytes '
+    #     curs = self.conn.cursor()
+    #     curs.execute("select page_size, page_count from pragma_page_count, pragma_page_size")
+    #     page_size, page_count = curs.fetchone()
+    #     curs.close()
+    #     return page_size *page_count
+    #     #return os.stat( self.path ).st_size
+
 
     def close(self):
         self.conn.close()
@@ -443,6 +458,9 @@ def open_store(dbname:str, key_type, value_type):
         It's suggested you use descriptive names so that you don't open existing stores without meaning to.
 
         for notes on key_type and value_type, see LocalKV.__init__()
+
+        CONSIDER: listening to a WETSUITE_BASE_DIR to override our "put in user's homedir" behaviour,
+                  this might make more sense e.g. to point it at distributed storage without symlink juggling
     '''
     if os.sep in dbname:
         raise ValueError('This function is meant to take a name, not an absolute path.  If you prefer to determine an absolute path, you can instantiate LocalKV directly.')
