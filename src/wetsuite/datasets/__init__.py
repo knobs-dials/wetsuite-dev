@@ -21,7 +21,7 @@ from wetsuite.helpers.notebook import is_interactive
 
 
 def hash(data: bytes):
-    ' Calculate SHA1 hash of some byte data,  returns that hash as a hex string. '
+    ' Given some byte data, calculate SHA1 hash.  Returns that hash as a hex string. '
     s1h = hashlib.sha1()
     s1h.update( data )
     return s1h.hexdigest()
@@ -30,12 +30,14 @@ def hash(data: bytes):
 def wetsuite_dir():
     ''' Figure out where we can store data.
     
-        Returns a dict mentioning directories:
+        Returns a dict with keys mentioning directories:
           wetsuite_dir: a directory in the user profile we can store things
           datasets_dir: a directory inside wetsuite_dir first that datasets.load() will put dataset files in
           stores_dir:   a directory inside wetsuite_dir that localdata.open_store will put sqlite files in
 
           CONSIDER: a tmp_dir
+          CONSIDER: listen to an expicit and/or environment variable to override that base directory, 
+                    to allow people to direct where to store this (might be useful e.g. on clustered filesystems)
 
         TODO: more checking, so we can give clearer errors
     '''
@@ -86,34 +88,32 @@ def wetsuite_dir():
 
 
 class Dataset:
-    ''' This object does little more than 
-        * take a dict
-        * put its ['description'] into a .description attribute    
-            that describes the structure to that data.
-        * put its ['data'] into a  .data attribute        
-            that contains all the data
+    ''' If you're looking for details about the specific dataset, look at the .description
 
-        ...and exists laregely so that a str() doesn't accidentally print hundreds of megabytes to your console.
-
-        NOTE: This is provisional, and likely to change.
+        This class is provisional and likely to change. Right now it does little more than
+        - put a description into a .description attribute 
+        - put data into .data attribute
+            without even saying what that is 
+            though it's probably an interable giving individually useful things, and be able to tell you its len()gth
+        ...also so that it's harder to accidentally dump gigabytes of text to your console.
     '''
-    def __init__(self, dict_data, name=''):
-        self._data = dict_data
-
+    def __init__(self, description, data, name=''):
         #for key in self.data:
         #    setattr(self, key, self.data[key])
         # the above seems powerful but potentially iffy, so for now:
-        self.data        = dict_data.get('data')
-        self.description = dict_data.get('description')
+        self.data        = data 
+        self.description = description 
         self.name        = name
         self.num_items   = len(self.data)
         
     def __str__(self):
         return '<wetsuite.datasets.Dataset name=%r num_items=%r>'%(self.name, self.num_items)
+    
+
 
 
 def load(dataset_name: str, verbose=None, force_refetch=False):
-    ''' Takes a dataset name,
+    ''' Takes a dataset name (that you learned of from the index),
         - downloads it if necessary - after the first time it's cached in your home directory
         - loads it into memory
         
@@ -143,7 +143,7 @@ def load(dataset_name: str, verbose=None, force_refetch=False):
     ## figure out path in that directory
     dataset_details = _index[dataset_name]
     data_url        = dataset_details['url']
-    location_hash   = hash( data_url.encode('utf8') ) 
+    location_hash   = hash( data_url.encode('utf8') ) # quick and dirty way to get a safe filename regardless of index contents
     data_path       = os.path.join( datasets_dir, location_hash )      # CONSIDER: using dataset_name instead of location_hash  (BUT that would mean restricting the characters allowed in there)
     # right now the data_path is a single file per dataset, expected to be a JSON file. TODO: decide on whether that is our standard, or needs changing
 
@@ -198,14 +198,23 @@ def load(dataset_name: str, verbose=None, force_refetch=False):
             os.rename( tmp_path, data_path )
 
     ### Finally the real loading bit: read from disk, and return.
-    with open(data_path,'rb') as f:
-        first_bytes = f.read(15)
-        f.seek(0)
-        if first_bytes == b'SQLite format 3':
-            data = wetsuite.helpers.localdata.LocalKV( data_path, None, None, read_only=True )
-        else:
-            data = json.loads( f.read() )
-        return Dataset( dict_data=data, name=dataset_name )
+    f = open(data_path,'rb')
+    first_bytes = f.read(15)
+    f.seek(0)
+
+    if first_bytes == b'SQLite format 3':
+        f.close()
+        data        = wetsuite.helpers.localdata.LocalKV( data_path, None, None, read_only=True )
+        description = data._get_meta('description', missing_as_none=True)
+
+    else: # Assume JSON - expected to be a dict with two main keys
+        loaded = json.loads( f.read() ) 
+        f.close()
+        data        = loaded.get('data')
+        description = loaded.get('description')
+
+    return Dataset( data=data, description=description, name=dataset_name )
+
         
 
 
@@ -235,13 +244,106 @@ def fetch_index():
     '''
     if True:
         index_dict = {
-            'kamervragen':         {  'url':'https://wetsuite.knobs-dials.com/datasets/kamervragen.json.bz2',              'version':'preliminary', 'short_description':'',    },
-            'kansspelautoriteit':  {  'url':'https://wetsuite.knobs-dials.com/datasets/kansspelautoriteit_plain.json.bz2', 'version':'preliminary', 'short_description':'',    },
-            'rvsadviezen':         {  'url':'https://wetsuite.knobs-dials.com/datasets/raadvanstate_adviezen.json.bz2',    'version':'preliminary', 'short_description':'Plain text version of advice under https://raadvanstate.nl/adviezen/',   },
+            'rvsadviezen':{ 
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/raadvanstate_adviezen.json.bz2',
+                                                'version':'preliminary', 
+                                      'short_description':'The advice under https://raadvanstate.nl/adviezen/ provided as plain text in a nested structure with metadata. ',  
+                                          'download_size':5460023,
+                                              'real_size':34212068, # or '5MB' and '34MB'?
+                                                   'type':'application/json',
+            },
+
+            'kamervragen':{  
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/kamervragen.json.bz2',             
+                                                'version':'preliminary',
+                                      'short_description':'Questions from ministers to the government. Provided as a nested data structure.',    
+                                          'download_size':74218609,
+                                              'real_size':506814395,
+                                                   'type':'application/json',
+            },
+
+
+            'bwb-mostrecent-xml':{  
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/',
+                                                'version':'preliminary',
+                                      'short_description':'',
+                                          'download_size':0,  
+                                              'real_size':0,
+                                                   'type':'application/json',
+            },
+
+            'cvdr-mostrecent-xml':{ 
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/',
+                                                'version':'preliminary',
+                                      'short_description':'',
+                                          'download_size':0,  
+                                              'real_size':0,
+                                                   'type':'application/json',
+            },
+                
+            'woobesluiten':{ 
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/',
+                                                'version':'preliminary', 
+                                      'short_description':'',    
+                                          'download_size':0,   
+                                              'real_size':0,
+                                                   'type':'application/json',
+            },
+
+            'kansspelsancties-txt':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/kansspelautoriteit_plain.json.bz2', 
+                                                'version':'preliminary', 
+                                      'short_description':'Sanction decisions, in plain text, extracted from from the case PDFs under https://kansspelautoriteit.nl/aanpak-misstanden/sanctiebesluiten/',
+                                          'download_size':1147517,
+                                              'real_size':7604025,
+                                                   'type':'application/json',
+            },
 
             # just metadata, no text
-            'gemeentes':            {  'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes.json',                    'version':'preliminary', 'short_description':'List of municipalities',    },
-            'test':                 {  'url':'https://wetsuite.knobs-dials.com/datasets/test.db.xz',                        'version':'preliminary', 'short_description':'List of municipalities',    },
+            'gemeentes':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes.json',    
+                                                'version':'preliminary', 
+                                      'short_description':'List of municipalities, and some basic information about them.', 
+                                          'download_size':397740,
+                                              'real_size':397740,
+                                                   'type':'application/json',
+            },
+            'gerechtcodes':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/gerechtcodes.json',      
+                                                'version':'preliminary',
+                                      'short_description':'List of gerechtcodes as e.g. they appear in ECLI identifiers',
+                                          'download_size':0,
+                                              'real_size':0,
+                                                   'type':'application/json',
+            },
+
+            'wetnamen':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/wetnamen.json',
+                                                'version':'preliminary',
+                                      'short_description':'Some more and less official name variants that are used to refer to laws.',
+                                          'download_size':4405025,
+                                              'real_size':4405025,
+                                                   'type':'application/json',
+            },
+
+            '':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/',
+                                                'version':'preliminary',
+                                      'short_description':'',
+                                          'download_size':0,
+                                              'real_size':0,
+                                                   'type':'application/json', # 'application/x-sqlite3'
+            },
+
+            'test':{
+                                                   'url':'https://wetsuite.knobs-dials.com/datasets/test.db.xz',
+                                               'version':'preliminary', 
+                                     'short_description':'Compression test',    
+                                         'download_size':0,
+                                             'real_size':0,
+                                                  'type':'application/x-sqlite3'
+            },
+
             #'fracties_membership': {  }
         }
         
