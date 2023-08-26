@@ -1,4 +1,8 @@
-' Reads text objects from PDF files ' 
+''' Reads text objects from PDF files 
+
+    TODO: consider pymupdf, because it thinks about more details - consider e.g.
+    https://pymupdf.readthedocs.io/en/latest/recipes-text.html#how-to-extract-text-in-natural-reading-order
+''' 
 import re
 
 
