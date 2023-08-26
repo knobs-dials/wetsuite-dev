@@ -99,6 +99,7 @@ if __name__ == '__main__':
     serve_ip = args.bind_ip
     port     = int( args.bind_port )
 
+    # CONSIDER: letting you specify it multiple times, mainly to be able to use the same model on multiple cores? (except that may not work because GIL and we would need multiprocessing)
     models_to_load = [
         ['en','cpu','en_core_web_lg' ], # gpu
         ['nl','cpu','nl_core_news_lg'], # gpu
