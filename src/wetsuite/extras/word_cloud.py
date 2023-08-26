@@ -49,9 +49,9 @@ stopwords_nl = (
 
 
 def wordcloud_from_freqs(freqs: dict, width:int=1200, height:int=300, background_color='white', min_font_size=10, **kwargs):
-    ''' Takes a {string: count} dict, returns a PIL image.
+    ''' Takes a {string: count} dict, returns a PIL image object.
 
-        That string:count ought to be cleaned up, so you probably want to use one of the count_ helper functions.
+        That image will look a bunch cleaner when you have cleaned up the string:count, so take a look at using one of the count_ helper functions.
     '''
     wco = wordcloud.WordCloud( width=width,  height=height,  background_color=background_color,  min_font_size=min_font_size, **kwargs )
     im = wco.generate_from_frequencies( freqs )
@@ -66,30 +66,31 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
 
         normalize_func: half the point of this function. Should be a str->str function. 
         - We group things by what is equal after this function is applied, but we report the most common case before it is. 
-          For example, 
+          For example, to _count_ blind to case, but report just one (the most common case)
             count_normalized( 'a A A a A A a B b b B b'.split(),  normalize_func=lambda s:s.lower() ) 
-          would count blind to case, but report the most common case, so give {'A':7, 'b':5}
-        - Could be used for other things. For example, 
-          if you make normalize_func map a word to its lemma,
-          then you unify all inflections, and get reported the most common one.
+          would give
+            {'A':7, 'b':5}
+        - Could be used for other things.  For example, 
+          if you make normalize_func map a word to its lemma, then you unify all inflections, and get reported the most common one.
        
-        The rest is mostly about having this function remove som common muck, so you don't have to do it separately
+        The further parameters are mostly about removing things you would probably call, so you don't have to do that separately
 
         - min_word_length:
            strings shorter than this are removed.
            This is tested after normalization, so you can remove things in normalization too.
 
         - min_count:
-             if integer, or float >1:  if the final count is < that count,  
-             if float  in 0 to 1.0 range:     if the final count is < this fraction times the maximum count we see
-           ...then it is removed from the results
+             if integer, or float >1:         we remove if final count is < that count,  
+             if float  in 0 to 1.0 range:     we remove if the final count is < this fraction times the maximum count we see
 
-        - stopwords: 
-           - defaults to not remove anything
-           - handing in a list uses yours instead. There's a stopwords_nl and stopwords_en here.
-               CONSIDER: have case insensitive and case sensitive stopwords
-               Note that if you're using spacy or other POS tagging, 
-               filtering e.g. just nouns and such before handing it into this is a lot cleaner and easier, if a little slower.
+        - stopwords and stopwords_i: 
+           - defaults to not removing anything
+           - handing in a list uses yours instead. 
+             There's a stopwords_nl and stopwords_en in this module to get you started but you may want to refine your own
+           - stopwords is case sensitive, stopwords_i is case insensitive
+
+            Note that if you're using spacy or other POS tagging anyway, 
+            filtering e.g. just nouns and such before handing it into this is a lot cleaner and easier (if a little slower).
 
         CONSIDER: imitating wordcloud's collocations= behaviour
         CONSIDER: imitating wordcloud's normalize_plurals=True
