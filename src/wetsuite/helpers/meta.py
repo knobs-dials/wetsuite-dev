@@ -5,7 +5,11 @@
 import re, collections, urllib.parse
 
 
-def parse_jci(s: str):
+_jcifind_re  = re.compile(r'(?:jci)?([0-9.]+):([a-z]):(BWB[RV][0-9]+)([^\s;"\']*)' ) # not meant for finding in free-form text
+_eclifind_re = re.compile(r'ECLI:[A-Za-z]{2}:[A-Z-z0-9.]{1,7}:[0-9]{,4}:[A-Z-z0-9.]{,25}')
+
+
+def parse_jci(text: str):
     """ Takes something in the form of jci{version}:{type}:{BWB-id}{key-value}*
           e.g. jci1.31:c:BWBR0012345&g=2005-01-01&artikel=3.1
         Returns something like
@@ -25,9 +29,9 @@ def parse_jci(s: str):
         in that versions made small semantic changes to the meanings of some parts.
     """
     ret = {}
-    m = re.match('(?:jci)?([0-9.]+):([a-z]):(BWB[RV][0-9]+)(.*)', s)
+    m = _jcifind_re.match( text )
     if m is None:
-        raise ValueError('%r does not look like a valid jci'%s)
+        raise ValueError('%r does not look like a valid jci'%text)
     else:
         version, typ, bwb, rest = m.groups()
         ret['version'] = version
@@ -54,6 +58,7 @@ def parse_jci(s: str):
 
 # CONSIDER: adding the lists of dutch courts. It might change over time, but is still useful.
 
+
 def findall_ecli(s:str, rstrip_dot=True):
     ''' Within plain text, this tries to find all occurences of things that look like an ECLI identifier
         Returns a list of strings.
@@ -65,25 +70,25 @@ def findall_ecli(s:str, rstrip_dot=True):
              and for well-controlled metadata fields it may be more correct to use False.
     '''
     ret = []
-    for match_str in re.findall(r'ECLI:[A-Za-z]{2}:[A-Z-z0-9.]{1,7}:[0-9]{,4}:[A-Z-z0-9.]{,25}', s):
+    for match_str in _eclifind_re.findall( s ):
         if rstrip_dot:
             match_str = match_str.rstrip('.')
         ret.append( match_str )
     return ret 
 
 
-def parse_ecli(ecli_string:str):
+def parse_ecli(text:str):
     ''' mostly just reports the parts in a dict - I don't actually see much use over .split(':')
 
     '''
     ret = {}
-    ecli_list = ecli_string.strip().split(':')
+    ecli_list = text.strip().split(':')
     if len(ecli_list) != 5:
-        raise ValueError("ECLI is expected to have five elements separated by four colons, %r does not"%ecli_string)
+        raise ValueError("ECLI is expected to have five elements separated by four colons, %r does not"%text)
     
     ECLI, country_code, court_code, year, caseid = ecli_list
     if ECLI.upper() != 'ECLI':
-        raise ValueError("First ECLI string isn't 'ECLI' in %r"%ecli_string)
+        raise ValueError("First ECLI string isn't 'ECLI' in %r"%text)
 
     if len(country_code)!=2:
         raise ValueError("ECLI country %s isn't two characters"%country_code)
@@ -96,6 +101,7 @@ def parse_ecli(ecli_string:str):
     ret['court_code'] = court_code
     ret['year'] = year
     ret['caseid'] = caseid
+    # TODO: court codes
 
     #if court_code in nl_court_codes:
     #    ret['court_name'] = nl_court_codes[court_code]
@@ -107,7 +113,8 @@ def parse_ecli(ecli_string:str):
 
 
 
-# member countries slowly change over time, of course, so maybe we should just accept any three letters, or any existing nearby country?
+# member countries slowly change over time, of course, so maybe we should just accept any three letters,
+#  or more pragmatically, any existing nearby country?
 CELEX_COUNTRIES = [ 
     'BEL', 'DEU', 'FRA', 'CZE', 'ESP', 'PRT', 'AUT', 'CYP', 'BGR', 'EST', 'FIN', 'GBR', 'HUN', 'IRL', 
     'LTU', 'MLT', 'LVA', 'SVN', 'SWE', 'GRC,' 'POL', 'DNK', 'ITA', 'LUX', 'NLD', 'SVK', 'ROU', 'HRV',
@@ -323,28 +330,35 @@ def equivalent_celex(celex1:str, celex2:str):
     d2 = parse_celex( celex2 )
     return d1[ 'id' ][1:] == d2[ 'id' ][1:]
 
-    
+
+
+_re_celex = re.compile( r'([1234567890CE])([0-9]{4})([A-Z][A-Z]?)([0-9\(\)]+)([^\s&.]*)?' )
+#_re_celex = re.compile( r'([1234567890CE])([0-9]{4})([A-Z][A-Z]?)([0-9\(\)]+)([A-Z0-9\(\)_]*)?' )
+
+
 
 def parse_celex(celex: str):
-    ''' Normalize a CELEX number, and describe its parts where possible.
+    ''' Normalize a CELEX number
+            (e.g. strips a 'CELEX:' in front)
+        Describes its parts in more readable form, where possible.
         All values are returned as strings, even where they are (ostensibly) numbers.
 
-        Will strip a 'CELEX:' in front.
-
-        Returns a dict detailing the parts.  NOTE that the details will change when I actually read the specs.
+        Returns a dict detailing the parts.  NOTE that the details will change when I actually read the specs properly
         - norm is what you fed in, uppercased, and with an optional 'CELEX:' stripped
           but otherwise untouched
         - id is recoposed from sector_number, year, document_type, document_number
           which means it is stripped of additions - it may strip more than you want!
 
-        Keep in mind that this will not resolve things like "go to the consolidated version" like the EUR-Lex site will do
+        Keep in mind that this will _not_ resolve things like "go to the consolidated version" like the EUR-Lex site will do
 
         TODO: read the spec, because I'm not 100% on 
          - sector 0
          - sector C
          - whether additions like (01) in e.g. 32012A0424(01) are part of the identifier or not
+            (...yes. Theyse are unique documents) 
          - national transposition
-         - what order additions like '(01)' and '-20160504' and 'FIN_240353' should appear in.
+         - if you have multiple additions like '(01)' and '-20160504' and 'FIN_240353',
+           ...what order they should appear in
         
         TODO: we might be able to assist common in those cases (e.g. a test for "is this equivalent").
               I e.g. do not know whether id_nonattrans is useful or correct
@@ -355,9 +369,8 @@ def parse_celex(celex: str):
         norm = norm[6:].strip()
 
     ret = { 'norm': norm }
-
     # TODO: read up on the possible additions, how they combine, because the current parsing is probably incomplete
-    match = re.match( r'([1234567890CE])([0-9]{4})([A-Z][A-Z]?)([0-9\(\)]+)(.*)?', norm )
+    match = _re_celex.match( norm )
     # -[0-9]{8}|[A-Z]{3}_[0-9]+
 
     if match is None:
