@@ -67,9 +67,9 @@ class LocalKV:
           This is why by default we leave it on autocommit, even though that can be slower.
 
         - It wouldn't be hard to also make it act like a dict, but we're trying to to avoid this to avoid a case of
-          "this is so hidden in the semantics that it what and how become really opaque " style leaky abstraction like various ORMs do,
-          so we at least make such behaviour specific calls (keys(), values(), and items(), and their iter variants),
-          because those can at least have docstrings to warn you, rather than the things that make it become part of the syntax. 
+          "this is so hidden in the semantics that it what and how become really opaque " style leaky abstraction.
+          So we choose to make you type out get(), put(),  keys(), values(), and items(), and their iter variants),
+          because those can at least have docstrings to warn you, rather than breaking your reasonable expectations. 
           ...exceptions are
             __len__        for amount of items                   CONSIDER: making that len()
             __contains__   backing 'is this key in the store'),  CONSIDER: making that has_key() instead
@@ -85,8 +85,11 @@ class LocalKV:
             so you proably want think to think about repeating the same path in absolute sense.
             (This is also often the answer to "why do I have an empty database")
             ...if you want to think about that less, consider using open_store().
+
+            read_only is enforced in this wrapper to give slightly more useful errors. (we also give SQLite a PRAGMA)
         '''
         self.path = path
+        self.read_only = read_only
         self._open()
         # here in part to remind us that we _could_ be using converters  https://docs.python.org/3/library/sqlite3.html#sqlite3-converters
         if key_type not in (str, bytes, int, None):
@@ -95,7 +98,6 @@ class LocalKV:
             raise ValueError("We are currently a little overly paranoid about what to allow as value types (%r not allowed)"%value_type.__name)
         self.key_type = key_type
         self.value_type = value_type
-        self.read_only = read_only
         self._in_transaction = False
 
 
@@ -105,6 +107,9 @@ class LocalKV:
         # Note: curs.execute is the regular DB-API way,  conn.execute is a shorthand that gets a temporary cursor
         with self.conn:
             self.conn.execute("PRAGMA auto_vacuum = INCREMENTAL")  # TODO: see that this does what I think it does
+                                                                   # https://www.sqlite.org/pragma.html#pragma_auto_vacuum
+            if self.read_only:
+                self.conn.execute("PRAGMA query_only = true") # https://www.sqlite.org/pragma.html#pragma_query_only
             #if make_tables:
             self.conn.execute("CREATE TABLE IF NOT EXISTS meta (key text unique NOT NULL, value text)")
             self.conn.execute("CREATE TABLE IF NOT EXISTS kv   (key text unique NOT NULL, value text)")
@@ -178,37 +183,6 @@ class LocalKV:
             self.commit()
 
 
-    def commit(self):
-        ' commit changes - for when you use put() or delete() with commit=False to do things in a larger transaction '
-        self.conn.commit()
-        self._in_transaction = False
-
-
-    # # TODO: test
-    # def truncate(self, key, vacuum=True):
-    #     ''' remove all kv entries.
-    #         If we were still in a transaction, we roll that back  first
-    #     '''
-    #     self._checktype_key(key)
-    #     curs = self.conn.cursor() # TODO: check that's correct when commit==False
-    #     if self._in_transaction:
-    #         self.rollback()
-    #         self._in_transaction = True
-    #     curs.execute('DELETE FROM kv')  # https://www.techonthenet.com/sqlite/truncate.php
-    #     if vacuum:
-    #         self.vacuum()
-
-
-    # # TODO: test
-    # def rollback(self):
-    #     ' roll back changes '
-    #     # maybe only if we were in a transaction?
-    #     self.conn.rollback()
-    #     self._in_transaction = False
-
-
-
-
     def _get_meta(self, key:str, missing_as_none=False):
         ''' For internal use, preferably don't use.
             This is an extra str:str table in there that is intended to be separate, with some keys special to these classes.
@@ -243,8 +217,31 @@ class LocalKV:
         curs = self.conn.cursor() # TODO: check that's correct when commit==False
         curs.execute('DELETE FROM meta where key=?', ( key,) )
         self.commit()
-        
 
+
+
+    def commit(self):
+        ' commit changes - for when you use put() or delete() with commit=False to do things in a larger transaction '
+        self.conn.commit()
+        self._in_transaction = False
+
+    # # TODO: test
+    # def rollback(self):
+    #     ' roll back changes '
+    #     # maybe only if _in_transaction?
+    #     self.conn.rollback()
+    #     self._in_transaction = False
+
+
+    def estimate_waste(self):
+        return self.conn.execute('SELECT (freelist_count*page_size) as FreeSizeEstimate  FROM pragma_freelist_count, pragma_page_size').fetchone()[0]
+
+    # def incremental_vacuum(self):
+    #     ' assuming we created with "PRAGMA auto_vacuum = INCREMENTAL" we can do cleanup. Ideally you do with some interval when you remove/update things '
+    #     # https://www.sqlite.org/pragma.html#pragma_auto_vacuum
+    #     if self._in_transaction:
+    #         self.commit()
+    #     self.conn.execute('PRAGMA schema.incremental_vacuum')
 
     def vacuum(self):
         ''' After a lot of deletes you could compact the store with vacuum().
@@ -267,6 +264,21 @@ class LocalKV:
     #     #return os.stat( self.path ).st_size
 
 
+    # # TODO: test
+    # def truncate(self, key, vacuum=True):
+    #     ''' remove all kv entries.
+    #         If we were still in a transaction, we roll that back  first
+    #     '''
+    #     self._checktype_key(key)
+    #     curs = self.conn.cursor() # TODO: check that's correct when commit==False
+    #     if self._in_transaction:
+    #         self.rollback()
+    #         self._in_transaction = True
+    #     curs.execute('DELETE FROM kv')  # https://www.techonthenet.com/sqlite/truncate.php
+    #     if vacuum:
+    #         self.vacuum()
+
+
     def close(self):
         self.conn.close()
 
@@ -275,6 +287,7 @@ class LocalKV:
         curs = self.conn.cursor()
         for row in curs.execute('SELECT key FROM kv'):
             yield row[0]
+        curs.close()
 
 
     def keys(self): 
@@ -285,6 +298,7 @@ class LocalKV:
         curs = self.conn.cursor()
         for row in curs.execute('SELECT value FROM kv'):
             yield row[0]
+        curs.close()
 
 
     def values(self): 
@@ -295,14 +309,30 @@ class LocalKV:
         curs = self.conn.cursor()
         for row in curs.execute('SELECT key, value FROM kv'):
             yield row[0], row[1]
+        curs.close()
 
 
     def items(self):
         return list( self.iteritems() )
-    
+
+
+    def __iter__(self): # TODO: check
+        return self.iterkeys()
+
 
     def __repr__(self):
         return '<LocalKV(%r)>'%( os.path.basename(self.path), )
+
+
+    def __len__(self):
+        return self.conn.execute('SELECT COUNT(*) FROM kv').fetchone()[0]  # TODO: double check
+
+
+    # Choice not to actually have it behave like a dict - this seems like a leaky abstraction,
+    # so we make you write out the .get and .put to make you realize it's different behaviour not like a real dict
+    # ...bit still a sneaky contains:
+    def __contains__(self, key):
+        return self.conn.execute('SELECT 1 FROM kv WHERE key = ?', (key,)).fetchone() is not None
 
 
     #def __getitem__(self, key):
@@ -320,16 +350,7 @@ class LocalKV:
     #    #    raise KeyError(key)
     #    self.conn.execute('DELETE FROM kv WHERE key = ?', (key,)) 
 
-    def __len__(self):
-        return self.conn.execute('SELECT COUNT(*) FROM kv').fetchone()[0]  # TODO: double check
 
-
-    def __contains__(self, key):
-        return self.conn.execute('SELECT 1 FROM kv WHERE key = ?', (key,)).fetchone() is not None
-
-
-    def __iter__(self): # TODO: check
-        return self.iterkeys()
 
 
 
@@ -376,7 +397,7 @@ class PickleKV(LocalKV):
             yield row[0], pickle.loads( row[1] )
 
 
-# msgpack would be faster than pickle (and more interoperable) but an extra dependency
+# msgpack would be faster than pickle, more interoperable, and safer - but an extra dependency
 
 # json is more interoperable, but slower and doesn't e.g. deal with date/datetime
 

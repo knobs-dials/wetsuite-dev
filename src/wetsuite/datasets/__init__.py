@@ -204,7 +204,7 @@ def load(dataset_name: str, verbose=None, force_refetch=False):
 
     if first_bytes == b'SQLite format 3':
         f.close()
-        data        = wetsuite.helpers.localdata.LocalKV( data_path, None, None, read_only=True )
+        data        = wetsuite.helpers.localdata.LocalKV( data_path, None, None, read_only=True ) # the type enforcement is irrelevant when opened read-only
         description = data._get_meta('description', missing_as_none=True)
 
     else: # Assume JSON - expected to be a dict with two main keys
