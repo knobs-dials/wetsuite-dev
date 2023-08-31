@@ -121,7 +121,7 @@ def find_identifier_references( text , ljn=False, ecli=True, celex=True, kamerst
 
 
 
-def find_nonidentifier_references(s, context_amt=60, debug=False):
+def find_nonidentifier_references(s, context_amt=60, debug=False): # TODO: needs a better name
     ''' Attempts to find references like
           "artikel 5.1, tweede lid, aanhef en onder i, van de Woo"
         and parse and resolve as much as it can.
@@ -167,10 +167,11 @@ def find_nonidentifier_references(s, context_amt=60, debug=False):
     # note to self: just the article bit also good for creating an anchor for test cases later, to see what we miss and roughly why
 
     for artikel_mo in artikel_matches: # these should be unique references
-        if debug:
-            print('------')
         details = collections.OrderedDict()
         details['artikel'] = artikel_mo.group(1)
+        #if debug:
+        #    print('------')
+        #    print(artikel_mo)
 
         overallmatch_st, overallmatch_en = artikel_mo.span()
 
@@ -229,8 +230,10 @@ def find_nonidentifier_references(s, context_amt=60, debug=False):
         while range_was_widened:
             range_was_widened = False
 
-            s_art_context = '%s[%s]%s'%( s[wider_start:overallmatch_st], s[overallmatch_st:overallmatch_en].upper(), s[overallmatch_en:wider_end] )
-            #print( 'SOFAR',  '\n'.join( textwrap.wrap(s_art_context.strip(), width=70, initial_indent='     ', subsequent_indent='     ') ) )
+            if debug:
+                import textwrap
+                s_art_context = '%s[%s]%s'%( s[wider_start:overallmatch_st], s[overallmatch_st:overallmatch_en].upper(), s[overallmatch_en:wider_end] )
+                print( 'SOFAR',  '\n'.join( textwrap.wrap(s_art_context.strip(), width=70, initial_indent='     ', subsequent_indent='     ') ) )
 
             for rng_st, rng_en, where in (    (wider_start, overallmatch_st, 'before'),    (overallmatch_en, wider_end,   'after'),    ):
                 for find_name, (before_andor_after, incl_excl, find_re) in find_things.items():

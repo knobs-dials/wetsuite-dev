@@ -27,10 +27,12 @@ def cvdr_meta(tree, flatten=False):
 
         
         Because in some cases there are tag-specific attributes, for this reason:
-          If flatten==False (default),    returns a dict like   { 'creator': [{'attr': {'scheme': 'overheid:Gemeente'}, 'text': 'Zuidplas'}], ... }
+          If flatten==False (default),    returns a dict like   
+                { 'creator': [{'attr': {'scheme': 'overheid:Gemeente'}, 'text': 'Zuidplas'}], ... }
         
-        For quick and dirty presentation you may wish to smush those into one string:
-          If flatten==True,               you get a creatively flattened thing like              { 'creator': 'Zuidplas (overheid:Gemeente)', ... }
+        For quick and dirty presentation (only) you may wish to smush those into one string:
+          If flatten==True,               you get a _creatively_ flattened thing like              
+                { 'creator': 'Zuidplas (overheid:Gemeente)', ... }
           Please avoid this when you care to deal with data in a structured way  (even if you can sometimes get away with it due to empty attributs).
 
 
