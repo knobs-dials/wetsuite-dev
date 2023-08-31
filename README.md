@@ -40,10 +40,10 @@ See [dataset_kamervragen (notebook)](notebooks/examples/dataset_kamervragen.ipyn
 Laws are of course structured, with paragraphs and lists, in an artikel, in a hoofdstuk, and much more.
 
 When studying details and structures and references you may need to understand and use all that structure, 
-yet broader tasks such as summarizing topics of broad parts cares can be fed plain text.
+yet broader tasks such as summarizing topics of broad parts can probably be fed text without that structure.
 
-We aim to let you flatten text with some controllable granularity, e.g. per article, per hoofdstuk,
-or otherwise, and ideally still with some reference to its origin within the original data-document.
+We aim to let you flatten text with some controllable granularity, e.g. per article, per hoofdstuk, or otherwise,
+and also give an indication to where it came from within the original data-document.
 
 Consider:
 
