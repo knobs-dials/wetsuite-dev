@@ -1,17 +1,17 @@
 
-from wetsuite.helpers.patterns import reference_parse
+from wetsuite.helpers.patterns import find_identifier_references, find_nonidentifier_references
 
 
 def test_reference_parse():
     import datetime, pytest
 
 
-    matches = reference_parse('artikel 5:9, aanhef en onder b, Awb')
+    matches = find_nonidentifier_references('artikel 5:9, aanhef en onder b, Awb')
     d = matches[0]['details']
     assert d['artikel'] == '5:9'
 
 
-    matches = reference_parse('artikel 4, tweede lid, aanhef en onder d, van het reglement van orde voor de ministerraad')
+    matches = find_nonidentifier_references('artikel 4, tweede lid, aanhef en onder d, van het reglement van orde voor de ministerraad')
     d = matches[0]['details']
     assert d['artikel'] == '4'
     assert 'tweede' in d['lid']
@@ -54,4 +54,4 @@ for test in [
 
 ]:
     print()
-    reference_parse( test )
+    find_nonidentifier_references( test )
