@@ -175,6 +175,7 @@ PDFs are common enough, so we can extract the text it says it contains.
 
 ```python
 import wetsuite.helpers.net
+import wetsuite.extras.pdf
 
 pdfbytes = wetsuite.helpers.net.download('https://open.overheid.nl/documenten/ronl-5439f4bf9849a53e634389ebbb5e4f5740c4f84f/pdf')
 text_per_page = wetsuite.extras.pdf.page_text( pdfbytes )
