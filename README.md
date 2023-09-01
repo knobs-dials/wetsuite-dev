@@ -241,7 +241,7 @@ Once you care to use this as a library in more serious projects, consider instal
 # Repository
 
 This repository is split into:
-- `notebooks` groups - which are introduced below
+- `notebooks`
   - [examples](notebooks/examples/) - python notebooks that demonstrate the use of varied package tools,  datasets,  and related things
   - [miscellany](notebooks/miscellany/) - things that are not core wetsuite functionality, but may be useful to people anyway, including examples of code in [extras/](src/wetsuite/extras/)
 
