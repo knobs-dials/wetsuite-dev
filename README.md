@@ -177,9 +177,9 @@ PDFs are common enough, so we can extract the text it says it contains.
 import wetsuite.helpers.net
 
 pdfbytes = wetsuite.helpers.net.download('https://open.overheid.nl/documenten/ronl-5439f4bf9849a53e634389ebbb5e4f5740c4f84f/pdf')
-text_per_page = wetsuite.datacollect.pdf.page_text( pdfbytes )
+text_per_page = wetsuite.extras.pdf.page_text( pdfbytes )
 # However, it turns out there are many PDFs that (partially or fully) contain _images of text_. To check, you can e.g. 
-chars_per_page, num_pages_with_text, num_pages = wetsuite.datacollect.pdf.count_pages_with_text(pdfbytes, char_threshold=150)
+chars_per_page, num_pages_with_text, num_pages = wetsuite.extras.pdf.count_pages_with_text(pdfbytes, char_threshold=150)
 print(f'{num_pages_with_text} out of {num_pages} pages contain reasonable amount of text\n  characters per page: {chars_per_page}')
 # which will point out that:
 #  7 out of 20 pages contain reasonable amount of text
@@ -191,12 +191,12 @@ So in this case, we move on to...
 ### OCR
 
 ```python
-import wetsuite.extras.pdf_text
+import wetsuite.extras.ocr
 
-all_text = wetsuite.extras.pdf_text.pdf_text_ocr( pdfbytes )
+all_text = wetsuite.extras.oct.easyocr_text( pdfbytes )
 ```
 
-Note: `pdf_text_ocr()` will not care as much about clean document structure as you do.
+Note: This `easyocr_text()` will _not_ care as much about clean document structure as you do.
 
 It is good enough for bag-of-words models, but a little messy for structured analysis.
 See [datacollect_ocr (notebook)](notebooks/examples/datacollect_ocr.ipynb) 
