@@ -63,7 +63,8 @@ def easyocr(image, pythontypes=True, use_gpu=True, languages=['nl','en']):
 
 
 def easyocr_text(results):
-    ''' take bounding boxed results and, right now, returns only the text as-is.
+    ''' take bounding boxed results and, right now, 
+        smushes just the text together as-is, without much care about placement.
         We plan to be smarter than this, given time.
 
         (there is some smarter code in kansspelautoriteit fetching script
