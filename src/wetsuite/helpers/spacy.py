@@ -224,7 +224,7 @@ def detect_language(text: str):
 
 
 _xx_sent_model = None
-def sentence_split(text):
+def sentence_split(text, as_plain_sents=False):
     ''' A language-agnostic sentence splitter based on the xx_sent_ud_sm model. 
 
         If you hacen't installed it:  python3 -m spacy download xx_sent_ud_sm
@@ -235,9 +235,12 @@ def sentence_split(text):
     global _xx_sent_model
     if _xx_sent_model==None:
         _xx_sent_model  = spacy.load("xx_sent_ud_sm")
-    doc = _xx_sent_model(text)
-    return doc
 
+    doc = _xx_sent_model(text)
+    if as_plain_sents:
+        return list( sent.text for sent in doc.sents )
+    else:
+        return doc
 
 
 # _xx_ner_model = None
