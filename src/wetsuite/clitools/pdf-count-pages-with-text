@@ -3,13 +3,13 @@
 
 if __name__ == '__main__':
     import sys
-    import wetsuite.extras.pdf_text
+    import wetsuite.extras.pdf
 
     for filename in sys.argv[1:]:
         count_pages, count_textless = 0,0
 
         with open(filename, 'rb') as file:
-            page_generator = wetsuite.extras.pdf_text.page_text( file.read() )  # which is currently a thin wrapper around poppler
+            page_generator = wetsuite.extras.pdf.page_text( file.read() )  # which is currently a thin wrapper around poppler
             for page_i, page_text in enumerate( page_generator ):
                 count_pages += 1
                 #print( "Page %d:  %d characters"%(page_i+1, len(page_text)) )

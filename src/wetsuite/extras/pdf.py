@@ -10,14 +10,11 @@
     https://pymupdf.readthedocs.io/en/latest/recipes-text.html#how-to-extract-text-in-natural-reading-order
 
 
-
     Render PDF pages as a PIL image.
     Used to feed PDFs that contain scanned images to OCR.
 ''' 
 
-import re
-import warnings
-from PIL import Image
+import warnings, io
 
 
 # def text_is_mainly_number(s:str):
@@ -30,29 +27,45 @@ from PIL import Image
 
 
 def page_text( filedata:bytes ):
-    """ Takes PDF file data.  
+    """ Takes PDF file data, yields a page's worth of its text at a time (is a generator),
+        according to the text objects in the PDF stream (which, note, aren't always there).
 
-        Parses it and yields a page's worth of text at a time (is a generator). 
+        Tries to sort the text fragments in reading order,  though this is far from perfect.
     """
-    import poppler
+    import fitz #pymupdf
+    with fitz.open( stream=filedata, filetype="pdf") as document:  # open document
+        for page in document:
+            yield page.get_text( sort=True )
 
-    pdf_doc = poppler.load_from_data( filedata )
-    num_pages = pdf_doc.pages # note that poppler counts pages zero-based
+    # else:
+    #     import poppler
+    #     pdf_doc = poppler.load_from_data( filedata )
+    #     num_pages = pdf_doc.pages # note that poppler counts pages zero-based
 
-    for page_num in range(num_pages):
-        page = pdf_doc.create_page(page_num)
-        text_list = page.text_list()
-        page_text = []
-        for textbox in text_list:
-            page_text.append( textbox.text )
-        yield ' '.join( page_text )
+    #     for page_num in range(num_pages):
+    #         page = pdf_doc.create_page(page_num)
+    #         text_list = page.text_list()
+    #         page_text = []
+    #         for textbox in text_list:
+    #             page_text.append( textbox.text )
+    #         yield ' '.join( page_text )
 
 
+def doc_text( filedata:bytes, strip=True ):
+    ''' Returns a single string.   Mostly just joins the output of page_text() '''
+    ret = '\n\n'.join( page_text( filedata ) )
+    if strip:
+        ret = ret.strip()
+    return ret
 
-def count_pages_with_text( filedata_or_list, char_threshold=150 ):
+
+def count_pages_with_text( filedata_or_list, char_threshold=200 ):
     """ Counts  the number of pages that have a reasonabl amount of text on them.
-        Takes   either PDF file data (as bytes) or the output of pages_text()
+        Takes   either PDF file data (as bytes) 
+                    or the output of pages_text()
         Returns (chars_per_page, num_pages_with_text, num_pages)
+
+        (The characters per page counts spaces between words, but strips edges; TODO: think about this more)
 
         Mainly intended to detect PDFs that are partly or fully images-of-text.
     """
@@ -61,17 +74,18 @@ def count_pages_with_text( filedata_or_list, char_threshold=150 ):
         it = page_text(filedata_or_list)
     else:
         it = filedata_or_list
+
     chars_per_page = []
     count_pages = 0
     count_pages_with_text  = 0
+
     for page in it:
         count_pages += 1
-        chars_per_page.append(len(page))
+        chars_per_page.append( len(page.strip() ))
         if len(page) >= char_threshold:
             count_pages_with_text += 1 
-    return chars_per_page, count_pages_with_text, count_pages
-    
 
+    return chars_per_page, count_pages_with_text, count_pages
 
 
 def pdf_text_ocr(bytedata: bytes):
@@ -89,17 +103,12 @@ def pdf_text_ocr(bytedata: bytes):
     '''
     ret = []
 
-    import wetsuite.extras.pdf_image
     import wetsuite.extras.ocr
-    for page_image in wetsuite.extras.pdf_image.pages_as_images(bytedata):
+    for page_image in pages_as_images(bytedata):
         fragments = wetsuite.extras.ocr.easyocr( page_image )
         for bbox, text_fragment, cert in fragments:
             ret.append( text_fragment )
     return ' '.join( ret )
-
-
-
-
 
 
 def pages_as_images( filedata, dpi=150, antialiasing=True ):
@@ -109,23 +118,38 @@ def pages_as_images( filedata, dpi=150, antialiasing=True ):
 
         Depends on poppler-utils. CONSIDER: alternatives like pymupdf (page.getpixmap?)
     """
-    import poppler
-    dpi = int(dpi)
-    pdf_doc = poppler.load_from_data( filedata )
-    num_pages = pdf_doc.pages # zero-based
-    
-    pr = poppler.PageRenderer() # I'm not sure the python wrapper can be told to use another pixel format?
-    
-    for page_num in range(num_pages):
-        page = pdf_doc.create_page(page_num)
+    #pymupdf
+    from PIL import Image
+    import fitz 
+
+    with fitz.open( stream=filedata, filetype="pdf") as document:
+        for page in document:
+            page_pixmap = page.get_pixmap(dpi=dpi)
+            im = Image.frombytes(mode='RGB', 
+                                    size=[page_pixmap.width, page_pixmap.height], 
+                                    data=page_pixmap.samples)
+            yield im
+            
+    # else:
+    #     import poppler
+    #     dpi = int(dpi)
+    #     pdf_doc = poppler.load_from_data( filedata )
+    #     num_pages = pdf_doc.pages # zero-based
         
-        if antialiasing:
-            try:
-                import poppler.cpp.page_renderer
-                pr.set_render_hint( poppler.cpp.page_renderer.render_hint.text_antialiasing, True) 
-            except Exception as e: # who knows when and why this might break
-                warnings.warn('set-antialiasing complained: %s'%str(e))
-                pass
-        poppler_im = pr.render_page( page, xres=dpi, yres=dpi )
-        pil_im = Image.frombytes( "RGBA",  (poppler_im.width, poppler_im.height), poppler_im.data, "raw", str(poppler_im.format), )
-        yield pil_im
+    #     pr = poppler.PageRenderer() # I'm not sure the python wrapper can be told to use another pixel format?
+        
+    #     for page_num in range(num_pages):
+    #         page = pdf_doc.create_page(page_num)
+            
+    #         if antialiasing:
+    #             try:
+    #                 import poppler.cpp.page_renderer
+    #                 pr.set_render_hint( poppler.cpp.page_renderer.render_hint.text_antialiasing, True) 
+    #             except Exception as e: # who knows when and why this might break
+    #                 warnings.warn('set-antialiasing complained: %s'%str(e))
+    #                 pass
+    #         poppler_im = pr.render_page( page, xres=dpi, yres=dpi )
+    #         pil_im = Image.frombytes( "RGBA",  (poppler_im.width, poppler_im.height), poppler_im.data, "raw", str(poppler_im.format), )
+    #         yield pil_im
+
+
