@@ -121,7 +121,7 @@ def find_identifier_references( text , ljn=False, ecli=True, celex=True, kamerst
 
 
 
-def find_nonidentifier_references(s, context_amt=60, debug=False): # TODO: needs a better name
+def find_nonidentifier_references(text, context_amt=60, debug=False): # TODO: needs a better name
     ''' Attempts to find references like
           "artikel 5.1, tweede lid, aanhef en onder i, van de Woo"
         and parse and resolve as much as it can.
@@ -161,7 +161,7 @@ def find_nonidentifier_references(s, context_amt=60, debug=False): # TODO: needs
     artikel_matches = []
 
 
-    for artikel_mo in re.finditer(r'\b(?:[Aa]rt(?:ikel|[.]|\b)\s*([0-9.:]+[a-z]*))', s):
+    for artikel_mo in re.finditer(r'\b(?:[Aa]rt(?:ikel|[.]|\b)\s*([0-9.:]+[a-z]*))', text):
         artikel_matches.append( artikel_mo )
 
     # note to self: just the article bit also good for creating an anchor for test cases later, to see what we miss and roughly why
@@ -177,7 +177,7 @@ def find_nonidentifier_references(s, context_amt=60, debug=False): # TODO: needs
 
         # based on that anchoring match, define a range to search in
         wider_start = max(0,      overallmatch_st - context_amt)
-        wider_end   = min(overallmatch_st + context_amt, len(s))
+        wider_end   = min(overallmatch_st + context_amt, len(text))
 
         # Look for some specific strings around the matched 'artikel', (and record whether they came before or after)
         find_things = { # match before and/or after,   include or exclude,    (uncompiled) regexp
@@ -224,7 +224,6 @@ def find_nonidentifier_references(s, context_amt=60, debug=False): # TODO: needs
             compiled = re.compile(  res,  flags=re.I|re.M  )  
             find_things[k][2] = compiled
 
-
         ## the main "keep adding things" loop
         range_was_widened = True
         while range_was_widened:
@@ -232,7 +231,7 @@ def find_nonidentifier_references(s, context_amt=60, debug=False): # TODO: needs
 
             if debug:
                 import textwrap
-                s_art_context = '%s[%s]%s'%( s[wider_start:overallmatch_st], s[overallmatch_st:overallmatch_en].upper(), s[overallmatch_en:wider_end] )
+                s_art_context = '%s[%s]%s'%( text[wider_start:overallmatch_st], text[overallmatch_st:overallmatch_en].upper(), text[overallmatch_en:wider_end] )
                 print( 'SOFAR',  '\n'.join( textwrap.wrap(s_art_context.strip(), width=70, initial_indent='     ', subsequent_indent='     ') ) )
 
             for rng_st, rng_en, where in (    (wider_start, overallmatch_st, 'before'),    (overallmatch_en, wider_end,   'after'),    ):
@@ -244,7 +243,7 @@ def find_nonidentifier_references(s, context_amt=60, debug=False): # TODO: needs
                         continue
 
                     # TODO: ideally, we use the closest match; right now we assume there will be only one in range (TODO: fix that)
-                    for now_mo in find_re.finditer(s, pos=rng_st, endpos=rng_en): # TODO: check whether inclusive or exclusive
+                    for now_mo in find_re.finditer(text, pos=rng_st, endpos=rng_en): # TODO: check whether inclusive or exclusive
                         #now_size = now_mo.end() - now_mo.start()
 
                         if incl_excl == 'E': # recognizing a string that we want _not_ to include (not all that different from just not seeing something
@@ -261,7 +260,7 @@ def find_nonidentifier_references(s, context_amt=60, debug=False): # TODO: needs
                             else:                                           # we can assume where==after
                                 howmuch = now_mo.start() - overallmatch_en  #  
                                 overallmatch_en = now_mo.end()              #  extend match
-                                wider_end = min(wider_end+howmuch, len(s))  #  extend search range
+                                wider_end = min(wider_end+howmuch, len(text))  #  extend search range
 
 
                             range_was_widened = True
@@ -283,15 +282,15 @@ def find_nonidentifier_references(s, context_amt=60, debug=False): # TODO: needs
                 #if changed:
                 #    break # break before/after
         
-        s_art_context = '%s[%s]%s'%( s[wider_start:overallmatch_st], s[overallmatch_st:overallmatch_en].upper(), s[overallmatch_en:wider_end] )
+        s_art_context = '%s[%s]%s'%( text[wider_start:overallmatch_st], text[overallmatch_st:overallmatch_en].upper(), text[overallmatch_en:wider_end] )
         #print( 'SETTLED ON')
         #print( '\n'.join( textwrap.wrap(s_art_context.strip(), width=70, initial_indent='     ', subsequent_indent='     ') ) )
         #print( details )
 
         if 'lid' in details:
             details['lid_num'] = []
-            s = details['lid']
-            words = list(  s.strip()  for s in re.split(r'[\s\n]*(?:,| en\b)', details['lid'], flags=re.M)   if len(s.strip())>0 )
+            lidtext = details['lid']
+            words = list(  s.strip()  for s in re.split(r'[\s\n]*(?:,| en\b)', lidtext, flags=re.M)   if len(s.strip())>0 )
             for part in words:
                 try:
                     details['lid_num'].append( int(part) )
@@ -305,7 +304,8 @@ def find_nonidentifier_references(s, context_amt=60, debug=False): # TODO: needs
         ret.append( {
               'start': overallmatch_st,
                 'end': overallmatch_en,
-               'text': s[overallmatch_st:overallmatch_en],
+               'text': text[overallmatch_st:overallmatch_en],
+      # 'contexttext':text,
             'details': details,
         } )
 
