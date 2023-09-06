@@ -1,9 +1,10 @@
 # Introduction
 
-Wetsuite is a project aimed at applying natural language processing and other analysis to Dutch and EU governmental legal data,
-focusing on providing the data and tools and other infrastructure to make it easier for researchers to do so.
+Wetsuite is a project aimed at easing the application of natural language processing, and other analysis,
+to Dutch and EU governmental legal data, 
+largely focused on providing the data and tools and other infrastructure to make it easier for researchers to do so.
 
-...this, so far, is an early repository test to test installs from github, not the primary source of this project 
+NOTE: this is an early repository test to test installs from github, not the primary source of this project.
 
 
 # Minimal examples as code fragments
