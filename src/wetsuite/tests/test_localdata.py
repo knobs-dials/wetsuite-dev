@@ -3,6 +3,7 @@ import pytest
 import wetsuite.helpers.localdata
 
 
+
 def test_crud():
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', key_type=str, value_type=str)
     with pytest.raises(KeyError):
@@ -79,7 +80,7 @@ def test_type():
 
 
 
-def TEMPORARILY_DISABLED_test_multiread_and_locking( tmp_path ):
+def TEMPORARILY_DISABLED_test_multiread_and_locking( tmp_path ): # disabled because the test takes longish (on purpose)
 #def test_multiread_and_locking( tmp_path ):
     import sqlite3
 
@@ -217,15 +218,37 @@ def test_cached_fetch():
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, bytes) 
     bytedata, fromcache = wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/')
     assert fromcache==False
-
     assert b'<html' in bytedata
 
     bytedata, fromcache = wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/')
     assert fromcache==True
+    assert b'<html' in bytedata
 
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str) 
-    with pytest.raises(TypeError, match=r'.*expects*'):
+    with pytest.raises(TypeError, match=r'.*expects*'): # complaint about type
         wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/')
+
+
+def test_msgpack_crud():
+    kv = wetsuite.helpers.localdata.MsgpackKV(':memory:')
+    with pytest.raises(KeyError):
+        kv.get('a')
+    kv.put('a', (2,3,4))
+    assert len(kv)==1
+    assert kv.get('a') == [2,3,4]   # list, not tuple
+    kv.delete('a')
+    assert len(kv)==0
+
+    kv.put('b', {1:2, b'b':[ {'a':'b'},{'c':[2,1,'0']}]} )
+
+    kv.put('c', {1:2, 'v':'a'})
+    assert len(kv)==2
+    # checks that strict_map_key is not enforced (things other than str or bytes)
+    kv.items()
+    kv.values()
+
+    kv.delete('c')
+    assert len(kv)==1
 
 
 

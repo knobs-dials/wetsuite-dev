@@ -102,7 +102,8 @@ class LocalKV:
 
 
     def _open(self):
-        #make_tables = (self.path==':memory:')  or  ( not os.path.exists( self.path ) )  # will be creating that file, or are using an in-memory database ?
+        ' Open file path set by init.  Could be merged into init ' 
+        #make_tables = (self.path==':memory:')  or  ( not os.path.exists( self.path ) )    # will be creating that file, or are using an in-memory database ?  Also how to combine with read_only?
         self.conn = sqlite3.connect( self.path )
         # Note: curs.execute is the regular DB-API way,  conn.execute is a shorthand that gets a temporary cursor
         with self.conn:
@@ -111,16 +112,19 @@ class LocalKV:
             if self.read_only:
                 self.conn.execute("PRAGMA query_only = true") # https://www.sqlite.org/pragma.html#pragma_query_only
             #if make_tables:
-            self.conn.execute("CREATE TABLE IF NOT EXISTS meta (key text unique NOT NULL, value text)")
-            self.conn.execute("CREATE TABLE IF NOT EXISTS kv   (key text unique NOT NULL, value text)")
+            if not self.read_only: # if read-only, we assume you are opening something that already exists
+                self.conn.execute("CREATE TABLE IF NOT EXISTS meta (key text unique NOT NULL, value text)")
+                self.conn.execute("CREATE TABLE IF NOT EXISTS kv   (key text unique NOT NULL, value text)")
 
 
     def _checktype_key(self, val):
+        ' checks a value according to the key_type you handed into the constructor '
         if self.key_type is not None  and  not isinstance(val, self.key_type): # None means don't check 
             raise TypeError('Only keys of type %s are allowed, you gave a %s'%(self.key_type.__name__, type(val).__name__))
 
 
     def _checktype_value(self, val):
+        ' checks a value according to the value_type you handed into the constructor '
         if self.value_type is not None  and  not isinstance(val, self.value_type):
             raise TypeError('Only values of type %s are allowed, you gave a %s'%(self.value_type.__name__, type(val).__name__))
 
@@ -302,6 +306,7 @@ class LocalKV:
 
 
     def values(self): 
+        " This will load everything in memory - you usually want itervalues "
         return list( self.itervalues() )
 
 
@@ -313,6 +318,7 @@ class LocalKV:
 
 
     def items(self):
+        " This will load everything in memory - you usually want iteritems "
         return list( self.iteritems() )
 
 
@@ -352,84 +358,101 @@ class LocalKV:
 
 
 
-
-
-class PickleKV(LocalKV):
-    ''' Like localKV, but 
-        - typing fixed at str:bytes 
-        - put() stores using pickle, get() unpickles
-        Will be a bit slower, but lets you more transpoarently store e.g. nested python structures, like dicts
-
-        Note that
-         - pickle isn't the most interoperable choice  (json or msgpack would be preferable)
-         - pickle isn't the fastest choice             (msgpack would be preferable)
-         - pickle is chosen mostly in case we want to store a date or datetime (json and msgpack don't like those)
-
-        Currently only intended to be used by datasets, though feel free to 
-    '''
-    def __init__(self, path, protocol_version=3):
-        ''' defaults to pickle protocol 3 to support all of py3.x (though not 2)
-            consider getting/setting meta to check that an existing store actually _should_ be used like this
-        '''
-        super(PickleKV, self).__init__( path, key_type=str, value_type=bytes )
-        self.protocol_version = protocol_version
-
-    def get(self, key:str):
-        " Note that unpickling could fail "
-        value = super(PickleKV, self).get( key )
-        unpickled = pickle.loads(value)
-        return unpickled
-        
-    def put(self, key:str, value):
-        " See LocalKV.put().   Unlike that, value is not checked for type, just pickled. Which can fail. "
-        pickled = pickle.dumps(value, protocol=self.protocol_version)
-        super(PickleKV, self).put( key, pickled )
-
-
-    def itervalues(self):
-        curs = self.conn.cursor()
-        for row in curs.execute('SELECT value FROM kv'):
-            yield pickle.loads( row[0] )
-
-    def iteritems(self):
-        curs = self.conn.cursor()
-        for row in curs.execute('SELECT key, value FROM kv'):
-            yield row[0], pickle.loads( row[1] )
-
-
-# msgpack would be faster than pickle, more interoperable, and safer - but an extra dependency
+# msgpack would be faster than pickle, more interoperable, and safer - but an extra dependency, and does a little less.
 
 # json is more interoperable, but slower and doesn't e.g. deal with date/datetime
 
-# class JSONKV(LocalKV):
+
+try:
+    import msgpack
+
+    class MsgpackKV(LocalKV):
+        ''' Like localKV, but 
+            - typing fixed at str:bytes 
+            - put() stores using pickle, get() unpickles
+
+            Will be a bit slower, but lets you more transparently store e.g. nested python structures, like dicts
+            ...but only of primitive types, and not e.g. datetime.
+
+            msgpack is used as a somewhat faster alternative to json and pickle (though that barely matters for smaller values)
+        
+            Note that this does _not_ change how the meta table works.
+        '''
+        def __init__(self, path, key_type=str, value_type=None):
+            ''' value_type is ignored; I need to restructure this
+            '''
+            super(MsgpackKV, self).__init__( path, key_type=str, value_type=None )
+
+        def get(self, key:str):
+            " Note that unpickling could fail "
+            value = super(MsgpackKV, self).get( key )
+            unpacked = msgpack.loads(value)
+            return unpacked
+            
+        def put(self, key:str, value):
+            " See LocalKV.put().   Unlike that, value is not checked for type, just pickled. Which can fail. "
+            packed = msgpack.dumps(value)
+            super(MsgpackKV, self).put( key, packed )
+
+        def itervalues(self):
+            curs = self.conn.cursor()
+            for row in curs.execute('SELECT value FROM kv'):
+                yield msgpack.loads( row[0], strict_map_key=False )
+
+        def iteritems(self):
+            curs = self.conn.cursor()
+            for row in curs.execute('SELECT key, value FROM kv'):
+                yield row[0], msgpack.loads( row[1], strict_map_key=False )    
+except ImportError:
+    pass
+
+
+# class PickleKV(LocalKV):
 #     ''' Like localKV, but 
-#         - typing fixed at str:str 
-#         - put() and get() will store as JSON
-#         More interoperable, but won't store quite as many things as PickleKV
+#         - typing fixed at str:bytes 
+#         - put() stores using pickle, get() unpickles
+#         Will be a bit slower, but lets you more transpoarently store e.g. nested python structures, like dicts
+
+#         Note that
+#          - pickle isn't the most interoperable choice  (json or msgpack would be preferable)
+#          - pickle isn't the fastest choice             (msgpack would be preferable)
+#          - pickle is chosen mostly in case we want to store a date or datetime (json and msgpack don't like those)
+
+#         Note that this does _not_ change how the meta table works.
+
+#         Currently only intended to be used by datasets, though feel free to 
 #     '''
-#     def __init__(self, path):
-#         super(JSONKV, self).__init__( path, key_type=str, value_type=str )
+#     def __init__(self, path, protocol_version=3):
+#         ''' defaults to pickle protocol 3 to support all of py3.x (though not 2)
+#             consider getting/setting meta to check that an existing store actually _should_ be used like this
+#         '''
+#         super(PickleKV, self).__init__( path, key_type=str, value_type=bytes )
+#         self.protocol_version = protocol_version
 
 #     def get(self, key:str):
-#         value = super(JSONKV, self).get( key )
-#         dec = json.loads(value)
-#         return dec
+#         " Note that unpickling could fail "
+#         value = super(PickleKV, self).get( key )
+#         unpickled = pickle.loads(value)
+#         return unpickled
         
 #     def put(self, key:str, value):
-#         " See LocalKV.put().   Unlike that, value is not checked for type, just dumped into JSON. Which can fail. "
-#         enc = json.dumps(value)
-#         super(JSONKV, self).put( key, enc )
+#         " See LocalKV.put().   Unlike that, value is not checked for type, just pickled. Which can fail. "
+#         pickled = pickle.dumps(value, protocol=self.protocol_version)
+#         super(PickleKV, self).put( key, pickled )
 
 
 #     def itervalues(self):
 #         curs = self.conn.cursor()
 #         for row in curs.execute('SELECT value FROM kv'):
-#             yield json.loads( row[0] )
+#             yield pickle.loads( row[0] )
 
 #     def iteritems(self):
 #         curs = self.conn.cursor()
 #         for row in curs.execute('SELECT key, value FROM kv'):
-#             yield row[0], json.loads( row[1] )
+#             yield row[0], pickle.loads( row[1] )
+
+
+
 
 
 
@@ -469,8 +492,8 @@ def cached_fetch(store, url:str, force_refetch:bool=False):
         return data, False
 
 
-def open_store(dbname:str, key_type, value_type):
-    ''' A helper that opens a LocalKV in the local wetsuite directory, 
+def open_store(dbname:str, key_type, value_type, inst=LocalKV):
+    ''' A helper that opens a (regular) LocalKV in the local wetsuite directory, 
         mostly so that you don't have to think about handing in a reproducable absolute path yourself.
 
         Just a filename, e.g.
@@ -482,21 +505,23 @@ def open_store(dbname:str, key_type, value_type):
 
         CONSIDER: listening to a WETSUITE_BASE_DIR to override our "put in user's homedir" behaviour,
                   this might make more sense e.g. to point it at distributed storage without symlink juggling
+
+        inst is currently a hack, this might actually need to become a factory
     '''
     if os.sep in dbname:
         raise ValueError('This function is meant to take a name, not an absolute path.  If you prefer to determine an absolute path, you can instantiate LocalKV directly.')
     # CONSIDER: sanitize filename?
     if dbname == ':memory:':  # allow the sqlite special value of :memory: 
-        ret = LocalKV( dbname, key_type=key_type, value_type=value_type )
+        ret = inst( dbname, key_type=key_type, value_type=value_type )
     else:
         dirs = wetsuite.datasets.wetsuite_dir()
         _docstore_path = os.path.join( dirs['stores_dir'], dbname )
-        ret = LocalKV( _docstore_path, key_type=key_type, value_type=value_type )
+        ret = inst( _docstore_path, key_type=key_type, value_type=value_type )
     return ret
 
 
 def list_stores():
-    ''' Lookin the directory that open_store() put things in, check which ones seem to be stores.
+    ''' Look in the directory that open_store() put things in, check which ones seem to be stores (does IO to do so).
         Returns a list of  (relative filename in there,  absolute path)
     '''
     dirs = wetsuite.datasets.wetsuite_dir()
@@ -507,7 +532,15 @@ def list_stores():
         abspath = os.path.join( stores_dir, basename )
         if os.path.isfile( abspath ):
             if is_file_a_store( abspath ):
-                ret.append( (basename, abspath) )
+                kv = LocalKV(abspath, key_type=None, value_type=None, read_only=True)
+                ret.append( {
+                    'basename':basename, 
+                    'path':abspath,
+                    'num_items':len(kv),
+                    'bytesize':os.stat(abspath).st_size,
+                } )
+                kv.close()
+        
     return ret
 
 
