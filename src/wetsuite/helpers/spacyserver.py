@@ -5,49 +5,22 @@ import requests, json, time
 
 ######### Spacy-server-specific
 
-def http_api(q, ip='127.0.0.1', port=8282, as_object=False, as_pickle=False, as_docbin=False,   want_svg=False, as_text=False):
-    """ basically use what spacy_server gives us. POST, because requests larger than ~4K aren't allowed 
+def http_api(q, ip='127.0.0.1', port=8282, want_svg=False, as_text=False):
+    """ Feed through a query (by default just text in q) to spacy_server
+        Return the data it gives us as a dict
 
-        - as_object: serialize and deserialize the doc object, unaltered. 
-          If false, we instead do our own thing and return it in JSON.
+        Notes:
+        - We return our own data-only conception of the information tacked onto the spacy Document.
+          There was previously an experiment to serialize/pickle/docbin the spacy object
+          so that we might transparently one or more other hosts to do work for us,
+          the overheads of deserializing are high - that serialization seems only useful when storing significant work.
 
-        - as_text==False (default):  this function returns a python dict  (decoded from JSON), to be used by code.
-                 ==True: returns JSON as text for passthrough.
+        - Is little more than a HTTP POST (because requests larger than ~4K aren't allowed),
+          and some JSON wrapping. 
 
-        - want_svg: whether to add dependencies SVG per sentence. Defaults to False because there are various uses where this is just a bunch of size
+        - want_svg requests spacy_server to sump dependencies SVG in a value (yes, that's cheating encoding-wise).
+          Defaults to False because it's large, and there are various uses where you don't want it.
     """
-
-    # if as_object: # as object via to_bytes   TEST ONLY, probably remove later
-    #     import spacy
-    #     res = requests.post('http://%s:%s/'%(ip,port), data={'q':q, 'as_object':'y'})
-    #     print("to_bytes size: %d"%len(res.content))
-    #     start = time.time()
-    #     nlp = spacy.blank("nl")
-    #     doc = spacy.tokens.Doc(nlp.vocab).from_bytes( res.content )
-    #     print("from_bytes took %.2fms"%( 1000.*(time.time() - start) ) )
-    #     return doc
-
-    # elif as_docbin: # as object via to_bytes   TEST ONLY, probably remove later
-    #     import spacy
-    #     res = requests.post('http://%s:%s/'%(ip,port), data={'q':q, 'as_docbin':'y'})
-    #     print("to_docbin size: %d"%len(res.content))
-    #     start = time.time()
-    #     nlp = spacy.blank("nl")
-    #     ret = spacy.tokens.DocBin().from_bytes( res.content )
-    #     doc = list( ret.get_docs(nlp.vocab)) [0]
-    #     print("docbin load took %.2fms"%( 1000.*(time.time() - start) ) )
-    #     return doc
-
-    # elif as_pickle: # as object via pickling   TEST ONLY, probably remove later
-    #     import pickle
-    #     res = requests.post('http://%s:%s/'%(ip,port), data={'q':q, 'as_pickle':'y'})
-    #     print("pickle size: %d"%len(res.content))
-    #     start = time.time()
-    #     doc = pickle.loads( res.content )
-    #     print("pickle load took %.2fms"%( 1000.*(time.time() - start) ) )
-    #     return doc
-
-    # else: # as dictionary
     if want_svg:
         want_svg = 'y'
     else:
@@ -64,14 +37,12 @@ def http_api(q, ip='127.0.0.1', port=8282, as_object=False, as_pickle=False, as_
 
 
 
-
-
 def parse(nlp, query_string, nlp_lock=None, want_svg=True, want_sims=False):
-    ''' 
-        Takes a specy nlp object, and python string,
+    ''' Takes a specy nlp object, and python string,
         runs that model on that string
         extracts some useful stuff
-        Returns a dict with just python(JSON-serializable) objects 
+        
+        Returns a dict, with just python(JSON-serializable) objects 
         ...so that we can send it over a HTTP API 
     
         Should probably be split up.
@@ -240,3 +211,6 @@ def parse(nlp, query_string, nlp_lock=None, want_svg=True, want_sims=False):
     ret['overall_msec'] = '%d'%(1000.*(time.time()-start_time))
     #ret['docdir'] = dir(doc)
     return ret
+
+
+
