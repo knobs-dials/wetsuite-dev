@@ -233,27 +233,37 @@ def list_datasets():
     global _index
     if _index is None:
         _index = fetch_index()
-    return _index.keys()
+    return list( _index.keys() )
 
 
 def fetch_index():
-    ''' Index is expected to be
+    ''' Index is expected to be a list of dicts, each with keys includin
+        - url
+        - version             (should probably become semver)
+        - short_description   summary of what this is   (details of use is part of the dataset itself)
+        - download_size       how much transfer you'll need
+        - real_size           Disk storage we expect to need once decompressed
+        - type                type of dataset, 
+                              currently MIME type 
+                              currently indicating it's either 
+                              - a JSON file (for small things) or 
+                              - an SQLite3 database that would be opened via the localdata module
           {'datasetname':{url:'http://example.com/dataset.tgz', 'description':'Blah'}}
 
         CONSIDER: keep hosting generic (HTTP fetch?) so that any hoster will do.
     '''
     if True:
         index_dict = {
-            'rvsadviezen':{ 
+            'rvsadviezen':{
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/raadvanstate_adviezen.json.bz2',
                                                 'version':'preliminary', 
                                       'short_description':'The advice under https://raadvanstate.nl/adviezen/ provided as plain text in a nested structure with metadata. ',  
                                           'download_size':5460023,
-                                              'real_size':34212068, # or '5MB' and '34MB'?
+                                              'real_size':34212068,   # or maybe more directly readable  '5MB' and '34MB'?
                                                    'type':'application/json',
             },
 
-            'kamervragen':{  
+            'kamervragen':{
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/kamervragen.json.bz2',             
                                                 'version':'preliminary',
                                       'short_description':'Questions from ministers to the government. Provided as a nested data structure.',    
@@ -263,25 +273,25 @@ def fetch_index():
             },
 
 
-            'bwb-mostrecent-xml':{  
-                                                    'url':'https://wetsuite.knobs-dials.com/datasets/',
+            'bwb-mostrecent-xml':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/bwb_latestonly_xml.db.xz',
                                                 'version':'preliminary',
-                                      'short_description':'',
-                                          'download_size':0,  
-                                              'real_size':0,
+                                      'short_description':'The latest revision from each BWB-id',
+                                          'download_size':168996888,  
+                                              'real_size':2981859328,
                                                    'type':'application/json',
             },
 
-            'cvdr-mostrecent-xml':{ 
-                                                    'url':'https://wetsuite.knobs-dials.com/datasets/',
+            'cvdr-mostrecent-xml':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/cvdr_lastonly_xml.db.xz',
                                                 'version':'preliminary',
-                                      'short_description':'',
-                                          'download_size':0,  
-                                              'real_size':0,
+                                      'short_description':'The latest expression from each CVDR work',
+                                          'download_size':603843736,  
+                                              'real_size':5586030592,
                                                    'type':'application/json',
             },
                 
-            'woobesluiten':{ 
+            'woobesluiten':{
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/',
                                                 'version':'preliminary', 
                                       'short_description':'',    
@@ -299,7 +309,7 @@ def fetch_index():
                                                    'type':'application/json',
             },
 
-            # just metadata, no text
+            # just metadata, no text documents to analyse
             'gemeentes':{
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes.json',    
                                                 'version':'preliminary', 
@@ -326,25 +336,36 @@ def fetch_index():
                                                    'type':'application/json',
             },
 
-            '':{
-                                                    'url':'https://wetsuite.knobs-dials.com/datasets/',
+            'fracties':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/wetnamen.json',
                                                 'version':'preliminary',
-                                      'short_description':'',
-                                          'download_size':0,
-                                              'real_size':0,
-                                                   'type':'application/json', # 'application/x-sqlite3'
+                                      'short_description':'Some more and less official name variants that are used to refer to laws.',
+                                          'download_size':4405025,
+                                              'real_size':4405025,
+                                                   'type':'application/json',
             },
 
-            'test':{
-                                                   'url':'https://wetsuite.knobs-dials.com/datasets/test.db.xz',
-                                               'version':'preliminary', 
-                                     'short_description':'Compression test',    
-                                         'download_size':0,
-                                             'real_size':0,
-                                                  'type':'application/x-sqlite3'
+            'fractie_meme':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/wetnamen.json',
+                                                'version':'preliminary',
+                                      'short_description':'Some more and less official name variants that are used to refer to laws.',
+                                          'download_size':4405025,
+                                              'real_size':4405025,
+                                                   'type':'application/json',
             },
 
             #'fracties_membership': {  }
+
+            # Empty template
+            # '':{
+            #                                         'url':'https://wetsuite.knobs-dials.com/datasets/',
+            #                                     'version':'preliminary',
+            #                           'short_description':'',
+            #                               'download_size':0,
+            #                                   'real_size':0,
+            #                                        'type':'application/json', # 'application/x-sqlite3'
+            # },
+
         }
         
     else:
