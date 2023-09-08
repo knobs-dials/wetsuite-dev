@@ -1,4 +1,7 @@
-' mostly-basic string helper functions '
+''' mostly-basic string helper functions 
+
+    Many are simple enough, or specific, that you'ld easily implement them as you need them, so not that much time is saved.
+'''
 import re, unicodedata
 from typing import List
 
@@ -121,6 +124,11 @@ def is_numeric(string: str):
     return  ( re.match(r'^\s*[0-9,.]+\s*$', string) is not None )
 
 
+def simplify_whitespace(string: str): #, strip=True, newline_to_space=True, squeeze_space=True)
+    ''' remove newlines, squeeze spaces, strip the whole
+        (largely imitates   tr -s '\n' ' '  )
+    '''
+    return re.sub(r'[\s\n]+', ' ', string.strip()).strip() 
 
 
 
