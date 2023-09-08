@@ -193,7 +193,7 @@ def cvdr_text(tree):
         if artikel.tag not in ['artikel', 'enig-artikel', 'tekst', 'structuurtekst']:
             continue
 
-        if artikel.find('lid'):
+        if artikel.find('lid') is not None:
             aparts = artikel.findall('lid')
         else:
             aparts = [artikel]
@@ -298,9 +298,16 @@ def cvdr_text(tree):
     return ret
 
 
-def cvdr_sourcerefs(tree, debug=False): 
+def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False): 
     ''' Given the CVDR XML content document as an etree object, 
           looks for the <source> tags, which are references to laws and other regulations (VERIFY)
+
+        This function 
+        - extracts (only) the source tags that specify
+          ...and ignores 
+        
+        in part to normalize what is in there a bit. 
+        Be aware this is more creative than a helper function probably should be.
     
         Returns a list of 
           (type, orig, specref, parts, source_text)
@@ -314,7 +321,7 @@ def cvdr_sourcerefs(tree, debug=False):
 
         For example (mostly to point out there is _plenty_ of variation in most parts)
          ('BWB', 
-          '1.0:c:BWBR0015703&artikel=6&g=2014-11-13', 
+          '1.0:c:BWBR0015703&artikel=6&g=2014-11-13',
           'BWBR0015703', 
           {'artikel': ['6'], 'g': ['2014-11-13']}, 
           'Participatiewet, art. 6')
@@ -337,7 +344,6 @@ def cvdr_sourcerefs(tree, debug=False):
           None, 
           'Verordening voorzieningen maatschappelijke participatie 2012-A, artikel 4')
 
-        This exists in part to normalize it a bit - yet this is more creative than a helper function probably should be.
     '''
     ret = []
     tree = wetsuite.helpers.etree.strip_namespace(tree)
@@ -384,10 +390,12 @@ def cvdr_sourcerefs(tree, debug=False):
                     print( 'BWB://-style   %r  %r'%(bwb, params), file=sys.stderr )
 
         elif resourceIdentifier.startswith('http://') or resourceIdentifier.startswith('https://'):
+            # TODO: centralize a 'reference_from_url' function, because there is more than this one style, and we can extract more
+
             # http://wetten.overheid.nl/BWBR0013016
             # http://wetten.overheid.nl/BWBR0003245/geldigheidsdatum_19-08-2009
             
-            m = re.match('https?://wetten.overheid.nl/(BWB[RV][0-9]+)(/.*)?', resourceIdentifier)
+            m = re.match('https?://wetten.overheid.nl/(?:zoeken_op/)?(BWB[RV][0-9]+)(/.*)?', resourceIdentifier)
             if m is not None:
                 bwb, rest = m.groups()
                 params={}
@@ -422,10 +430,12 @@ def cvdr_sourcerefs(tree, debug=False):
             ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
 
         else:
-            pass
+            if not ignore_without_id:
+                ret.append( ('unknown', None, None, None, source_text) )
             if debug and len(resourceIdentifier.strip())>0:
                 print( 'UNKNOWN: %r %r'%(resourceIdentifier, source_text), file=sys.stderr )
-            #    #print( wetsuite.helpers.etree.tostring(source) )
+                #print( wetsuite.helpers.etree.tostring(source) )
+    
     return ret
 
 
@@ -626,7 +636,7 @@ def bwb_merge_usefuls(toestand_usefuls=None, wti_usefuls=None, manifest_usefuls=
 
 
 def bwb_toestand_text(tree):
-    ''' Given the document, this is a quick and dirty 'give me mainly the plaintext in it',
+    ''' Given the document (as an etree object), this is a quick and dirty 'give me mainly the plaintext in it',
         skipping any introductions and such.
 
         Not structured data, intended to assist generic "how do these setences parse" code
