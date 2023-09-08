@@ -200,11 +200,12 @@ import wetsuite.extras.ocr
 all_text = wetsuite.extras.oct.easyocr_text( pdfbytes )
 ```
 
-Note: This `easyocr_text()` will _not_ care as much about clean document structure as you do.
-
-It is good enough for bag-of-words models, but a little messy for structured analysis.
-See [datacollect_ocr (notebook)](notebooks/examples/datacollect_ocr.ipynb) 
-to get some more insight on why, and how you might improve that.
+Notes: 
+* this is a shorthand that creates renders the page to an image; you can do that yourself as well
+* `easyocr_text()` will _not_ care as much about clean document structure as you do.
+  It is good enough for bag-of-words models, but a little messy for structured analysis.
+  See [datacollect_ocr (notebook)](notebooks/examples/datacollect_ocr.ipynb) 
+  to get some more insight on why, and how you might improve that.
 
 
 
