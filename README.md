@@ -1,9 +1,10 @@
 # Introduction
 
-Wetsuite is a project aimed at applying natural language processing and other analysis to Dutch and EU governmental legal data,
-focusing on providing the data and tools and other infrastructure to make it easier for researchers to do so.
+Wetsuite is a project aimed at easing the application of natural language processing, and other analysis,
+to Dutch and EU governmental legal data, 
+largely focused on providing the data and tools and other infrastructure to make it easier for researchers to do so.
 
-...this, so far, is an early repository test to test installs from github, not the primary source of this project 
+NOTE: this is an early repository test to test installs from github, not the primary source of this project.
 
 
 # Minimal examples as code fragments
@@ -41,6 +42,8 @@ Laws are of course structured, with paragraphs and lists, in an artikel, in a ho
 
 When studying details and structures and references you may need to understand and use all that structure, 
 yet broader tasks such as summarizing topics of broad parts can probably be fed text without that structure.
+
+The XML form (rather than HTML) is most usable as malleable data, but for the same reason we would like some convenience functions.
 
 We aim to let you flatten text with some controllable granularity, e.g. per article, per hoofdstuk, or otherwise,
 and also give an indication to where it came from within the original data-document.
