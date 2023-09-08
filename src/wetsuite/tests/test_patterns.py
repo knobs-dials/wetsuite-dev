@@ -5,7 +5,6 @@ from wetsuite.helpers.patterns import find_identifier_references, find_nonidenti
 def test_reference_parse():
     import datetime, pytest
 
-
     matches = find_nonidentifier_references('artikel 5:9, aanhef en onder b, Awb')
     d = matches[0]['details']
     assert d['artikel'] == '5:9'
@@ -20,6 +19,26 @@ def test_reference_parse():
 
     #with pytest.raises(ValueError, match=r'.*of type.*'):
     #    date_range( (2022,1,1), (2022,1,1) )
+
+
+
+def test_cleanup_basics():
+
+    # some "are those helper functions roughly working at all" tests?
+    assert cleanup_basics( 'artikel 2.1 Wet ruimtelijke ordening' )              == 'Wet ruimtelijke ordening'
+
+    assert cleanup_basics( 'artikel 10.23, eerste lid van de Wet milieubeheer' ) == 'Wet milieubeheer'
+
+    assert name_from_extref_tag( 
+        wetsuite.helpers.etree.fromstring(
+        '<extref doc="http://wetten.overheid.nl/cgi-bin/deeplink/law1/title=Wet%20milieubeheer/article=10.23" struct="BWB">artikel 10.23, eerste lid van de Wet milieubeheer</extref>' 
+        )
+        ) == 'Wet milieubeheer'
+
+    
+
+
+
 
 
 
