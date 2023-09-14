@@ -1,43 +1,43 @@
 ### bwb-mostrecent-xml
-version:      preliminary
-Description:  The latest revision from each BWB-id
-Size:         169M downloaded, 3GB installed
+* Version:      preliminary
+* Description:  The latest revision from each BWB-id
+* Size:         169M downloaded, 3GB installed
 
 ### cvdr-mostrecent-xml
-version:      preliminary
-Description:  The latest expression from each CVDR work
-Size:         604M downloaded, 5.6GB installed
+* Version:      preliminary
+* Description:  The latest expression from each CVDR work
+* Size:         604M downloaded, 5.6GB installed
 
 
 ### kansspelsancties-txt
-version:      preliminary
-Description:  Sanction decisions, in plain text, extracted from from the case PDFs under https://kansspelautoriteit.nl/aanpak-mis
+* version:      preliminary
+* Description:  Sanction decisions, in plain text, extracted from from the case PDFs under https://kansspelautoriteit.nl/aanpak-mis
 standen/sanctiebesluiten/
-Size:         1.1M downloaded, 7.6MB installed
+* Size:         1.1M downloaded, 7.6MB installed
 
 
 ### rvsadviezen
-version:      preliminary
-Description:  The advice under https://raadvanstate.nl/adviezen/ provided as plain text in a nested structure with metadata.
-Size:         5.5M downloaded, 34MB installed
+* Version:      preliminary
+* Description:  The advice under https://raadvanstate.nl/adviezen/ provided as plain text in a nested structure with metadata.
+* Size:         5.5M downloaded, 34MB installed
 
 ### kamervragen
-version:      preliminary
-Description:  Questions from ministers to the government. Provided as a nested data structure.
-Size:         74M downloaded, 507MB installed
+* Version:      preliminary
+* Description:  Questions from ministers to the government. Provided as a nested data structure.
+* Size:         74M downloaded, 507MB installed
 
 ### woobesluiten-txt
-version:      preliminary
-TODO
+* Version:      preliminary
+* TODO
 
 
 ### gemeentes
-version:      preliminary
-Description:  List of municipalities, and some basic information about them.
+* Version:      preliminary
+* Description:  List of municipalities, and some basic information about them.
 
 ### gerechtcodes
-version:      preliminary
-Description:  List of gerechtcodes as e.g. they appear in ECLI identifiers
+* Version:      preliminary
+* Description:  List of gerechtcodes as e.g. they appear in ECLI identifiers
 
 ### wetnamen
 version:      preliminary
