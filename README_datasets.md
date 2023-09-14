@@ -42,6 +42,6 @@ standen/sanctiebesluiten/
 * Description:  List of gerechtcodes as e.g. they appear in ECLI identifiers
 
 ### wetnamen
-version:      preliminary
-Description:  Some more and less official name variants that are used to refer to laws.
+* Version:      preliminary
+* Description:  Some more and less official name variants that are used to refer to laws.
 
