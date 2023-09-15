@@ -1,0 +1,26 @@
+#!/usr/bin/python3
+import sys, os, textwrap
+import wetsuite.helpers.localdata
+import wetsuite.helpers.format
+
+
+if __name__ == '__main__':
+    for item in wetsuite.helpers.localdata.list_stores( True ):
+
+        print()
+        print('=== %s ==='%item.pop('basename'))
+        print('       path:  %s'%item.pop('path'))
+
+        bytesize = item.pop('bytesize')
+        print('       size:  %sB'%wetsuite.helpers.format.kmgtp(bytesize, extradigits=0))
+        
+        num_items = item.pop('num_items', None)
+        if num_items is not None:
+            print('      items:  %s'%num_items)
+
+        description = item.pop('description', None)
+        #if description is not None:
+        #    print('description: %sB'%( '\n'.join(textwrap.wrap(description, 90, subsequent_indent='             '))))
+
+        if len(item) > 0:
+            print(item)
