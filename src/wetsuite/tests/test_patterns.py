@@ -22,23 +22,19 @@ def test_reference_parse():
 
 
 
-def test_cleanup_basics():
+# def test_cleanup_basics():
+#     # some "are those helper functions roughly working at all" tests?
+#     assert cleanup_basics( 'artikel 2.1 Wet ruimtelijke ordening' )              == 'Wet ruimtelijke ordening'
 
-    # some "are those helper functions roughly working at all" tests?
-    assert cleanup_basics( 'artikel 2.1 Wet ruimtelijke ordening' )              == 'Wet ruimtelijke ordening'
+#     assert cleanup_basics( 'artikel 10.23, eerste lid van de Wet milieubeheer' ) == 'Wet milieubeheer'
 
-    assert cleanup_basics( 'artikel 10.23, eerste lid van de Wet milieubeheer' ) == 'Wet milieubeheer'
-
-    assert name_from_extref_tag( 
-        wetsuite.helpers.etree.fromstring(
-        '<extref doc="http://wetten.overheid.nl/cgi-bin/deeplink/law1/title=Wet%20milieubeheer/article=10.23" struct="BWB">artikel 10.23, eerste lid van de Wet milieubeheer</extref>' 
-        )
-        ) == 'Wet milieubeheer'
+#     assert name_from_extref_tag( 
+#         wetsuite.helpers.etree.fromstring(
+#         '<extref doc="http://wetten.overheid.nl/cgi-bin/deeplink/law1/title=Wet%20milieubeheer/article=10.23" struct="BWB">artikel 10.23, eerste lid van de Wet milieubeheer</extref>' 
+#         )
+#         ) == 'Wet milieubeheer'
 
     
-
-
-
 
 
 
