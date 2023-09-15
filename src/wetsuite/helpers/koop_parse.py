@@ -658,7 +658,7 @@ def bwb_toestand_text(tree):
         if artikel.tag not in ['artikel', 'enig-artikel', 'tekst', 'structuurtekst']:
             continue
 
-        if artikel.find('lid'):
+        if artikel.find('lid') is not None:
             aparts = artikel.findall('lid')
         else:
             aparts = [artikel]
