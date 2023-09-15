@@ -19,7 +19,9 @@ def product(l):
 class Collocation:
     ''' A basic collocation calculator class. '''
     def __init__(self, connectors=[]):
-        ''' connectors takes a list of words that, if they are at the edge of an n-gram, will not be entered into (n>1)-grams, but are fine to appear inside (n>3)-grams
+        ''' connectors takes a list of words that, 
+              are removed from the _edge_ of an n-gram (for n>1),
+              but are left if they are inside (so for n>=3)
         '''
         self.connectors = connectors
         self.uni   = defaultdict(int)

@@ -132,6 +132,17 @@ def simplify_whitespace(string: str): #, strip=True, newline_to_space=True, sque
 
 
 
+### A little more creative
+
+
+# TODO: add tests
+def simple_tokenize(text):  # real NLP tokenizers are often more robust, but for a quick test we can avoid a big depdenency
+    ' split string into words '
+    l = re.split('[\s!@#$%^&*()"\':;/.,?\xab\xbb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a\u2358\u275b\u275c\u275d\u275e\u275f\u2760\u276e\u276f\u2e42\u301d\u301e\u301f\uff02\U0001f676\U0001f677\U0001f678-]+', text)
+    return list(e   for e in l  if len(e)>0)
+
+
+
 ordinal_nl_20 = {
           "nulde":0,
          "eerste":1,
