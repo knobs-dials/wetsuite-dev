@@ -31,6 +31,7 @@
       sqlite3 store.db 'select key,value from kv limit 1 ' | less
 '''
 import os, pickle, json
+from typing import Tuple
 
 import sqlite3
 
@@ -205,7 +206,7 @@ class LocalKV:
 
 
     def _put_meta(self, key:str, value:str):
-        ''' For internal use, preferably don't use.   See also _get_meta() '''
+        ''' For internal use, preferably don't use.   See also _get_meta(), _delete_meta() '''
         if self.read_only:
             raise RuntimeError('Attempted _put_meta() on a store that was opened read-only.  (you can subvert that but may not want to)')
         curs = self.conn.cursor()
@@ -215,7 +216,7 @@ class LocalKV:
 
 
     def _delete_meta(self, key:str):
-        ''' For internal use, preferably don't use.   See also _get_meta() '''
+        ''' For internal use, preferably don't use.   See also _get_meta(), _delete_meta() '''
         if self.read_only:
             raise RuntimeError('Attempted _put_meta() on a store that was opened read-only.  (you can subvert that but may not want to)')
         curs = self.conn.cursor() # TODO: check that's correct when commit==False
@@ -229,19 +230,21 @@ class LocalKV:
         self.conn.commit()
         self._in_transaction = False
 
-    # # TODO: test
-    # def rollback(self):
-    #     ' roll back changes '
-    #     # maybe only if _in_transaction?
-    #     self.conn.rollback()
-    #     self._in_transaction = False
+
+    def rollback(self):
+        ' roll back changes '
+        # maybe only if _in_transaction?
+        self.conn.rollback()
+        self._in_transaction = False
 
 
     def estimate_waste(self):
         return self.conn.execute('SELECT (freelist_count*page_size) as FreeSizeEstimate  FROM pragma_freelist_count, pragma_page_size').fetchone()[0]
 
     # def incremental_vacuum(self):
-    #     ' assuming we created with "PRAGMA auto_vacuum = INCREMENTAL" we can do cleanup. Ideally you do with some interval when you remove/update things '
+    #     ''' assuming we created with "PRAGMA auto_vacuum = INCREMENTAL" we can do cleanup. Ideally you do with some interval when you remove/update things
+    #         CONSIDER our own logic to that?  Maybe purely per interpreter (after X puts/deletes),  and maybe do it on close?
+    #     '''
     #     # https://www.sqlite.org/pragma.html#pragma_auto_vacuum
     #     if self._in_transaction:
     #         self.commit()
@@ -258,29 +261,27 @@ class LocalKV:
         self.conn.execute('vacuum')
 
 
-    # def size(self):
-    #     ' Returns the approximate amount of the contained data, in bytes '
-    #     curs = self.conn.cursor()
-    #     curs.execute("select page_size, page_count from pragma_page_count, pragma_page_size")
-    #     page_size, page_count = curs.fetchone()
-    #     curs.close()
-    #     return page_size *page_count
-    #     #return os.stat( self.path ).st_size
+    def size(self) -> int:
+        ' Returns the approximate amount of the contained data, in bytes  (may be a few dozen kilobytes off) '
+        curs = self.conn.cursor()
+        curs.execute("select page_size, page_count from pragma_page_count, pragma_page_size")
+        page_size, page_count = curs.fetchone()
+        curs.close()
+        return page_size *page_count
+        #return os.stat( self.path ).st_size
 
 
-    # # TODO: test
-    # def truncate(self, key, vacuum=True):
-    #     ''' remove all kv entries.
-    #         If we were still in a transaction, we roll that back  first
-    #     '''
-    #     self._checktype_key(key)
-    #     curs = self.conn.cursor() # TODO: check that's correct when commit==False
-    #     if self._in_transaction:
-    #         self.rollback()
-    #         self._in_transaction = True
-    #     curs.execute('DELETE FROM kv')  # https://www.techonthenet.com/sqlite/truncate.php
-    #     if vacuum:
-    #         self.vacuum()
+    def truncate(self, vacuum=True):
+        ''' remove all kv entries.
+            If we were still in a transaction, we roll that back first
+        '''
+        curs = self.conn.cursor() # TODO: check that's correct when commit==False
+        if self._in_transaction:
+            self.rollback()
+        curs.execute('DELETE FROM kv')  # https://www.techonthenet.com/sqlite/truncate.php
+        self.commit()
+        if vacuum:
+            self.vacuum()
 
 
     def close(self):
@@ -288,37 +289,49 @@ class LocalKV:
 
      
     def iterkeys(self):
+        """ Returns a generator that yields all keys """
         curs = self.conn.cursor()
         for row in curs.execute('SELECT key FROM kv'):
             yield row[0]
         curs.close()
 
 
-    def keys(self): 
+    def keys(self):   # CONSIDER removing 
+        """ Returns a list of all keys
+            NOTE: when working with larger data it is recommended to use itervalues(), iteritems(), and even iterkeys() instead of values(), items(), and keys()
+        """
         return list( self.iterkeys() )
 
 
     def itervalues(self):
+        """ Returns a generator that yields all values """
         curs = self.conn.cursor()
         for row in curs.execute('SELECT value FROM kv'):
             yield row[0]
         curs.close()
 
 
-    def values(self): 
-        " This will load everything in memory - you usually want itervalues "
+    def values(self):  # CONSIDER removing 
+        """ Returns a list of all values
+            NOTE: when working with larger data it is recommended to use itervalues(), iteritems(), and even iterkeys() instead of values(), items(), and keys()
+        """
         return list( self.itervalues() )
 
 
     def iteritems(self):
+        """ Returns a generator that yields all items """
         curs = self.conn.cursor()
-        for row in curs.execute('SELECT key, value FROM kv'):
-            yield row[0], row[1]
-        curs.close()
+        try: # TODO: figure out whether this is necessary
+            for row in curs.execute('SELECT key, value FROM kv'):
+                yield row[0], row[1]
+        finally:
+            curs.close()
 
 
-    def items(self):
-        " This will load everything in memory - you usually want iteritems "
+    def items(self):  # CONSIDER removing 
+        """ Returns a list of all items.
+            NOTE: when working with larger data it is recommended to use itervalues(), iteritems(), and even iterkeys() instead of values(), items(), and keys()
+        """
         return list( self.iteritems() )
 
 
@@ -336,10 +349,6 @@ class LocalKV:
 
     # Choice not to actually have it behave like a dict - this seems like a leaky abstraction,
     # so we make you write out the .get and .put to make you realize it's different behaviour not like a real dict
-    # ...bit still a sneaky contains:
-    def __contains__(self, key):
-        return self.conn.execute('SELECT 1 FROM kv WHERE key = ?', (key,)).fetchone() is not None
-
 
     #def __getitem__(self, key):
     #    ret = self.get(key)
@@ -355,6 +364,11 @@ class LocalKV:
     #    #if key not in self:
     #    #    raise KeyError(key)
     #    self.conn.execute('DELETE FROM kv WHERE key = ?', (key,)) 
+
+    # ...but we still sneakily have:
+    def __contains__(self, key):
+        return self.conn.execute('SELECT 1 FROM kv WHERE key = ?', (key,)).fetchone() is not None
+
 
 
 
@@ -404,6 +418,7 @@ try:
             for row in curs.execute('SELECT key, value FROM kv'):
                 yield row[0], msgpack.loads( row[1], strict_map_key=False )    
 except ImportError:
+    # warning?
     pass
 
 
@@ -456,7 +471,7 @@ except ImportError:
 
 
 
-def cached_fetch(store, url:str, force_refetch:bool=False):
+def cached_fetch(store, url:str, force_refetch:bool=False) -> Tuple[bytes, bool]:
     ''' Helper to use a str-to-bytes LocalKV to cache URL fetch results.
 
         Takes a store to get/put data from, and a url to fetch,
@@ -492,7 +507,7 @@ def cached_fetch(store, url:str, force_refetch:bool=False):
         return data, False
 
 
-def open_store(dbname:str, key_type, value_type, inst=LocalKV):
+def open_store(dbname:str, key_type, value_type, inst=LocalKV) -> LocalKV:
     ''' A helper that opens a (regular) LocalKV in the local wetsuite directory, 
         mostly so that you don't have to think about handing in a reproducable absolute path yourself.
 
@@ -511,7 +526,7 @@ def open_store(dbname:str, key_type, value_type, inst=LocalKV):
     if os.sep in dbname:
         raise ValueError('This function is meant to take a name, not an absolute path.  If you prefer to determine an absolute path, you can instantiate LocalKV directly.')
     # CONSIDER: sanitize filename?
-    if dbname == ':memory:':  # allow the sqlite special value of :memory: 
+    if dbname == ':memory:':  # special-case the sqlite value of ':memory:' (pass it through)  -- all other values are expected to be a filename in our own dir
         ret = inst( dbname, key_type=key_type, value_type=value_type )
     else:
         dirs = wetsuite.datasets.wetsuite_dir()
@@ -520,9 +535,12 @@ def open_store(dbname:str, key_type, value_type, inst=LocalKV):
     return ret
 
 
-def list_stores():
-    ''' Look in the directory that open_store() put things in, check which ones seem to be stores (does IO to do so).
-        Returns a list of  (relative filename in there,  absolute path)
+def list_stores( get_num_items=False ):
+    ''' Look in the directory that open_store() put things in,
+          check which ones seem to be stores (does IO to do so).
+        Returns a dict with details for each
+
+        does not by default get the number of items, because that can need a bunch of IO
     '''
     dirs = wetsuite.datasets.wetsuite_dir()
     stores_dir = dirs['stores_dir']
@@ -533,12 +551,17 @@ def list_stores():
         if os.path.isfile( abspath ):
             if is_file_a_store( abspath ):
                 kv = LocalKV(abspath, key_type=None, value_type=None, read_only=True)
-                ret.append( {
+                itemdict = {
                     'basename':basename, 
                     'path':abspath,
-                    'num_items':len(kv),
                     'bytesize':os.stat(abspath).st_size,
-                } )
+                }
+                if get_num_items: 
+                    itemdict['num_items'] = len( kv )
+                
+                itemdict['description'] = kv._get_meta('description', True)
+
+                ret.append( itemdict )
                 kv.close()
         
     return ret
@@ -547,6 +570,8 @@ def list_stores():
 def is_file_a_store(path, skip_table_check=False):
     ''' Checks that the path seems to point to one of our stores.
         More specifailly: whether it is an sqlite(3) database, and has a table called 'kv'
+
+        You can skip the latter test - which you might want to do when it may timeout on someone else having the store open for writing.
     '''
     is_sqlite3 = None
     with open(path, 'rb') as f:
