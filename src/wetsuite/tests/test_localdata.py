@@ -57,6 +57,60 @@ def test_doublecommit():
     kv.commit()
 
 
+def test_rollback():
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
+    assert len( kv.keys() ) == 0
+    kv.put('1','2', commit=False)
+    #assert len( kv.keys() ) == 1    true but not relevant here
+    kv.rollback()
+    assert len( kv.keys() ) == 0
+    kv.commit()  # just to be sure there's no leftover state
+    assert len( kv.keys() ) == 0
+    kv.rollback()  # check that it works if not in a transaction 
+    # TODO: more complex tests
+
+
+def test_truncate():
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
+    assert len( kv.keys() ) == 0
+    for i in range(10):
+        kv.put(str(i),'blah', commit=False)
+    kv.truncate()
+    assert len( kv.keys() ) == 0
+    kv.commit()
+    assert len( kv.keys() ) == 0
+
+    for i in range(10):
+        kv.put(str(i),'blah', commit=False)
+    kv.commit()
+    assert len( kv.keys() ) > 0
+    kv.truncate()
+    assert len( kv.keys() ) == 0
+    kv.commit()
+    assert len( kv.keys() ) == 0
+
+    for i in range(10):
+        kv.put(str(i),'blah', commit=False)
+    kv.commit()
+    assert len( kv.keys() ) > 0
+    kv.truncate(vacuum=False)
+    assert len( kv.keys() ) == 0
+    kv.commit()
+    assert len( kv.keys() ) == 0
+
+
+def test_size():
+    # mostly that it doesn't bork out
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
+    initial_size = kv.size()
+    assert initial_size > 0   # I believe it counts the overhead
+    # it counts in pages, so add more than a few things
+    for i in range(1000):
+        kv.put(str(i),'blah', commit=False)
+    kv.commit()
+    assert kv.size() > initial_size
+    
+
 def test_type():
     # default str:str
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
