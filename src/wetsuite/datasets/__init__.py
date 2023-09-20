@@ -291,14 +291,23 @@ def fetch_index():
                                                    'type':'application/json',
             },
                 
-            'woobesluiten':{
-                                                    'url':'https://wetsuite.knobs-dials.com/datasets/',
-                                                'version':'preliminary', 
-                                      'short_description':'',    
-                                          'download_size':0,   
-                                              'real_size':0,
+            'woo-besluiten-meta':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/woo_besluiten_meta.db',
+                                                'version':'preliminary',
+                                      'short_description':'',
+                                          'download_size':708608,
+                                              'real_size':708608,
                                                    'type':'application/json',
             },
+            'woo-besluiten-txt':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/woo_besluiten_docs_txt.db.xz',
+                                                'version':'preliminary',
+                                      'short_description':'',
+                                          'download_size':7191376,
+                                              'real_size':40292352,
+                                                   'type':'application/json',
+            },
+
 
             'kansspelsancties-txt':{
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/kansspelautoriteit_plain.json.bz2', 
@@ -318,14 +327,14 @@ def fetch_index():
                                               'real_size':397740,
                                                    'type':'application/json',
             },
-            'gerechtcodes':{
-                                                    'url':'https://wetsuite.knobs-dials.com/datasets/gerechtcodes.json',      
-                                                'version':'preliminary',
-                                      'short_description':'List of gerechtcodes as e.g. they appear in ECLI identifiers',
-                                          'download_size':0,
-                                              'real_size':0,
-                                                   'type':'application/json',
-            },
+            # 'gerechtcodes':{
+            #                                         'url':'https://wetsuite.knobs-dials.com/datasets/gerechtcodes.json',      
+            #                                     'version':'preliminary',
+            #                           'short_description':'List of gerechtcodes as e.g. they appear in ECLI identifiers',
+            #                               'download_size':0,
+            #                                   'real_size':0,
+            #                                        'type':'application/json',
+            # },
 
             'wetnamen':{
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/wetnamen.json',
@@ -337,24 +346,22 @@ def fetch_index():
             },
 
             'fracties':{
-                                                    'url':'https://wetsuite.knobs-dials.com/datasets/wetnamen.json',
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/fracties.json',
                                                 'version':'preliminary',
-                                      'short_description':'Some more and less official name variants that are used to refer to laws.',
-                                          'download_size':4405025,
-                                              'real_size':4405025,
+                                      'short_description':'',
+                                          'download_size':18596,
+                                              'real_size':18596,
                                                    'type':'application/json',
             },
 
-            'fractie_meme':{
-                                                    'url':'https://wetsuite.knobs-dials.com/datasets/wetnamen.json',
+            'fractie_membership':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/fractie_membership.json',
                                                 'version':'preliminary',
-                                      'short_description':'Some more and less official name variants that are used to refer to laws.',
-                                          'download_size':4405025,
-                                              'real_size':4405025,
+                                      'short_description':'',
+                                          'download_size':502694,
+                                              'real_size':502694,
                                                    'type':'application/json',
             },
-
-            #'fracties_membership': {  }
 
             # Empty template
             # '':{
