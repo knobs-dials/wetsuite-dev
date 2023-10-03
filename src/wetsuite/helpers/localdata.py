@@ -392,10 +392,10 @@ try:
         
             Note that this does _not_ change how the meta table works.
         '''
-        def __init__(self, path, key_type=str, value_type=None):
+        def __init__(self, path, key_type=str, value_type=None, read_only=False):
             ''' value_type is ignored; I need to restructure this
             '''
-            super(MsgpackKV, self).__init__( path, key_type=str, value_type=None )
+            super(MsgpackKV, self).__init__( path, key_type=str, value_type=None, read_only=read_only )
 
         def get(self, key:str):
             " Note that unpickling could fail "
