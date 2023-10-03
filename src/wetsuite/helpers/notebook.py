@@ -78,32 +78,46 @@ def is_ipython_interactive():
     return env['ipython'] and detect_env()['interactive']
 
 
+def progress_bar(max, description='', display=True): # , **kwargs
+    ''' Wrapper that prefers tqdm, falls back to ipywidgets's IntProgress progress bar.
 
-def progress_bar(max, description='', display=True, **kwargs):
-    ''' Slightly shorter code for using ipywidgets's IntProgress progress bar,
-        usable like 
+        Usable like 
           prog = progress_bar( 10, 'overall' )
           for i in range(10):
               prog.value += 1
               time.sleep(1)
 
         Arguments
-        - you probably just care about the max (required)
-        - and probably a description (optional)
+        - maximum value (required)
+        - optional description
         - if display==True (default), it calls display on it so you don't have to
-        - anything else is passed through to IntProgress
 
         You should only call this after you know you are in an ipython environment - e.g. with is_ipython() / is_notebook()
-        
-        CONSIDER: prefer tqdm if installed, fall back quietly to ipywidgets.IntProgress?
-                  but then we'd also need to abstract out IntProgress's .value= versus tqdm's .update()
     '''
-    import IPython.display, ipywidgets 
-    prog = ipywidgets.IntProgress(max=max, description=description, **kwargs)
-    if display:
-        IPython.display.display(prog)
-    return prog
+    try:
+        import tqdm.autonotebook
+        class TqdmWrap:
+            def __init__(self, max, description):
+                self.tq = tqdm.autonotebook.tqdm( range(max), desc=description)
+                self._value = 0
 
+            def set_value(self, val):
+                self._value = val
+                self.tq.update(self._value)
+
+            def get_value(self):
+                return self._value
+
+            value = property(get_value, set_value)
+
+        return TqdmWrap(max, description)
+    
+    except ImportError:
+        import IPython.display, ipywidgets 
+        prog = ipywidgets.IntProgress(max=max, description=description, **kwargs)
+        if display:
+            IPython.display.display(prog)
+        return prog
 
 
 
@@ -198,4 +212,6 @@ if is_notebook():
         setproctitle.setproctitle( 'wetsuite-notebook' )
     except ImportError:
         pass
+
+
 
