@@ -206,6 +206,9 @@ def load(dataset_name: str, verbose=None, force_refetch=False):
         f.close()
         data        = wetsuite.helpers.localdata.LocalKV( data_path, None, None, read_only=True ) # the type enforcement is irrelevant when opened read-only
         description = data._get_meta('description', missing_as_none=True)
+        if data._get_meta('valtype', missing_as_none=True) == 'msgpack': # This is very hackish - TODO: avoid this
+            data.close()
+            data = wetsuite.helpers.localdata.MsgpackKV( data_path, None, None, read_only=True) 
 
     else: # Assume JSON - expected to be a dict with two main keys
         loaded = json.loads( f.read() ) 
