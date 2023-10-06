@@ -1,8 +1,14 @@
-''' This is intended to provide an easier way way to store collections of data on disk, in a in key-value store way.
+''' This is intended to store store collections of data on disk,
+      relatively unobtrusive to use    (better than e.g. lots of files),
+      and with quick random access     (better than e.g. JSONL).
+
+    It currently centers on a key-value store.
     See the docstring on the LocalKV class for more details.
 
+    This is used e.g. by various data collection, and by distributed datasets.
     
-    How to use:
+
+    HOW TO USE:
     - You can create your own specific stores by doing something like:
         mystore_path = os.path.join( project_data_dir, 'docstore.db')  # OS-agnostic path join
         mystore = LocalKV( mystore_path )
@@ -10,34 +16,64 @@
         open_store( 'docstore.db' ), which places it in the wetsuite directory in your homedir
 
     "Why two ways?"
-        The first gives you direct control, but
-            ...with relative paths it will create in whatever is the current working directory,
+        The first gives you direct control, 
+            ...but with relative paths, it will create in whatever is the current working directory,
                which makes it easy for you to confuse yourself with databases all over the place
-            ...with absolute paths you will easily make things less portable.
-        The latter just gives the same store for the same name
-            (if you want to know where exactly, use .path)
-          
-    Note that by default, writes are done autocommit style, because SQlite's driver defaults to that.
-      so you can get bulk writes to be more performant by using put() with commit=False parameter and doing an explicit commit() after.
+            ...but with absolute paths you will easily make things less portable via hardcoded paths
+        The latter ensures that whenever you give the same name, you open the same store, 
+            no thought about where it goes exactly  (if you want to know where exactly, use .path)
 
-    CONSIDER: meta table for e.g. 'description'
+                     
+    By default, each write is committed individually, (because SQlite3's driver defaults to autocommit)
+    If you want more performant bulk writes, 
+      use put() with commit=False, and
+      do an explicit commit() afterwards
+
+      
+    "Could I access these SQLite databases myself?"
+        Sure, particularly when just reading.
+        The code is mainly there for convenience and checks. Consider:
+          sqlite3 store.db 'select key,value from kv limit 10 ' | less
+        It only starts getting special once you using MsgpackKV, or the extra parsing and wrapping that wetsuite.datasets adds.
+
+      
     CONSIDER: writing a ExpiringLocalKV that cleans up old entries
     CONSIDER: writing variants that do convert specific data, letting you e.g. set/fetch dicts, or anything else you could pickle
-
-    
-    "Could I access these SQLite databases myself?"
-    Sure, particularly when just reading.
-    The code is only there for convenience, there is nothing special about them. Consider:
-      sqlite3 store.db 'select key,value from kv limit 1 ' | less
 '''
-import os, pickle, json
+import os, hashlib, json
 from typing import Tuple
-
+import collections.abc
 import sqlite3
-
 import wetsuite.datasets     # to get wetsuite_dir
 import wetsuite.helpers.net
 
+
+def hash(data: bytes):
+    ' Given some byte data, calculate SHA1 hash.  Returns that hash as a hex string. '
+    s1h = hashlib.sha1()
+    s1h.update( data )
+    return s1h.hexdigest()
+
+
+# # Our own imitation of views, mainly to get __len__ on it
+# from collections import MutableMapping
+
+# class DictView(MutableMapping):
+#     def __init__(self, source):
+#         self.source = source
+
+#     def __getitem__(self, key):
+#         if key in self.valid_keys:
+#             return self.source[key]
+#         else:
+#             raise KeyError(key)
+
+#     def __len__(self):
+#         return len(self.len())
+
+#     def __iter__(self):
+#         for key in self.valid_keys:
+#             yield key
 
    
 class LocalKV:
@@ -59,7 +95,7 @@ class LocalKV:
         
         Notes:
         - It is a good idea to open the store with the same typing each  or you will still confuse yourself.
-            CONSIDER: storing typing in the file 
+            CONSIDER: storing typing in the file in the meta table
         - doing it via functions is a little more typing yet also exposes some sqlite things (using transactions, vacuum) for when you know how to use them.
             and is arguably clearer than 'this particular dict-like happens to get stored magically'
         - On concurrency: As per basic sqlite behaviour, multiple processes can read the same database,
@@ -67,14 +103,22 @@ class LocalKV:
           readers are likely to bork out on the fact it's locked (CONSIDER: have it retry / longer).
           This is why by default we leave it on autocommit, even though that can be slower.
 
-        - It wouldn't be hard to also make it act like a dict, but we're trying to to avoid this to avoid a case of
-          "this is so hidden in the semantics that it what and how become really opaque " style leaky abstraction.
-          So we choose to make you type out get(), put(),  keys(), values(), and items(), and their iter variants),
-          because those can at least have docstrings to warn you, rather than breaking your reasonable expectations. 
+        - It wouldn't be hard to also make it act largely like a dict,   implementing __getitem__, __setitem__, and __delitem__
+          but this muddies the waters as to its semantics, in particularly when things you set are actually saved. 
+
+          So we try to avoid a leaky abstraction, by making you write out all the altering operatiopns, 
+            and actually all of them, e.g.  get(), put(),  keys(), values(), and items(),
+            because those can at least have docstrings to warn you, rather than breaking your reasonable expectations. 
+
           ...exceptions are
             __len__        for amount of items                   CONSIDER: making that len()
-            __contains__   backing 'is this key in the store'),  CONSIDER: making that has_key() instead
-            __iter__       which is actually iterkeys()       so CONSIDER: removing it
+            __contains__   backing 'is this key in the store'),  CONSIDER: making that e.g. has_key() instead
+          and also:
+            __iter__       which is actually iterkeys()         CONSIDER: removing it
+            __getitem__    supports the views-with-a-len  
+          The last were tentative until keys(), values(), and items() started giving views.  
+
+          TODO: make a final decision where to sit between clean abstractions and convenience.
     '''
     def __init__(self, path, key_type, value_type, read_only=False):
         ''' Specify the path to the database file to open. 
@@ -102,18 +146,17 @@ class LocalKV:
         self._in_transaction = False
 
 
-    def _open(self):
+    def _open(self, timeout=2.0):
         ' Open file path set by init.  Could be merged into init ' 
         #make_tables = (self.path==':memory:')  or  ( not os.path.exists( self.path ) )    # will be creating that file, or are using an in-memory database ?  Also how to combine with read_only?
-        self.conn = sqlite3.connect( self.path )
+        self.conn = sqlite3.connect( self.path, timeout=timeout )
         # Note: curs.execute is the regular DB-API way,  conn.execute is a shorthand that gets a temporary cursor
         with self.conn:
-            self.conn.execute("PRAGMA auto_vacuum = INCREMENTAL")  # TODO: see that this does what I think it does
-                                                                   # https://www.sqlite.org/pragma.html#pragma_auto_vacuum
             if self.read_only:
                 self.conn.execute("PRAGMA query_only = true") # https://www.sqlite.org/pragma.html#pragma_query_only
-            #if make_tables:
-            if not self.read_only: # if read-only, we assume you are opening something that already exists
+                # if read-only, we assume you are opening something that was aleady created before
+            else:
+                self.conn.execute("PRAGMA auto_vacuum = INCREMENTAL")  # TODO: see that this does what I think it does    https://www.sqlite.org/pragma.html#pragma_auto_vacuum
                 self.conn.execute("CREATE TABLE IF NOT EXISTS meta (key text unique NOT NULL, value text)")
                 self.conn.execute("CREATE TABLE IF NOT EXISTS kv   (key text unique NOT NULL, value text)")
 
@@ -156,6 +199,8 @@ class LocalKV:
             
             commit=False lets us do bulk commits, mostly when you want to a load of small changes without becoming IOPS bound.
             If you care less about speed, and/or more about parallel access, you can ignore this.
+
+            CONSIDER: making commit take an integer as well, meaning 'commit every X operations'
         '''
         if self.read_only:
             raise RuntimeError('Attempted put() on a store that was opened read-only.  (you can subvert that but may not want to)')
@@ -224,7 +269,6 @@ class LocalKV:
         self.commit()
 
 
-
     def commit(self):
         ' commit changes - for when you use put() or delete() with commit=False to do things in a larger transaction '
         self.conn.commit()
@@ -241,6 +285,7 @@ class LocalKV:
     def estimate_waste(self):
         return self.conn.execute('SELECT (freelist_count*page_size) as FreeSizeEstimate  FROM pragma_freelist_count, pragma_page_size').fetchone()[0]
 
+
     # def incremental_vacuum(self):
     #     ''' assuming we created with "PRAGMA auto_vacuum = INCREMENTAL" we can do cleanup. Ideally you do with some interval when you remove/update things
     #         CONSIDER our own logic to that?  Maybe purely per interpreter (after X puts/deletes),  and maybe do it on close?
@@ -249,6 +294,7 @@ class LocalKV:
     #     if self._in_transaction:
     #         self.commit()
     #     self.conn.execute('PRAGMA schema.incremental_vacuum')
+
 
     def vacuum(self):
         ''' After a lot of deletes you could compact the store with vacuum().
@@ -261,7 +307,7 @@ class LocalKV:
         self.conn.execute('vacuum')
 
 
-    def size(self) -> int:
+    def bytesize(self) -> int:
         ' Returns the approximate amount of the contained data, in bytes  (may be a few dozen kilobytes off) '
         curs = self.conn.cursor()
         curs.execute("select page_size, page_count from pragma_page_count, pragma_page_size")
@@ -287,36 +333,37 @@ class LocalKV:
     def close(self):
         self.conn.close()
 
-     
+
+    #TODO: see if the view's semantics in keys(), values(), and items() are actually correct. 
+    #      Note that they rely on __iter__ and __getitem  - there's a bunch of heavly liftin in hading self to those view classes
+
     def iterkeys(self):
-        """ Returns a generator that yields all keys """
+        """ Returns a generator that yields all keus
+            If you wanted a list with all keys, use list( store.keys() )
+        """
         curs = self.conn.cursor()
         for row in curs.execute('SELECT key FROM kv'):
             yield row[0]
         curs.close()
 
-
-    def keys(self):   # CONSIDER removing 
-        """ Returns a list of all keys
-            NOTE: when working with larger data it is recommended to use itervalues(), iteritems(), and even iterkeys() instead of values(), items(), and keys()
-        """
-        return list( self.iterkeys() )
-
+    def keys(self):
+        """ Returns an iterable of all keys.  (a view with a len, rather than just a generator) """
+        return collections.abc.KeysView( self )
+        #return list( self.iterkeys() )
 
     def itervalues(self):
-        """ Returns a generator that yields all values """
+        """ Returns a generator that yields all values. 
+            If you wanted a list with all the values, use list( store.values )
+        """
         curs = self.conn.cursor()
         for row in curs.execute('SELECT value FROM kv'):
             yield row[0]
         curs.close()
 
-
-    def values(self):  # CONSIDER removing 
-        """ Returns a list of all values
-            NOTE: when working with larger data it is recommended to use itervalues(), iteritems(), and even iterkeys() instead of values(), items(), and keys()
-        """
-        return list( self.itervalues() )
-
+    def values(self):
+        """ Returns an iterable of all values.  (a view with a len, rather than just a generator)  """
+        return collections.abc.ValuesView( self )
+        
 
     def iteritems(self):
         """ Returns a generator that yields all items """
@@ -327,16 +374,9 @@ class LocalKV:
         finally:
             curs.close()
 
-
-    def items(self):  # CONSIDER removing 
-        """ Returns a list of all items.
-            NOTE: when working with larger data it is recommended to use itervalues(), iteritems(), and even iterkeys() instead of values(), items(), and keys()
-        """
-        return list( self.iteritems() )
-
-
-    def __iter__(self): # TODO: check
-        return self.iterkeys()
+    def items(self):
+        """ Returns an iteralble of all items.    (a view with a len, rather than just a generator)  """
+        return collections.abc.ItemsView( self ) # this relies on __getitem__ which we didn't really want, maybe wrap a class to hide that?
 
 
     def __repr__(self):
@@ -350,11 +390,15 @@ class LocalKV:
     # Choice not to actually have it behave like a dict - this seems like a leaky abstraction,
     # so we make you write out the .get and .put to make you realize it's different behaviour not like a real dict
 
-    #def __getitem__(self, key):
-    #    ret = self.get(key)
-    #    if ret is None:
-    #        raise KeyError()
-    #    return ret
+    def __iter__(self): # TODO: check
+        " Using this object as an iterator yields its keys (equivalent to .iterkeys()) "
+        return self.iterkeys()
+
+    def __getitem__(self, key): # this one is here only really to support the ValuesView and Itemsview
+        ret = self.get(key)
+        if ret is None:
+            raise KeyError()
+        return ret
         
     #def __setitem__(self, key, value):
     #    self.put(key, value)
@@ -408,12 +452,12 @@ try:
             packed = msgpack.dumps(value)
             super(MsgpackKV, self).put( key, packed )
 
-        def itervalues(self):
+        def values(self):
             curs = self.conn.cursor()
             for row in curs.execute('SELECT value FROM kv'):
                 yield msgpack.loads( row[0], strict_map_key=False )
 
-        def iteritems(self):
+        def items(self):
             curs = self.conn.cursor()
             for row in curs.execute('SELECT key, value FROM kv'):
                 yield row[0], msgpack.loads( row[1], strict_map_key=False )    
@@ -456,12 +500,12 @@ except ImportError:
 #         super(PickleKV, self).put( key, pickled )
 
 
-#     def itervalues(self):
+#     def values(self):
 #         curs = self.conn.cursor()
 #         for row in curs.execute('SELECT value FROM kv'):
 #             yield pickle.loads( row[0] )
 
-#     def iteritems(self):
+#     def items(self):
 #         curs = self.conn.cursor()
 #         for row in curs.execute('SELECT key, value FROM kv'):
 #             yield row[0], pickle.loads( row[1] )

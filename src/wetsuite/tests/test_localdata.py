@@ -37,12 +37,9 @@ def test_moreapi():
     #kv['c'] = 'd'
     kv.put('a', 'b')
     kv.put('c', 'd')
-    assert kv.keys()             == ['a', 'c']
-    assert list(kv.iterkeys())   == ['a', 'c']
-    assert kv.values()           == ['b', 'd']
-    assert list(kv.itervalues()) == ['b', 'd']
-    assert kv.items()            == [('a','b'), ('c','d')]
-    assert list(kv.iteritems())  == [('a','b'), ('c','d')]
+    assert list( kv.keys() )   == ['a', 'c']
+    assert list( kv.values() ) == ['b', 'd']
+    assert list( kv.items() )  == [('a','b'), ('c','d')]
     assert 'a' in kv
     
     wetsuite.helpers.localdata.list_stores()
@@ -99,16 +96,16 @@ def test_truncate():
     assert len( kv.keys() ) == 0
 
 
-def test_size():
+def test_bytesize():
     # mostly that it doesn't bork out
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
-    initial_size = kv.size()
+    initial_size = kv.bytesize()
     assert initial_size > 0   # I believe it counts the overhead
     # it counts in pages, so add more than a few things
     for i in range(1000):
         kv.put(str(i),'blah', commit=False)
     kv.commit()
-    assert kv.size() > initial_size
+    assert kv.bytesize() > initial_size
     
 
 def test_type():
@@ -116,21 +113,21 @@ def test_type():
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
     kv.put('1','2')
     with pytest.raises(TypeError, match=r'.*are allowed*'):
-        kv.put(1,'2')
+        kv.put(  1, '2')
     with pytest.raises(TypeError, match=r'.*are allowed*'):
-        kv.put('1',2)
+        kv.put( '1', 2 )
 
     # str:bytes
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, bytes)
-    kv.put('a',b'b')
+    kv.put( 'a', b'b' )
     with pytest.raises(TypeError, match=r'.*are allowed*'):
-        kv.put('a','s')
+        kv.put( 'a', 's' )
 
     # int:float
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', key_type=int, value_type=float)
     kv.put(1, 2.0)
     with pytest.raises(TypeError, match=r'.*are allowed*'):
-        kv.put('a','s')
+        kv.put( 'a','s' )
 
 
 
