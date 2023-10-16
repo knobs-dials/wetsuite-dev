@@ -40,40 +40,13 @@
     CONSIDER: writing a ExpiringLocalKV that cleans up old entries
     CONSIDER: writing variants that do convert specific data, letting you e.g. set/fetch dicts, or anything else you could pickle
 '''
-import os, hashlib, json
+import os
 from typing import Tuple
 import collections.abc
 import sqlite3
-import wetsuite.datasets     # to get wetsuite_dir
+import wetsuite.helpers.util     # to get wetsuite_dir
 import wetsuite.helpers.net
 
-
-def hash(data: bytes):
-    ' Given some byte data, calculate SHA1 hash.  Returns that hash as a hex string. '
-    s1h = hashlib.sha1()
-    s1h.update( data )
-    return s1h.hexdigest()
-
-
-# # Our own imitation of views, mainly to get __len__ on it
-# from collections import MutableMapping
-
-# class DictView(MutableMapping):
-#     def __init__(self, source):
-#         self.source = source
-
-#     def __getitem__(self, key):
-#         if key in self.valid_keys:
-#             return self.source[key]
-#         else:
-#             raise KeyError(key)
-
-#     def __len__(self):
-#         return len(self.len())
-
-#     def __iter__(self):
-#         for key in self.valid_keys:
-#             yield key
 
    
 class LocalKV:
@@ -414,6 +387,15 @@ class LocalKV:
         return self.conn.execute('SELECT 1 FROM kv WHERE key = ?', (key,)).fetchone() is not None
 
 
+    ## Used as a context manager
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type,exc_value, exc_traceback):
+        self.close()
+
+
+
 
 
 # msgpack would be faster than pickle, more interoperable, and safer - but an extra dependency, and does a little less.
@@ -452,12 +434,12 @@ try:
             packed = msgpack.dumps(value)
             super(MsgpackKV, self).put( key, packed )
 
-        def values(self):
+        def itervalues(self):
             curs = self.conn.cursor()
             for row in curs.execute('SELECT value FROM kv'):
                 yield msgpack.loads( row[0], strict_map_key=False )
 
-        def items(self):
+        def iteritems(self):
             curs = self.conn.cursor()
             for row in curs.execute('SELECT key, value FROM kv'):
                 yield row[0], msgpack.loads( row[1], strict_map_key=False )    
@@ -500,12 +482,12 @@ except ImportError:
 #         super(PickleKV, self).put( key, pickled )
 
 
-#     def values(self):
+#     def itervalues(self):
 #         curs = self.conn.cursor()
 #         for row in curs.execute('SELECT value FROM kv'):
 #             yield pickle.loads( row[0] )
 
-#     def items(self):
+#     def iteritems(self):
 #         curs = self.conn.cursor()
 #         for row in curs.execute('SELECT key, value FROM kv'):
 #             yield row[0], pickle.loads( row[1] )
@@ -552,28 +534,36 @@ def cached_fetch(store, url:str, force_refetch:bool=False) -> Tuple[bytes, bool]
 
 
 def open_store(dbname:str, key_type, value_type, inst=LocalKV) -> LocalKV:
-    ''' A helper that opens a (regular) LocalKV in the local wetsuite directory, 
-        mostly so that you don't have to think about handing in a reproducable absolute path yourself.
+    ''' Note that if you give a name without a path separator, e.g.
+            docs = open_store('docstore.db')
+        then will open the same store every time  (picking a path in a wetsuite directory in your user profile) 
+        regardless of the directory the interpreter is currently considered to be in.
+        Mostly so that you don't have to think about handing in a reproducable absolute path yourself.
+            HINT: It's suggested you use descriptive names so that you don't open existing stores without meaning to.
 
-        Just a filename, e.g.
-          docs = open_store('docstore.db')
-        will open the same store regardless of the directory the interpreter is currently considered to be in.
-        It's suggested you use descriptive names so that you don't open existing stores without meaning to.
+            CONSIDER: listening to a WETSUITE_BASE_DIR to override our "put in user's homedir" behaviour,
+                    this might make more sense e.g. to point it at distributed storage without symlink juggling
+        
 
-        for notes on key_type and value_type, see LocalKV.__init__()
+        If you actually _wanted_ it in the current directory, you will have to give an absolute path,
+            e.g. os.path.abspath('mystore.db').
+            We make this harder to do accidentally because this is a common mistake around sqlite.
 
-        CONSIDER: listening to a WETSUITE_BASE_DIR to override our "put in user's homedir" behaviour,
-                  this might make more sense e.g. to point it at distributed storage without symlink juggling
+
+        For notes on key_type and value_type, see LocalKV.__init__()
+
 
         inst is currently a hack, this might actually need to become a factory
     '''
-    if os.sep in dbname:
-        raise ValueError('This function is meant to take a name, not an absolute path.  If you prefer to determine an absolute path, you can instantiate LocalKV directly.')
     # CONSIDER: sanitize filename?
-    if dbname == ':memory:':  # special-case the sqlite value of ':memory:' (pass it through)  -- all other values are expected to be a filename in our own dir
+    if dbname == ':memory:':  # special-case the sqlite value of ':memory:' (pass it through) 
         ret = inst( dbname, key_type=key_type, value_type=value_type )
-    else:
-        dirs = wetsuite.datasets.wetsuite_dir()
+
+    elif os.sep in dbname:
+        ret = inst( dbname, key_type=key_type, value_type=value_type )
+
+    else: # bare name, 
+        dirs = wetsuite.helpers.util.wetsuite_dir()
         _docstore_path = os.path.join( dirs['stores_dir'], dbname )
         ret = inst( _docstore_path, key_type=key_type, value_type=value_type )
     return ret
@@ -586,7 +576,7 @@ def list_stores( get_num_items=False ):
 
         does not by default get the number of items, because that can need a bunch of IO
     '''
-    dirs = wetsuite.datasets.wetsuite_dir()
+    dirs = wetsuite.helpers.util.wetsuite_dir()
     stores_dir = dirs['stores_dir']
 
     ret = []
