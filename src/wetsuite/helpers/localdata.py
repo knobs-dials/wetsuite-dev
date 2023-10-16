@@ -304,11 +304,14 @@ class LocalKV:
 
 
     def close(self):
+        if self._in_transaction:
+            pass # DECIDE 
         self.conn.close()
 
 
     #TODO: see if the view's semantics in keys(), values(), and items() are actually correct. 
-    #      Note that they rely on __iter__ and __getitem  - there's a bunch of heavly liftin in hading self to those view classes
+    #      Note there's a bunch of implied heavy lifting in hnading self to those view classes,
+    #         which require that that relies on __iter__ and __getitem__ to be there
 
     def iterkeys(self):
         """ Returns a generator that yields all keus
@@ -321,7 +324,7 @@ class LocalKV:
 
     def keys(self):
         """ Returns an iterable of all keys.  (a view with a len, rather than just a generator) """
-        return collections.abc.KeysView( self )
+        return collections.abc.KeysView( self ) # TODO: check that this is enough
         #return list( self.iterkeys() )
 
     def itervalues(self):
