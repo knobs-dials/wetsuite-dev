@@ -1,1 +1,0 @@
-See [the project README](../../README.md) for an introduction to many of these notebooks.

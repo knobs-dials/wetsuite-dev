@@ -1,54 +1,54 @@
 
 # Dealing with PDFs
 
-## Basics
+## PDFs can be messy
 
 While you may think of PDFs as structured text documents, they aren't quite that.
 They mostly just specify how to draw things.
 
 PDFs consists of a stream of objects - that often ''includes'' "this is the text we are drawing",
-and we can get out that text fairly easily, but the more general nature of this PDF stream 
-makes things a little messier.
+but not necessarily.
 
 
-When it comes from a word processor, it'll have good text.
+Even if we we can get out that text fairly easily, the more general nature of this PDF stream 
+still makes things a little messier than you would think - there is quite a bit of _variation of what documents contain_:
+* When it comes from a word processor, it'll have good text.
 
-If it comes from scanned images or such, it may have no text objects at all,
-in which case your only option is your own OCR.
+* If it comes from scanned images or such, it may have no text objects at all,
+  in which case your only option is your own OCR.
 
-Scanned images may also have some OCRed text added afterwards, which is a great start but may be imperfect.
+* Scanned images may also have some OCRed text added afterwards, which is a great start but may be imperfect.
 
-There are also some cases where it seems to show text perfectly, but there are some internals
-that mean it would not copy/exctract text correctly.
-That _also_ means we need to fall back to your own OCR.
+* There are also some cases where it seems to show text perfectly, but there are some internals
+  that mean it would not copy/exctract text correctly.
+  That _also_ means we need to fall back to your own OCR.
 
 
+Even assuming we can pick out all that text without mistakes, we don't yet know the layout.
+* Headers and footers won't be separated.
 
-Even assuming we can pick out all that text perfectly, we don't yet know the layout.
-
-Headers and footers won't be separated.
-Two-column layout may not come out in reading order.
+* Two-column layout may not come out in reading order.
 
 
 The point is that the quality of text we can extract can generally vary significantly.
-with the way it was entered, 
-the way we use these fragments of text,
-wither whether we are detecting things like two-column layouting, footnotes, headers, footers, etc.
-
-
-## Practically
-
-How much work there is to be done depends on what you're doing.
-
-
-If you're only detecting the presence of words, e.g. to find them by contents,
-text objects of any sort will go a long way and a few lines of code are all you need.
 
 
 
-One of the first things we can do fairly easily is detect the "PDF has no text at all" case,
+## More practically
 
-Well, per page, because there are plenty of cases where PDFs are different things appended,
+How much work there is to be done depends on what you're doing,
+just how much require of the text.
+
+
+If you're only detecting the presence of words, 
+e.g. to find documents them by contents,
+then text objects of any sort will already go a long way,
+and a few lines of code are all you need.
+
+
+One of the first things we can do fairly easily is detect the "PDF has no text at all" case.
+
+...though we should maybe do that per page, because it turns out there are plen  there are plenty of cases where PDFs are different things appended,
 and it's a mix of perfectly good text, and later just images of text.
 
 In mixed datasets, you might consider to OCR everything, if only because while that gives you more data to polish, it is at least more uniform.
