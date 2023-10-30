@@ -1,21 +1,33 @@
 # Introduction
 
-Wetsuite is a project aimed at easing the application of natural language processing, and other analysis,
-to Dutch and EU governmental legal data, 
-largely focused on providing the data and tools and other infrastructure to make it easier for researchers to do so.
+Wetsuite is a project aimed at easing the application of natural language processing, 
+and other analysis, to Dutch and also EU governmental legal data, 
+currently largely focused on providing the data and tools and other infrastructure to make it easier for researchers to do so.
 
 NOTE: this is an early repository test to test installs from github, not the primary source of this project.
+
+
+# What to expect from this project
+
+Core
+- Datasets to work on, 
+- helper functions to ease some common tasks
+- notebooks that introduce data sources, demonstrate our added helpers, demonstrate some common methods 
+
+Plans and extras
+- our own searchable index of the data in the datasets, and/or a demonstration how to set up your own
+- basic web versions of some common tools, e.g. extracting references
+- a better trained Named Entity Recognition for more 
 
 
 
 # Repo
 This repository is split into:
-- `notebooks`
-  - [examples](notebooks/examples/) - python notebooks that demonstrate the use of varied package tools,  datasets,  and related things
-  - [miscellany](notebooks/miscellany/) - things that are not core wetsuite functionality, but may be useful to people anyway, including examples of code in [extras/](src/wetsuite/extras/)
+- [examples](notebooks/) - python notebooks that demonstrate the use of varied package tools,  datasets,  and related things
+  - ...things marked 'extras' are not core functionality, there more for showing our work and potentially useful to other programemrs (and includes some demos of cod e in  [extras/ in src](src/wetsuite/extras/))
 
 - [src](src/wetsuite/) - the part of this project that you would install and use.   
-  Has its own [README](src/wetsuite/README.md)
+  There are more READMEs here detailing parts
 
 
 
@@ -32,7 +44,7 @@ import wetsuite.datasets, random
 
 kv = wetsuite.datasets.load('kamervragen')
 
-# As the text in   kv.description   will point out,  kv.data  is a nested structure, so some informed wrangling is necessary:
+# As  print( kv.description )   will point out,  kv.data  contains a nested structure, so some informed wrangling is necessary:
 vraag_document = random.choice( list(kv.data.values()) )
 for number in vraag_document['vraagdata']: 
     vraag_n_text,    _ = vraag_document['vraagdata'][number].get('vraag')
@@ -43,22 +55,24 @@ for number in vraag_document['vraagdata']:
     print('---')
 ```
 
-See [dataset_kamervragen (notebook)](notebooks/examples/dataset_kamervragen.ipynb) for example output, and more on that data.
+See [dataset_kamervragen (notebook)](notebooks/using_dataset_kamervragen.ipynb) for example output, and more on that data.
 
 
 
 ## Working on text
 
 ### Extract plain text fragments (from BWB)
-Laws are of course structured, with paragraphs and lists, in an artikel, in a hoofdstuk, and much more.
+For some broader tasks, where complete but structureless, flat text is enough, there is a dataset. 
 
-When studying details and structures and references you may need to understand and use all that structure, 
-yet broader tasks such as summarizing topics of broad parts can probably be fed text without that structure.
+Instead, this secion is about wanting more control than that: Laws are of course structured, with paragraphs and lists, 
+in an artikel, in a hoofdstuk, and more, and when you want to portion the text by those, or summarize sections, 
+or actively use references to such parts, then you need a to understand and use all that structure, 
+and probably want more assistance than "Here is the XML (or HTML), good luck".
 
-The XML form (rather than HTML) is most usable as malleable data, but for the same reason we would like some convenience functions.
+We aim to let you flatten text with a granularity that you can control, e.g. per article, per hoofdstuk, or otherwise.
 
-We aim to let you flatten text with some controllable granularity, e.g. per article, per hoofdstuk, or otherwise,
-and also give an indication to where it came from within the original data-document.
+And also give an indication to where it came from within the document it came from, 
+for the more advanced use of "use the intermediate form to then go interrogate the fully detailed original data".
 
 Consider:
 
@@ -81,14 +95,16 @@ pprint.pprint( merged )
 #  ]
 ```
 
-The above relies on some defaults we don't explain here, also dealing with observed variation in those higher-level layers.
-See [datacollect_koop_docstructure_bwb (notebook)](notebooks/examples/datacollect_koop_docstructure_bwb.ipynb) for more such details.
+The above relies on some defaults we don't explain in this introduction, also dealing with observed variation in those higher-level layers.
+See [datacollect_koop_docstructure_bwb (notebook)](notebooks/extras/extras_datacollect_koop_docstructure_bwb.ipynb) for more explanation
+and how to dive in deeper into the details.
 
 We are still considering the balance between more convenient, controllable, and complete, so this code will likely change.
 
 
 
 ### Entity extraction (with spaCy)
+# TODO: 
 ```python
 
 
@@ -114,14 +130,14 @@ import wetsuite.datasets, wetsuite.helpers.spacy, wetsuite.extras.word_cloud
 ks = wetsuite.datasets.load('kansspelautoriteit')
 # again, most lines are wrangling of structured data
 for case_details in ks.data[:5]:
-    case_phrases = [] # we try to only get out nouns / noun phrases.  Using all words would go a lot faster  yet would include a lot of empty function words
+    case_phrases = []  # we try to only get out nouns and noun phrases.  Using all words would go a lot faster  yet would include a lot of empty function words
     for doc_details in case_details['docs']:
         for page in doc_details['pages']:
             for fragment in page['body_text']:
                 case_phrases.extend( wetsuite.helpers.spacy.nl_noun_chunks( fragment ) )
     counts = wetsuite.extras.word_cloud.count_normalized( case_phrases, stopwords_i=['de kansspelautoriteit', 'artikel', 'zij','die', 'de'] )
     im = wetsuite.extras.word_cloud.wordcloud_from_freqs( counts )
-    display( im )  # display() exists in the context of python notebooks, elsewhere you might e.g. do   im.save( '%s.png'%case_details['name'] ) 
+    display( im )  # display() exists in the context of python notebooks, elsewhere you might e.g.   im.save( '%s.png'%case_details['name'] ) 
 ```
 
 
@@ -144,13 +160,14 @@ That said...
 ## Search
 Various goverment systems offer live search, in website and/or data form.
 
-Each has its own limitations, features, and idiosyncracies, and potentially document structure.
-The most controlled way is often to learn and use each directly.
+Each has its own features, limitations, and idiosyncracies, and potentially their own document structure to deal with.
+The most controlled way is often to learn and use each one individually.
 
 We can at least ease that process, with explorations and explanations, and code to ease access.
+
 More effort will be made once we decide the best course of action.
 
-Also, since we have datasets, we provisionally provide a search of such,
+Also, since we have datasets, we provisionally provide a search of those,
 as that should at least put a single interface on all data wet put in there.
 If there is interest may may later explain how to set up your own.
 
@@ -160,12 +177,12 @@ If there is interest may may later explain how to set up your own.
 
 import pprint, wetsuite.datacollect.koop_repositories, wetsuite.helpers.koop_parse
 
-cvdr = wetsuite.datacollect.koop_repositories.CVDR()
-for hit_et in cvdr.search_retrieve_many( 'body any fish', up_to=50 ):
+cvdr = wetsuite.datacollect.koop_repositories.CVDR() # object informed about that backend, and has a search function
+for hit_et in cvdr.search_retrieve_many( 'body any visserij', up_to=50 ):
     pprint.pprint(  wetsuite.helpers.koop_parse.cvdr_meta( hit_et, flatten=True )  )
 ```
 
-See [datacollect_koop_repos (notebook)](notebooks/examples/datacollect_koop_repos.ipynb) for more details.
+See [datacollect_koop_repos (notebook)](notebooks/extras/extras_datacollect_koop_sru_repos.ipynb) for more details.
 
 
 ### Search recent law changes (in BWB)
@@ -181,12 +198,15 @@ for hit_et in bwb.search_retrieve_many( 'dcterms.modified >= 2023-03-01', up_to=
 
 ## Data collection
 
-Often enough, existing datasets aren't quite enough and you will have 
-collect and organize some yourself.
+Often enough, existing datasets aren't quite enough,
+and you will have collect and organize your own.
 
 
 ### PDF
-PDFs are common enough, so we can extract the text it says it contains. 
+One aspect is that the government is only required to try to give the most machine-readable version they have,
+and sometimes the best version is PDFs.
+
+Can we extract the text it says it contains?  You can ask the PDF about the text it says it contains, and often that works:
 
 ```python
 import wetsuite.helpers.net
@@ -194,7 +214,13 @@ import wetsuite.extras.pdf
 
 pdfbytes = wetsuite.helpers.net.download('https://open.overheid.nl/documenten/ronl-5439f4bf9849a53e634389ebbb5e4f5740c4f84f/pdf')
 text_per_page = wetsuite.extras.pdf.page_text( pdfbytes )
-# However, it turns out there are many PDFs that (partially or fully) contain _images of text_. To check, you can e.g. 
+pprint.pprint(text_per_page)
+```
+
+However, it turns out there are many PDFs that (partially or fully) contain _images of text_. To check, you can e.g. 
+
+```python
+
 chars_per_page, num_pages_with_text, num_pages = wetsuite.extras.pdf.count_pages_with_text(pdfbytes, char_threshold=150)
 print(f'{num_pages_with_text} out of {num_pages} pages contain reasonable amount of text\n  characters per page: {chars_per_page}')
 # which will point out that:
