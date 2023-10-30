@@ -28,6 +28,7 @@
     If you want more performant bulk writes, 
       use put() with commit=False, and
       do an explicit commit() afterwards
+      ...BUT if a script borks in the middle of something uncommited, you will need to do manual cleanup.
 
       
     "Could I access these SQLite databases myself?"
@@ -46,6 +47,7 @@ import collections.abc
 import sqlite3
 import wetsuite.helpers.util     # to get wetsuite_dir
 import wetsuite.helpers.net
+import wetsuite.helpers.format
 
 
    
@@ -107,6 +109,7 @@ class LocalKV:
             read_only is enforced in this wrapper to give slightly more useful errors. (we also give SQLite a PRAGMA)
         '''
         self.path = path
+        # 
         self.read_only = read_only
         self._open()
         # here in part to remind us that we _could_ be using converters  https://docs.python.org/3/library/sqlite3.html#sqlite3-converters
@@ -432,10 +435,10 @@ try:
             unpacked = msgpack.loads(value)
             return unpacked
             
-        def put(self, key:str, value):
+        def put(self, key:str, value, commit:bool=False):
             " See LocalKV.put().   Unlike that, value is not checked for type, just pickled. Which can fail. "
             packed = msgpack.dumps(value)
-            super(MsgpackKV, self).put( key, packed )
+            super(MsgpackKV, self).put( key, packed, commit )
 
         def itervalues(self):
             curs = self.conn.cursor()
@@ -536,7 +539,7 @@ def cached_fetch(store, url:str, force_refetch:bool=False) -> Tuple[bytes, bool]
         return data, False
 
 
-def open_store(dbname:str, key_type, value_type, inst=LocalKV) -> LocalKV:
+def open_store(dbname:str, key_type, value_type, inst=LocalKV, read_only=False) -> LocalKV:
     ''' Note that if you give a name without a path separator, e.g.
             docs = open_store('docstore.db')
         then will open the same store every time  (picking a path in a wetsuite directory in your user profile) 
@@ -560,7 +563,7 @@ def open_store(dbname:str, key_type, value_type, inst=LocalKV) -> LocalKV:
     '''
     # CONSIDER: sanitize filename?
     if dbname == ':memory:':  # special-case the sqlite value of ':memory:' (pass it through) 
-        ret = inst( dbname, key_type=key_type, value_type=value_type )
+        ret = inst( dbname, key_type=key_type, value_type=value_type, read_only=read_only )
 
     elif os.sep in dbname:
         ret = inst( dbname, key_type=key_type, value_type=value_type )
@@ -568,39 +571,41 @@ def open_store(dbname:str, key_type, value_type, inst=LocalKV) -> LocalKV:
     else: # bare name, 
         dirs = wetsuite.helpers.util.wetsuite_dir()
         _docstore_path = os.path.join( dirs['stores_dir'], dbname )
-        ret = inst( _docstore_path, key_type=key_type, value_type=value_type )
+        ret = inst( _docstore_path, key_type=key_type, value_type=value_type, read_only=read_only )
     return ret
 
 
-def list_stores( get_num_items=False ):
+def list_stores( skip_table_check=True, get_num_items=False ):
     ''' Look in the directory that open_store() put things in,
           check which ones seem to be stores (does IO to do so).
         Returns a dict with details for each
 
-        does not by default get the number of items, because that can need a bunch of IO
+        skip_table_check - if true, only tests whether it's a sqlite file, not whether it contains the table we expect.
+                           because when it's in the stores directory, chances are we put it there, and we can avoid IO and locking.
+        
+        get_num_items    - does not by default get the number of items, because that can need a bunch of IO, and locking.
     '''
     dirs = wetsuite.helpers.util.wetsuite_dir()
     stores_dir = dirs['stores_dir']
-
     ret = []
     for basename in os.listdir( stores_dir ):
         abspath = os.path.join( stores_dir, basename )
         if os.path.isfile( abspath ):
-            if is_file_a_store( abspath ):
+            if is_file_a_store( abspath, skip_table_check=skip_table_check ): 
+                bytesize = os.stat(abspath).st_size
                 kv = LocalKV(abspath, key_type=None, value_type=None, read_only=True)
                 itemdict = {
                     'basename':basename, 
                     'path':abspath,
-                    'bytesize':os.stat(abspath).st_size,
+                    'bytesize':bytesize,
+                    'bytesize_readable':wetsuite.helpers.format.kmgtp( bytesize ),
                 }
                 if get_num_items: 
                     itemdict['num_items'] = len( kv )
                 
                 itemdict['description'] = kv._get_meta('description', True)
-
                 ret.append( itemdict )
                 kv.close()
-        
     return ret
 
 
@@ -608,7 +613,7 @@ def is_file_a_store(path, skip_table_check=False):
     ''' Checks that the path seems to point to one of our stores.
         More specifailly: whether it is an sqlite(3) database, and has a table called 'kv'
 
-        You can skip the latter test - which you might want to do when it may timeout on someone else having the store open for writing.
+        You can skip the latter test. It avoids opening the file, so avoids a possible timeout on someone else having the store open for writing.
     '''
     is_sqlite3 = None
     with open(path, 'rb') as f:
