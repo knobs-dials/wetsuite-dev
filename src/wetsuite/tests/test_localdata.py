@@ -67,6 +67,12 @@ def test_rollback():
     # TODO: more complex tests
 
 
+def test_context_manager():
+    with wetsuite.helpers.localdata.LocalKV(':memory:', str, str) as kv:
+        assert len( kv.keys() ) == 0
+
+
+
 def test_truncate():
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
     assert len( kv.keys() ) == 0
