@@ -10,7 +10,9 @@ import urllib.parse
 import wetsuite.datacollect.koop_repositories
 import wetsuite.helpers.meta
 
-from lxml.etree import _Comment, _ProcessingInstruction   # CONSIDER: import these via wetsuite.helpers.etree ? 
+import wetsuite.helpers.etree
+
+from lxml.etree import _Comment, _ProcessingInstruction, tostring   # CONSIDER: import these via wetsuite.helpers.etree ?
 
 
 
@@ -1062,3 +1064,42 @@ def merge_alinea_data( alinea_dicts, if_same={
         ret.append( (key_meta[key], text) )
     return ret
 
+
+def iter_chunks_xml(xml):
+    """
+    Sloppy initial implementation; merges alineas_with_selective_path and merge_alinea_data while attempting to handle tables.
+    Currently geared specifically to CVDR xml.
+    """
+
+    tree = wetsuite.helpers.etree.fromstring(xml)
+    tree_stripped = wetsuite.helpers.etree.strip_namespace(tree)
+
+    for n, table in enumerate(list(tree_stripped.findall(".//table"))):
+        text = str(tostring(table))
+        if len(text) < 10:
+            continue
+        yield {'n': n,
+               'part_id': f'table {n}',
+               'text': text,
+               'from_table': True,
+               }
+        table.getparent().remove(table)
+
+    alinea_dicts = alineas_with_selective_path(tree_stripped, start_at_path='body/regeling/regeling-tekst')
+    merged = merge_alinea_data(alinea_dicts, if_same={'hoofdstuk':'hoofdstuknr',
+    'afdeling':'afdelingnr',
+    'paragraaf':'paragraafnr',
+    'sub-paragraaf':'subparagraafnr',
+    'artikel':'artikelnr',})
+
+    for n, (label, content) in enumerate(merged):
+        text = '\n'.join(content)
+        # print(label, text)
+        # r = input('prompt? y/n')
+        # if r == 'y':
+        if len(text) > 10:
+            yield {'n': n,
+                   'part_id': ' '.join(' '.join(l) for l in label),
+                   'text': text,
+                   'from_table': False,
+                   }
