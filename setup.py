@@ -16,7 +16,8 @@ setup(
         'requests',            # Apache2
         'python-dateutil',     # Apache2
         'numpy >= 1.11.1',     # BSD   
-        'matplotlib >= 1.5.1', # BSD       
+        'matplotlib >= 1.5.1', # BSD
+        'msgpack',             # Apache2       
         'spacy',               # MIT
         'spacy-transformers',  # MIT       
     ],
@@ -27,10 +28,10 @@ setup(
         'spacy-cuda100':'spacy[cuda100]','spacy-cuda101':'spacy[cuda101]','spacy-cuda102':'spacy[cuda102]','spacy-cuda110':'spacy[cuda110]',
         'spacy-cuda111':'spacy[cuda111]','spacy-cuda112':'spacy[cuda112]','spacy-cuda113':'spacy[cuda113]','spacy-cuda114':'spacy[cuda114]','spacy-cuda115':'spacy[cuda115]','spacy-cuda116':'spacy[cuda116]','spacy-cuda117':'spacy[cuda117]',
         'fastlang':[
-            'spacy_fastlang',   # MIT
-            'fasttext'          # MIT
+            'spacy_fastlang',    # MIT
+            'fasttext'           # MIT
         ],
-        'ocr':'easyocr',        # Apache2
+        'ocr':'easyocr',         # Apache2
         'extras':['wordcloud',], # MIT
         # all?
     },
