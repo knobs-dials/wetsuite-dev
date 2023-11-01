@@ -289,8 +289,8 @@ class LocalKV:
         curs.execute("select page_size, page_count from pragma_page_count, pragma_page_size")
         page_size, page_count = curs.fetchone()
         curs.close()
-        return page_size *page_count
-        #return os.stat( self.path ).st_size
+        return (page_size * page_count)
+        # return os.stat( self.path ).st_size
 
 
     def truncate(self, vacuum=True):
