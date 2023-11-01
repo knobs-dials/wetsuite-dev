@@ -3,21 +3,23 @@
 
 ## PDFs can be messy
 
-While you may think of PDFs as structured text documents, they aren't quite that.
-They mostly just specify how to draw things.
+While you may think of PDFs as structured text documents, they aren't that.
+Somestimes yes, sometimes no.
 
-PDFs consists of a stream of objects - that often ''includes'' "this is the text we are drawing",
-but not necessarily.
+They mostly just specify how to draw things. PDFs consists of a stream of objects,
+that often but not necessarily ''includes'' "by the way, the text we are drawing says this".
 
 
 Even if we we can get out that text fairly easily, the more general nature of this PDF stream 
-still makes things a little messier than you would think - there is quite a bit of _variation of what documents contain_:
+still makes things a little messier than you would think. 
+
+There is quite a bit of variation of what documents contain, and how they contain it:
 * When it comes from a word processor, it'll have good text.
 
 * If it comes from scanned images or such, it may have no text objects at all,
   in which case your only option is your own OCR.
 
-* Scanned images may also have some OCRed text added afterwards, which is a great start but may be imperfect.
+* Scanned images may also have some OCRed text added afterwards, which is a still a great start but may be imperfect in multiple ways.
 
 * There are also some cases where it seems to show text perfectly, but there are some internals
   that mean it would not copy/exctract text correctly.
