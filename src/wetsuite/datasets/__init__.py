@@ -262,23 +262,169 @@ class Dataset:
         return '<wetsuite.datasets.Dataset name=%r num_items=%r>'%(self.name, self.num_items)
 
 
+    def save_files(self, in_dir, overwrite=False):
+        ''' This is primarily for people who want to see their data in file form.
+        '''
+        import re
+
+        if not os.path.exists(in_dir):
+            os.mkdir(in_dir)
+
+        i=0
+        for key, value in self.data.items():
+            i+=1
+            if i>100:
+                break
+
+            typ = self.name.rsplit('-')[-1]  # if nothing better
+            if type(value) is bytes and b'<?xml' in value[:50]:
+                typ='xml'
+            elif type(value) is dict:
+                typ = 'json'
+                value = json.dumps(value).encode('u8')
+            elif type(value) is str:
+                typ = 'txt'
+                value = value.encode('u8')
+            else:
+                raise ValueError("Do not know what to do with %r"%type(value))
+
+            safe_fn = '%08d_%s_%s.%s'%(
+                i,    wetsuite.helpers.util.hash_hex(key)[:12],  # should make it unique
+                re.sub('[^A-Za-z0-9_-]','', re.sub('[.:/]+','-',key))[:220],  # primarily aimed at URLs
+                typ[:5],
+            )[:254]
+
+            ffn = os.path.join( in_dir, safe_fn )
+
+            if os.path.exists(ffn):
+                if not overwrite:
+                    continue
+            # implied else: either it doesn't exist, or overwrite==True
+            
+            with open(ffn, 'wb') as f:
+                f.write( value )
+
+        # TODO: see if we can restructure this to iterating and calling DatasetItem.save, if it makes sense to do DatasetItems
+
+
+#    @classmethod
+def files_as_dataset(self, in_dir):
+    ''' Notes that this does _nothing_ for you other than making it a little easier to iterate though the _contents_ of these files '''
+
+    store = wetsuite.helpers.localdata.LocalKV( ':memory:', None, None )
+
+    import os
+    for r, ds, fs in os.walk(in_dir):
+        for fn in fs:
+            ffn = os.path.join( r, fn )
+            #if os.path.is_file():
+            with open(ffn,'rb') as f:
+                store.put(ffn, f.read() )
+
+    ret = Dataset(  description='Files loaded from %r'%in_dir,
+                    data=store,
+                    name='filesystem-'+re.sub('[^A-Za-z0-9]+','-',indir)  )
+    return ret
+    
+
+    
+
+
+ # This will probably go away again
+class _DatasetItem:
+    def __init__(self, **kwargs):
+        #self.vars = []
+        for var, val in kwargs.items():
+            setattr(self, var, val)
+            #self.vars.append( var )
+        #self.__doc__ == '\n'.join( self.vars )
+
+class DatasetItem:
+    def __new__(cls, **kwargs):
+        # Magic factory-like trickery to have something to say in a docstring.
+        newcls = type('DatasetItem', (_DatasetItem, ), 
+                      {'__doc__': "Take a look at attributes: {}".format( ', '.join(list(kwargs.keys())))}
+                     )
+        return newcls(**kwargs)
+
+
+class DatasetItems():
+    def __init__(self, named_views_of_items):
+        self.named_views_of_items = named_views_of_items
+
+    def __iter__(self): # TODO: check
+        " Using this object as an iterator yields its keys (equivalent to .iterkeys()) "
+        return self.views_of_items[0].iterkeys() # assumes that's valid for all
+
+    def __getitem__(self, key): # this one is here only really to support the ValuesView and Itemsview
+        ret = self.get(key)
+        if ret is None:
+            raise KeyError()
+        datas = list( view.get(key)  for view in views_of_items )
+        return DatasetItem( )
+
+    def items(self):
+        """ Returns an iteralble of all items.    (a view with a len, rather than just a generator)  """
+    #return collections.abc.ItemsView( self ) # this relies on __getitem__ which we didn't really want, maybe wrap a class to hide that?
+
+
+
+
+
+
 def merge_datasets(map): # maybe make this a @staticmethod on Dataset?
+    ''' If you want to take related datasets and see them on one object, this 
+        - takes a dict like
+            { dataset_object:'xml',
+            dataset_object:'meta',
+            dataset_object:'text'}
+            }
+        Returns a dataset object that has a .xml, .meta, and .text attribute that refers to those respective dataset objects.
+
+        TODO: insteadh ave .data return DatasetItems with those attributes
+
+          the main problem with this is that this probably has to be an iterable view,
+          of iterable views, 
+          because otherwise we _probably_ have to materialize data all data into memory somewhere,
+          but will that always be a collections.abc.ValuesView ?
+          (also, that will easily occupy the database from being writable but that's okay for datasts)
+
+        ---
+
+        The .data member be an iterable of DatasetItem objects, 
+          which will contain at least a .raw (what comes out of the dataset file, which will often be a str, bytes, or nested python structure),
+          if augment==False, just that. If augment==True, there may be some further interpretation of that.
+
+          (the augmenting is, necessarily, somewhat nasty, because it is based on a hardcoded table of known datasets)
     '''
-    If you want to take related datasets and see them on one object, this 
-    - takes a dict like
-        { dataset_object:'xml',
-        dataset_object:'meta',
-        dataset_object:'text'}
-        }
-    Ret
-    '''
-    ret = Dataset('joined dataset of %s. .data will be None but see attributes called %s'%(
-        ', '.join(ds.name for ds in map.keys()),
-        ', '.join(map.values())
-        ), data=[])
+    namelist = ', '.join(ds.name for ds in map.keys())
+    attrlist = ', '.join(map.values())
+    ret = Dataset('joined dataset of %s. .data will be None but see attributes called %s'%( namelist, attrlist ), data=[])
 
     for dataset_object, attrib_name in map.items():
         setattr(ret, attrib_name, dataset_object.data)
+
+
+    d = { 
+        '__doc__':"Bork %s"%namelist
+        #"__init__": constructor, 
+        #"string_attribute": "Geeks 4 geeks !", 
+        #"int_attribute": 1706256, 
+        #"func_arg": displayMethod, 
+        #"class_func": classMethod
+    }
+    MyClass = type("Bork", (object, ), d) 
+
+
+    def iteritems(self):
+        """ Returns a generator that yields all items """
+        try: # TODO: figure out whether this is necessary
+            
+            for row in curs.execute('SELECT key, value FROM kv'):
+                yield row[0], row[1]
+        finally:
+            pass
+
     return ret
 
 
@@ -363,6 +509,33 @@ def _load_bare(dataset_name: str, verbose=None, force_refetch=False):
     return data_path
 
 
+def _path_to_data(data_path):
+        ' read from disk, return the data and description regardless of what it is '
+        f = open(data_path,'rb')
+        first_bytes = f.read(15)
+        f.seek(0)
+
+        if first_bytes == b'SQLite format 3':
+            f.close()
+            data        = wetsuite.helpers.localdata.LocalKV( data_path, None, None, read_only=True ) # the type enforcement is irrelevant when opened read-only
+            description = data._get_meta('description', missing_as_none=True)
+            if data._get_meta('valtype', missing_as_none=True) == 'msgpack': # This is very hackish - TODO: avoid this
+                data.close()
+                data = wetsuite.helpers.localdata.MsgpackKV( data_path, None, None, read_only=True) 
+
+        else: # Assume JSON - expected to be a dict with two main keys
+            loaded = json.loads( f.read() ) 
+            f.close()
+            # TODO: remove the need for JSON, or at least make this alternative go away:
+            if 'description' in loaded:
+                data        = loaded.get('data')
+                description = loaded.get('description')
+            else:            
+                data        = loaded
+                description = ''
+        return (data, description)
+
+
 def load(dataset_name: str, verbose=None, force_refetch=False, augment=True):
     ''' Takes a dataset name (that you learned of from the index),
         downloads it if necessary - after the first time it's cached in your home directory
@@ -381,26 +554,7 @@ def load(dataset_name: str, verbose=None, force_refetch=False, augment=True):
         force_refetch - whether to remove the current contents before fetching
            dataset naming should prevent the need for this (except if you're the wetsuite programmer)
     '''
-    def path_to_data(data_path):
-        ' read from disk, return the data and description regardless of what it is '
-        f = open(data_path,'rb')
-        first_bytes = f.read(15)
-        f.seek(0)
-
-        if first_bytes == b'SQLite format 3':
-            f.close()
-            data        = wetsuite.helpers.localdata.LocalKV( data_path, None, None, read_only=True ) # the type enforcement is irrelevant when opened read-only
-            description = data._get_meta('description', missing_as_none=True)
-            if data._get_meta('valtype', missing_as_none=True) == 'msgpack': # This is very hackish - TODO: avoid this
-                data.close()
-                data = wetsuite.helpers.localdata.MsgpackKV( data_path, None, None, read_only=True) 
-
-        else: # Assume JSON - expected to be a dict with two main keys
-            loaded = json.loads( f.read() ) 
-            f.close()
-            data        = loaded.get('data')
-            description = loaded.get('description')
-        return (data, description)
+    
 
     #if '*' in dataset_name:
     global _index
@@ -415,7 +569,7 @@ def load(dataset_name: str, verbose=None, force_refetch=False, augment=True):
     
     elif len(dataname_matches) == 1:
         data_path = _load_bare( dataname_matches[0] )
-        data, description = path_to_data( data_path )
+        data, description = _path_to_data( data_path )
         data_path = _load_bare( dataset_name=dataname_matches[0], verbose=verbose, force_refetch=force_refetch )
         return Dataset( data=data, description=description, name=dataname_matches[0] )
 
@@ -425,7 +579,7 @@ def load(dataset_name: str, verbose=None, force_refetch=False, augment=True):
 
         for dataname_match in dataname_matches:
             data_path = _load_bare( dataname_match )
-            data, description = path_to_data( data_path )
+            data, description = _path_to_data( data_path )
             data_path = _load_bare( dataset_name=dataname_match, verbose=verbose, force_refetch=force_refetch )
             datasets[ Dataset( data=data, description=description, name=dataname_match ) ] = dataname_match.rsplit('-')[-1]
         print( datasets)
