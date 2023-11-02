@@ -80,8 +80,9 @@ def is_ipython_interactive():
 
 def progress_bar(max, description='', display=True): # , **kwargs
     ''' Wrapper that prefers tqdm, falls back to ipywidgets's IntProgress progress bar.
-
-        Usable like 
+        
+        You can set (and get) .value and .description and they should be shown,
+        so e.g. usable like 
           prog = progress_bar( 10, 'overall' )
           for i in range(10):
               prog.value += 1
@@ -90,25 +91,36 @@ def progress_bar(max, description='', display=True): # , **kwargs
         Arguments
         - maximum value (required)
         - optional description
-        - if display==True (default), it calls display on it so you don't have to
+        - if display==True (default), it calls display on the IPython widget, so you don't have to
 
         You should only call this after you know you are in an ipython environment - e.g. with is_ipython() / is_notebook()
     '''
     try:
         import tqdm.autonotebook
         class TqdmWrap:
+            ' make it act enough like the ipywidget, in terms of our description '
             def __init__(self, max, description):
-                self.tq = tqdm.autonotebook.tqdm( range(max), desc=description)
+                self.tq = tqdm.autonotebook.tqdm( total=max, desc=description)
                 self._value = 0
+                self._description = description
 
             def set_value(self, val):
                 self._value = val
-                self.tq.update(self._value)
+                self.tq.update( 1 ) # self._value
 
             def get_value(self):
                 return self._value
 
             value = property(get_value, set_value)
+
+            def set_description(self, val):
+                self._description = val
+                self.tq.desc = self._description
+
+            def get_description(self):
+                return self._description
+
+            description = property(get_description, set_description)
 
         return TqdmWrap(max, description)
     
