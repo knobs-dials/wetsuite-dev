@@ -143,11 +143,11 @@ class etree_visualize_selection(object):
 
             Given 
                 - a parsed tree
-                - either a sequence of elements or a string (interpreted as xpath)
-                and optionally:
-                - reindent     display reindented copy of the tree
-                            reindenting 
-                            defaults True
+                - either 
+                  - a sequence of elements from a tree  (that you probably selected yourself)
+                  - or a string, interpreted as xpath
+               and optionally:
+                - reindent     display reindented copy of the tree (defaults True, this is debug function)
                 - mark_text:    mark initial text content of each matched element)
                 - mark_tail:    mark tail-text after each matched element)
                 - mark_subtree: mark entire tree under each matched element. Useful 
@@ -189,7 +189,9 @@ class etree_visualize_selection(object):
             ret.append('&gt;')
 
             if element.text:
-                if self.mark_text and element in selection:
+                #if self.mark_text and element in selection:
+                if (self.mark_text and len(element.text.strip())>0) and element in selection:
+                    
                     ret.append('<span style="background-color:#faa; color:black">%s</span>'%element.text)
                 else:
                     ret.append(element.text)
@@ -205,7 +207,8 @@ class etree_visualize_selection(object):
             ret.append("&lt;/%s&gt;"% conditional_highlight(element))
 
             if element.tail:
-                if (self.mark_tail) and element in selection:
+                #if (self.mark_tail  and len(element.tail.strip())>0)  and  element in selection:
+                if self.mark_tail  and  element in selection:
                     ret.append('<span style="background-color:#fab; color:black">%s</span>'%element.tail)
                 else:
                     ret.append(element.tail)
