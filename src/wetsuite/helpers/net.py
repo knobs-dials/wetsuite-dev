@@ -9,7 +9,7 @@ from wetsuite.helpers.notebook import is_interactive
 
 
 
-def download( url:str, tofile_path:str = None, show_progress:bool=None, chunk_size=131072 ):
+def download( url:str, tofile_path:str = None, show_progress=None, chunk_size=131072 ):
     ''' Wrapper around requests.get() with some optional extras.
 
         One of them is the option to stream-download to filesystem:     
