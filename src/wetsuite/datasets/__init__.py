@@ -60,31 +60,11 @@ def fetch_index():
     '''
     if True: # HACK: the index is currently hardcoded, it should probably come from the host, and from listing uploaded metadata there
         index_dict = {
-            'rvsadviezen-struc':{
-                                                    'url':'https://wetsuite.knobs-dials.com/datasets/raadvanstate_adviezen.json.bz2',
-                                                'version':'preliminary', 
-                                      'short_description':'The advice under https://raadvanstate.nl/adviezen/ provided as plain text in a nested structure with metadata. ',  
-                                          'download_size':5460023,
-                                              'real_size':34212068,   # or maybe more directly readable  '5MB' and '34MB'?
-                                                   'type':'application/json',
-            },
-
-
-            'kamervragen-struc':{
-                                                    'url':'https://wetsuite.knobs-dials.com/datasets/kamervragen.json.bz2',             
-                                                'version':'preliminary',
-                                      'short_description':'Questions from ministers to the government. Provided as a nested data structure.',    
-                                          'download_size':74218609,
-                                              'real_size':506814395,
-                                                   'type':'application/json',
-            },
-
-
             'bwb-mostrecent-xml':{
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/bwb_latestonly_xml.db.xz',
                                                 'version':'preliminary',
                                       'short_description':'The latest revision from each BWB-id',
-                                          'download_size':-1,  
+                                          'download_size':-1,
                                               'real_size':-1,
                                                    'type':'application/json',
             },
@@ -92,7 +72,7 @@ def fetch_index():
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/bwb_latestonly_meta.db.xz',
                                                 'version':'preliminary',
                                       'short_description':'The latest revision from each BWB-id',
-                                          'download_size':-1,  
+                                          'download_size':-1,
                                               'real_size':-1,
                                                    'type':'application/json',
             },
@@ -100,7 +80,7 @@ def fetch_index():
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/bwb_latestonly_text.db.xz',
                                                 'version':'preliminary',
                                       'short_description':'The latest revision from each BWB-id',
-                                          'download_size':-1,  
+                                          'download_size':-1,
                                               'real_size':-1,
                                                    'type':'application/json',
             },
@@ -110,7 +90,7 @@ def fetch_index():
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/cvdr_latestonly_xml.db.xz',
                                                 'version':'preliminary',
                                       'short_description':'The latest expression from each CVDR work',
-                                          'download_size':603843736,  
+                                          'download_size':603843736,
                                               'real_size':5586030592,
                                                    'type':'application/json',
             },
@@ -146,6 +126,27 @@ def fetch_index():
                                       'short_description':'',
                                           'download_size':7191376,
                                               'real_size':40292352,
+                                                   'type':'application/json',
+            },
+
+
+            'kamervragen-struc':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/kamervragen.json.bz2',             
+                                                'version':'preliminary',
+                                      'short_description':'Questions from ministers to the government. Provided as a nested data structure.',    
+                                          'download_size':74218609,
+                                              'real_size':506814395,
+                                                   'type':'application/json',
+            },
+
+
+
+            'raadvanstate-adviezen-struc':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/rvs_extracted.db.xz',
+                                                'version':'preliminary', 
+                                      'short_description':'The advice under https://raadvanstate.nl/adviezen/ provided as plain text in a nested structure with metadata. ',  
+                                          'download_size':-1,
+                                              'real_size':-1,   # or maybe more directly readable  '5MB' and '34MB'?
                                                    'type':'application/json',
             },
 
