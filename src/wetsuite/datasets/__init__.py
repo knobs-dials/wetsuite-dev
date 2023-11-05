@@ -152,7 +152,7 @@ def fetch_index():
 
 
             # TODO: meta as well
-            'kansspelautoriteit-sancties-txt':{
+            'kansspelautoriteit-sancties-struc':{
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/kansspelautoriteit_plain.json.bz2', 
                                                 'version':'preliminary', 
                                       'short_description':'Sanction decisions, in plain text, extracted from from the case PDFs under https://kansspelautoriteit.nl/aanpak-misstanden/sanctiebesluiten/',
