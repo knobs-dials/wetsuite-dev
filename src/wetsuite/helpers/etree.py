@@ -398,15 +398,22 @@ def path_count(under, max_depth=None):
 def debug_pretty(tree, reindent=True, strip_namespaces=True, encoding='unicode'):
     ''' Return (piece of) tree as a string, readable for debugging
 
-        Because this is purely meant for debugging use, it by default
+        Intended to take an etree object  (but if give a bytestring we'll try to parse it as XML)
+        
+        Because this is purely meant for debugging, it by default
         - strips namespaces
         - reindents
-        - returns as unicode
+        - returns as unicode (not bytes) so we can print() it
 
-        and is mostly just short for   etree.tostring(  etree.indent( etree.strip_namespace( tree ) ), encoding='unicode' )
+        It's also mostly just short for   etree.tostring(  etree.indent( etree.strip_namespace( tree ) ), encoding='unicode' )
     '''
+    if type(tree) is bytes:
+        tree = lxml.etree.fromstring( tree )
+
     if strip_namespaces:
         tree = strip_namespace( tree )
+
     if reindent:
         tree = indent( tree )
+        
     return tostring( tree, encoding=encoding )
