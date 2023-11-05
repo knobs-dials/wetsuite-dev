@@ -11,7 +11,7 @@ def wetsuite_dir():
         Returns a dict with keys mentioning directories:
           wetsuite_dir: a directory in the user profile we can store things
           datasets_dir: a directory inside wetsuite_dir first that datasets.load() will put dataset files in 
-          stores_dir:   a directory inside wetsuite_dir that localdata.open_store will put sqlite files in   
+          stores_dir:   a directory inside wetsuite_dir that localdata will put sqlite files in   
 
         Keep in mind:
         - When windows users have their user profile on the network, we try to pick a directory more likely to be shared by your other logins
