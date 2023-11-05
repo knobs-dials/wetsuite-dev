@@ -4,6 +4,12 @@ import wetsuite.helpers.localdata
 
 
 
+#def test_pathlib()
+#    import pathlib
+
+    
+
+
 def test_crud():
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', key_type=str, value_type=str)
     with pytest.raises(KeyError):
