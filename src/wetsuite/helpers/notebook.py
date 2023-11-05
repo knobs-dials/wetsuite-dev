@@ -142,7 +142,7 @@ class etree_visualize_selection(object):
             (works only within IPython/jupyter style notebooks. works via a HTML representation.) 
 
             Given 
-                - a parsed tree
+                - a parsed tree    (or a bytes object, will be parsed, but you probably shouldn't do that)
                 - either 
                   - a sequence of elements from a tree  (that you probably selected yourself)
                   - or a string, interpreted as xpath
@@ -155,6 +155,9 @@ class etree_visualize_selection(object):
                 Mostly used in the tutorials
         '''
         import wetsuite.helpers.etree
+        if type(tree) is bytes:
+            tree = wetsuite.helpers.etree.fromstring( tree )
+
         if reindent:
             tree = wetsuite.helpers.etree.indent( tree )
         self.tree  = tree
