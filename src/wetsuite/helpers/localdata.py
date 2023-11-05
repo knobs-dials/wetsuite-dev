@@ -8,49 +8,45 @@
     This is used e.g. by various data collection, and by distributed datasets.
     
 
-    HOW TO USE:
-    - You can create your own specific stores by doing something like:
-        mystore_path = os.path.join( project_data_dir, 'docstore.db')  # OS-agnostic path join
-        mystore = LocalKV( mystore_path )
-    OR
-        open_store( 'docstore.db' ), which places it in the wetsuite directory in your homedir
+    BASIC USE:
+      mystore = LocalKV( 'docstore.db' )
 
-    "Why two ways?"
-        The first gives you direct control, 
-            ...but with relative paths, it will create in whatever is the current working directory,
-               which makes it easy for you to confuse yourself with databases all over the place
-            ...but with absolute paths you will easily make things less portable via hardcoded paths
-        The latter ensures that whenever you give the same name, you open the same store, 
-            no thought about where it goes exactly  (if you want to know where exactly, use .path)
+    Notes:
+    - on the path/name argument:
+        - just a name (without os.sep, i.e. / or \) will be resolved to a path where wetsuite keeps various stores
+        - an absolute path will be passed through             
+        ...but this isn't very portable until you do things like   os.path.join( myproject_data_dir, 'docstore.db')
+        - a relative path with os.sep will be passed through  
+        ...which is only as portable as the cwd is predictable)
+        - ':memory:' is in-memory only                        
+        See also resolve_path() for more details
 
-                     
-    By default, each write is committed individually, (because SQlite3's driver defaults to autocommit)
-    If you want more performant bulk writes, 
-      use put() with commit=False, and
-      do an explicit commit() afterwards
-      ...BUT if a script borks in the middle of something uncommited, you will need to do manual cleanup.
+    - by default, each write is committed individually, (because SQlite3's driver defaults to autocommit)
+        If you want more performant bulk writes, 
+            use put() with commit=False, and
+            do an explicit commit() afterwards
+        ...BUT if a script borks in the middle of something uncommited, you will need to do manual cleanup.
+    
+    - you _could_ access these SQLite databses yourself, particularly when just reading.
+      Our code is mainly there for convenience and checks.     
+      Consider:
+        sqlite3 store.db 'select key,value from kv limit 10 ' | less
+      It only starts getting special once you using MsgpackKV, or the extra parsing and wrapping that wetsuite.datasets adds.
 
-      
-    "Could I access these SQLite databases myself?"
-        Sure, particularly when just reading.
-        The code is mainly there for convenience and checks. Consider:
-          sqlite3 store.db 'select key,value from kv limit 10 ' | less
-        It only starts getting special once you using MsgpackKV, or the extra parsing and wrapping that wetsuite.datasets adds.
-
-      
+    
     CONSIDER: writing a ExpiringLocalKV that cleans up old entries
     CONSIDER: writing variants that do convert specific data, letting you e.g. set/fetch dicts, or anything else you could pickle
 '''
-import os
+import os, random
 from typing import Tuple
 import collections.abc
 import sqlite3
+
 import wetsuite.helpers.util     # to get wetsuite_dir
 import wetsuite.helpers.net
 import wetsuite.helpers.format
 
 
-   
 class LocalKV:
     ''' A key-value store backed by a local filesystem.
         This is currently a fairly thin wrapper around SQLite - this may change.
@@ -62,7 +58,7 @@ class LocalKV:
         You could change both key and value types - e.g. the cached_fetch function expects a str:bytes store
 
         Given
-            db = LocalKv('path/to/dbfile')      # (note that open_store() may be more convenient)
+            db = LocalKv('path/to/dbfile')
         Basic use is:
             db.put('foo', 'bar')
             db.get('foo')
@@ -102,13 +98,14 @@ class LocalKV:
             but we often use   str,str  and  str,bytes
 
             The database file will be created if it does not yet exist 
-            so you proably want think to think about repeating the same path in absolute sense.
-            (This is also often the answer to "why do I have an empty database")
-            ...if you want to think about that less, consider using open_store().
+            so you proably want think to think about repeating the same path in absolute sense
+            ...see also the module docstring, and resolve_path()'s docstring
 
-            read_only is enforced in this wrapper to give slightly more useful errors. (we also give SQLite a PRAGMA)
+            read_only is only enforced in this wrapper to give slightly more useful errors. (we also give SQLite a PRAGMA)
         '''
         self.path = path
+        self.path = resolve_path(self.path)   # tries to centralize the absolute/relative path handling code logic
+
         # 
         self.read_only = read_only
         self._open()
@@ -117,20 +114,21 @@ class LocalKV:
             raise ValueError("We are currently a little overly paranoid about what to allow as key types (%r not allowed)"%key_type.__name)
         if value_type not in (str, bytes, int, float, None):
             raise ValueError("We are currently a little overly paranoid about what to allow as value types (%r not allowed)"%value_type.__name)
+
         self.key_type = key_type
         self.value_type = value_type
         self._in_transaction = False
 
 
     def _open(self, timeout=2.0):
-        ' Open file path set by init.  Could be merged into init ' 
+        ' Open the path previously set by init.  This function could probably be merged into init, actually. ' 
         #make_tables = (self.path==':memory:')  or  ( not os.path.exists( self.path ) )    # will be creating that file, or are using an in-memory database ?  Also how to combine with read_only?
         self.conn = sqlite3.connect( self.path, timeout=timeout )
         # Note: curs.execute is the regular DB-API way,  conn.execute is a shorthand that gets a temporary cursor
         with self.conn:
             if self.read_only:
-                self.conn.execute("PRAGMA query_only = true") # https://www.sqlite.org/pragma.html#pragma_query_only
-                # if read-only, we assume you are opening something that was aleady created before
+                self.conn.execute("PRAGMA query_only = true")   # https://www.sqlite.org/pragma.html#pragma_query_only
+                # if read-only, we assume you are opening something that was aleady created before, so we don't do...
             else:
                 self.conn.execute("PRAGMA auto_vacuum = INCREMENTAL")  # TODO: see that this does what I think it does    https://www.sqlite.org/pragma.html#pragma_auto_vacuum
                 self.conn.execute("CREATE TABLE IF NOT EXISTS meta (key text unique NOT NULL, value text)")
@@ -217,6 +215,7 @@ class LocalKV:
         curs = self.conn.cursor()
         curs.execute("SELECT value FROM meta WHERE key=?", (key,) )
         row = curs.fetchone()
+        curs.close()
         if row is None:
             if missing_as_none:
                 return None
@@ -227,22 +226,24 @@ class LocalKV:
 
 
     def _put_meta(self, key:str, value:str):
-        ''' For internal use, preferably don't use.   See also _get_meta(), _delete_meta() '''
+        ''' For internal use, preferably don't use.   See also _get_meta(), _delete_meta().   Note this does an implicit commit() '''
         if self.read_only:
             raise RuntimeError('Attempted _put_meta() on a store that was opened read-only.  (you can subvert that but may not want to)')
         curs = self.conn.cursor()
         curs.execute('BEGIN')
         curs.execute('INSERT INTO meta (key, value) VALUES (?, ?)  ON CONFLICT (key) DO UPDATE SET value=?', (key,value, value) )
         self.commit()
+        curs.close()
 
 
     def _delete_meta(self, key:str):
-        ''' For internal use, preferably don't use.   See also _get_meta(), _delete_meta() '''
+        ''' For internal use, preferably don't use.   See also _get_meta(), _delete_meta().   Note this does an implicit commit() '''
         if self.read_only:
             raise RuntimeError('Attempted _put_meta() on a store that was opened read-only.  (you can subvert that but may not want to)')
         curs = self.conn.cursor() # TODO: check that's correct when commit==False
         curs.execute('DELETE FROM meta where key=?', ( key,) )
         self.commit()
+        curs.close()
 
 
     def commit(self):
@@ -258,58 +259,12 @@ class LocalKV:
         self._in_transaction = False
 
 
-    def estimate_waste(self):
-        return self.conn.execute('SELECT (freelist_count*page_size) as FreeSizeEstimate  FROM pragma_freelist_count, pragma_page_size').fetchone()[0]
-
-
-    # def incremental_vacuum(self):
-    #     ''' assuming we created with "PRAGMA auto_vacuum = INCREMENTAL" we can do cleanup. Ideally you do with some interval when you remove/update things
-    #         CONSIDER our own logic to that?  Maybe purely per interpreter (after X puts/deletes),  and maybe do it on close?
-    #     '''
-    #     # https://www.sqlite.org/pragma.html#pragma_auto_vacuum
-    #     if self._in_transaction:
-    #         self.commit()
-    #     self.conn.execute('PRAGMA schema.incremental_vacuum')
-
-
-    def vacuum(self):
-        ''' After a lot of deletes you could compact the store with vacuum().
-            However, note this rewrites the entire file, so the more data you store, the longer this takes.
-            
-            Note that if we were left in a transaction (due to commit=False), ths is commit()ed first. 
-        '''
-        if self._in_transaction:
-            self.commit()
-        self.conn.execute('vacuum')
-
-
-    def bytesize(self) -> int:
-        ' Returns the approximate amount of the contained data, in bytes  (may be a few dozen kilobytes off) '
-        curs = self.conn.cursor()
-        curs.execute("select page_size, page_count from pragma_page_count, pragma_page_size")
-        page_size, page_count = curs.fetchone()
-        curs.close()
-        return (page_size * page_count)
-        # return os.stat( self.path ).st_size
-
-
-    def truncate(self, vacuum=True):
-        ''' remove all kv entries.
-            If we were still in a transaction, we roll that back first
-        '''
-        curs = self.conn.cursor() # TODO: check that's correct when commit==False
-        if self._in_transaction:
-            self.rollback()
-        curs.execute('DELETE FROM kv')  # https://www.techonthenet.com/sqlite/truncate.php
-        self.commit()
-        if vacuum:
-            self.vacuum()
-
-
     def close(self):
         if self._in_transaction:
             pass # DECIDE 
         self.conn.close()
+
+
 
 
     #TODO: see if the view's semantics in keys(), values(), and items() are actually correct. 
@@ -402,14 +357,87 @@ class LocalKV:
 
 
 
+    ### Convenience functions, not core functionality
+
+    def estimate_waste(self):
+        return self.conn.execute('SELECT (freelist_count*page_size) as FreeSizeEstimate  FROM pragma_freelist_count, pragma_page_size').fetchone()[0]
 
 
-# msgpack would be faster than pickle, more interoperable, and safer - but an extra dependency, and does a little less.
+    # def incremental_vacuum(self):
+    #     ''' assuming we created with "PRAGMA auto_vacuum = INCREMENTAL" we can do cleanup. Ideally you do with some interval when you remove/update things
+    #         CONSIDER our own logic to that?  Maybe purely per interpreter (after X puts/deletes),  and maybe do it on close?
+    #     '''
+    #     # https://www.sqlite.org/pragma.html#pragma_auto_vacuum
+    #     if self._in_transaction:
+    #         self.commit()
+    #     self.conn.execute('PRAGMA schema.incremental_vacuum')
 
-# json is more interoperable, but slower and doesn't e.g. deal with date/datetime
+
+    def vacuum(self):
+        ''' After a lot of deletes you could compact the store with vacuum().
+            However, note this rewrites the entire file, so the more data you store, the longer this takes.
+            
+            Note that if we were left in a transaction (due to commit=False), ths is commit()ed first. 
+        '''
+        if self._in_transaction:
+            self.commit()
+        self.conn.execute('vacuum')
+
+
+    def bytesize(self) -> int:
+        ''' Returns the approximate amount of the contained data, in bytes  (may be a few dozen kilobytes off, or more, because it counts in pages) '''
+        #if self.path == ':memory:'
+        curs = self.conn.cursor()
+        curs.execute("select page_size, page_count from pragma_page_count, pragma_page_size")
+        page_size, page_count = curs.fetchone()
+        curs.close()
+        return (page_size * page_count)
+        #else:
+        #    return os.stat( self.path ).st_size
+
+
+    def truncate(self, vacuum=True):
+        ''' remove all kv entries.
+            If we were still in a transaction, we roll that back first
+        '''
+        curs = self.conn.cursor() # TODO: check that's correct when commit==False
+        if self._in_transaction:
+            self.rollback()
+        curs.execute('DELETE FROM kv')  # https://www.techonthenet.com/sqlite/truncate.php
+        self.commit()
+        if vacuum:
+            self.vacuum()
+
+
+    def random_choice(self):
+        ''' Returns a single random item from the store, specifically a (key, value) pair
+
+            Convenience function, because doing this properly takes a few lines 
+              (you can't random.choice/sample a view, so to do it properly you have to materialize all keys - and not accidentally all values).
+            BUT assume this is slower than working on the keys yourself.
+        '''
+        all_keys = list( self.keys() )
+        chosen_key = random.choice( all_keys )
+        return chosen_key, self.get(chosen_key)
+
+
+    def random_sample(self, k):
+        ''' Returns a selection of items from the store, specifically a [(key, value), ...] list
+
+            Convenience function, because doing this properly yourself takes two or three lines 
+              (you can't random.choice/sample a view, so to do it properly you have to materialize all keys - and not accidentally all values)
+            BUT assume this is slower than working on the keys yourself.
+        '''
+        all_keys = list( self.keys() )
+        chosen_keys = random.sample( all_keys, k=k )
+        return list( (chosen_key, self.get(chosen_key))  for chosen_key in chosen_keys)
+         
+
 
 
 try:
+    # msgpack should be more interoperable and safer than pickle, and slightly faster - but an extra dependency, and does a little less.
+    # json is more interoperable, but slower and (also) doesn't e.g. deal with date/datetime
     import msgpack
 
     class MsgpackKV(LocalKV):
@@ -417,7 +445,7 @@ try:
             - typing fixed at str:bytes 
             - put() stores using pickle, get() unpickles
 
-            Will be a bit slower, but lets you more transparently store e.g. nested python structures, like dicts
+            Will be a bit slower because it's doing that on the fly, but lets you more transparently store things like nested python dicts
             ...but only of primitive types, and not e.g. datetime.
 
             msgpack is used as a somewhat faster alternative to json and pickle (though that barely matters for smaller values)
@@ -429,13 +457,16 @@ try:
             '''
             super(MsgpackKV, self).__init__( path, key_type=str, value_type=None, read_only=read_only )
 
+            if self._get_meta('valtype', missing_as_none=True) is None: # this is meant to be able to detect/signal incorrect interpretation, not fully used yet
+                self._put_meta('valtype','msgpack')
+
         def get(self, key:str):
             " Note that unpickling could fail "
             value = super(MsgpackKV, self).get( key )
             unpacked = msgpack.loads(value)
             return unpacked
             
-        def put(self, key:str, value, commit:bool=False):
+        def put(self, key:str, value, commit:bool=True):
             " See LocalKV.put().   Unlike that, value is not checked for type, just pickled. Which can fail. "
             packed = msgpack.dumps(value)
             super(MsgpackKV, self).put( key, packed, commit )
@@ -448,7 +479,8 @@ try:
         def iteritems(self):
             curs = self.conn.cursor()
             for row in curs.execute('SELECT key, value FROM kv'):
-                yield row[0], msgpack.loads( row[1], strict_map_key=False )    
+                yield row[0], msgpack.loads( row[1], strict_map_key=False )
+                
 except ImportError:
     # warning?
     pass
@@ -539,44 +571,89 @@ def cached_fetch(store, url:str, force_refetch:bool=False) -> Tuple[bytes, bool]
         return data, False
 
 
-def open_store(dbname:str, key_type, value_type, inst=LocalKV, read_only=False) -> LocalKV:
-    ''' Note that if you give a name without a path separator, e.g.
-            docs = open_store('docstore.db')
-        then will open the same store every time  (picking a path in a wetsuite directory in your user profile) 
-        regardless of the directory the interpreter is currently considered to be in.
-        Mostly so that you don't have to think about handing in a reproducable absolute path yourself.
-            HINT: It's suggested you use descriptive names so that you don't open existing stores without meaning to.
 
-            CONSIDER: listening to a WETSUITE_BASE_DIR to override our "put in user's homedir" behaviour,
-                    this might make more sense e.g. to point it at distributed storage without symlink juggling
-        
+def resolve_path( name:str ):
+    ''' Note: the KV classes call this internally. 
+            This is less for you to use directly, more explain why.
 
-        If you actually _wanted_ it in the current directory, you will have to give an absolute path,
-            e.g. os.path.abspath('mystore.db').
-            We make this harder to do accidentally because this is a common mistake around sqlite.
+        For context, handing a pathless base name to underlying sqlite would just put it in the current directory
+            which isn't always where you think, so is likely to sprinkle databases all over the place.
+            This is common point of confusion/mistake around sqlite (and files in general),
+            so we make it harder to do accidentally, so that this doesn't become your problem.
 
+        Using this function makes it a little more controlled where things go:     
+            - Given a **bare name**, e.g. 'extracted.db', this returns an absolute path 
+                within a "this is where wetsuite keeps its stores directory" within your user profile,
+                e.g. /home/myuser/.wetsuite/stores/extracted.db or C:\\Users\\myuser\\AppData\\Roaming\\.wetsuite\\stores\\extracted.db
+                Most of the point is that handing in the same name will lead to opening the same store, regardless of details.
 
-        For notes on key_type and value_type, see LocalKV.__init__()
+            - hand in **`:memory:`** if you wanted a memory-only store, not backed by disk
 
+            - given an absolute path, it will use that
+                so if you actually _wanted_ it in the current directory, instead of this function 
+                consider something like  `os.path.abspath('mystore.db')`
 
-        inst is currently a hack, this might actually need to become a factory
+            - given a relative path, it will pass that through -- which will open it relative to the current directory
+
+        Notes:
+        - should be idempotent, so shouldn't hurt to call this more than once on the same path 
+            (in that it _should_ always produce a path with os.sep (...or :memory: ...), 
+            which it would pass through the second time)
+
+        - When you rely on the 'base name means it goes to a wetsuite directory', 
+            it is suggested that you use descriptive names (e.g. 'rechtspraaknl_extracted.db', not 'extracted.db') 
+            so that you don't open existing stores without meaning to.
+
+        - us figuring out a place in your use profile for you
+          This _is_ double-edged, though, in that we will get fair questions like
+            "I can't tell why my user profile is full" and 
+            "I can't find my files"   (sorry, they're not so useful to access directly)
+
+        CONSIDER: 
+        - listening to a WETSUITE_BASE_DIR to override our "put in user's homedir" behaviour,
+          this might make more sense e.g. to point it at distributed storage without 
+          e.g. you having to do symlink juggling
     '''
-    # CONSIDER: sanitize filename?
-    if dbname == ':memory:':  # special-case the sqlite value of ':memory:' (pass it through) 
-        ret = inst( dbname, key_type=key_type, value_type=value_type, read_only=read_only )
+    # deal with pathlib arguments by flattening it to a string
+    import pathlib
+    if isinstance(name, pathlib.Path):
+        name = str(name)
 
-    elif os.sep in dbname:
-        ret = inst( dbname, key_type=key_type, value_type=value_type )
-
-    else: # bare name, 
+    if name == ':memory:':  # special-case the sqlite value of ':memory:' (pass it through) 
+        return name
+    elif os.sep in name:    # assume it's an absolute path, or a relative one you _want_ resolved relative to cwd
+        return name
+    else:                     # bare name, do our "put in homedir" logic 
         dirs = wetsuite.helpers.util.wetsuite_dir()
-        _docstore_path = os.path.join( dirs['stores_dir'], dbname )
-        ret = inst( _docstore_path, key_type=key_type, value_type=value_type, read_only=read_only )
-    return ret
+        return os.path.join( dirs['stores_dir'], name )
+
+
+# def open_store(dbname:str, key_type, value_type, inst=LocalKV, read_only=False) -> LocalKV:
+#     ''' For notes on key_type and value_type, see LocalKV.__init__()
+        
+#         dbname can be
+#         - :memory:
+#         - an absolute path (you decide where to put it) 
+#         - a relative path with os.sep in it (resolved relative to cwd)
+#         - a bare name without os.sep in it (we place it somewhere in your home dir)
+
+#         inst is currently a hack, this might actually need to become a factory
+#     '''
+#     # CONSIDER: sanitize filename?
+#     if dbname == ':memory:':  # special-case the sqlite value of ':memory:' (pass it through) 
+#         ret = inst( dbname, key_type=key_type, value_type=value_type, read_only=read_only )
+
+#     elif os.sep in dbname:
+#         ret = inst( dbname, key_type=key_type, value_type=value_type )
+
+#     else: # bare name, 
+#         _docstore_path = store_in_profile(dbname)
+#         ret = inst( _docstore_path, key_type=key_type, value_type=value_type, read_only=read_only )
+#     return ret
 
 
 def list_stores( skip_table_check=True, get_num_items=False ):
-    ''' Look in the directory that open_store() put things in,
+    ''' Look in the directory that (everything that uses) resolve_path() puts things in,
           check which ones seem to be stores (does IO to do so).
         Returns a dict with details for each
 
