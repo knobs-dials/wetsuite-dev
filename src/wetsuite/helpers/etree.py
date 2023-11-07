@@ -7,6 +7,7 @@
 
     CONSIDER: 
     - A "turn tree into nested dicts" function - see e.g. https://lxml.de/FAQ.html#how-can-i-map-an-xml-tree-into-a-dict-of-dicts
+    - have a fromstring() as a thin wrapper but with strip_namespace in there? (saves a lines but might be a confusing API change)
 '''
 
 #try: 
@@ -228,11 +229,11 @@ def strip_namespace(tree, remove_from_attr=True):
         * namespaces from attribute names (default, but optional)
         * default namespaces (TODO: test that properly)
 
-        Note that for attributes with the same name, that are unique only because of a different namespace,
-        this may cause attributes to be overwritten. 
-        For example:   <e p:at="bar" at="quu">   would become   <e at="bar">
+        Note that for attributes with the same name that are unique only because of a different namespace,
+                  this may cause attributes to be overwritten.
+        For example:   <e p:at="bar" at="quu"/>   might become   <e at="bar"/>
         I've not yet seen any XML where this matters - but it might.
-
+        
         Returns the URLs for the stripped namespaces, in case you want to report them.
     '''
     if not isinstance(tree, lxml.etree._Element):

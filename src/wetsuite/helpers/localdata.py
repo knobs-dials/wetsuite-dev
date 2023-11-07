@@ -121,7 +121,9 @@ class LocalKV:
 
 
     def _open(self, timeout=2.0):
-        ' Open the path previously set by init.  This function could probably be merged into init, actually. ' 
+        ''' Open the path previously set by init.
+            This function could probably be merged into init, it was separated mostly with the idea that we could keep it closed when not using it. 
+        ''' 
         #make_tables = (self.path==':memory:')  or  ( not os.path.exists( self.path ) )    # will be creating that file, or are using an in-memory database ?  Also how to combine with read_only?
         self.conn = sqlite3.connect( self.path, timeout=timeout )
         # Note: curs.execute is the regular DB-API way,  conn.execute is a shorthand that gets a temporary cursor
@@ -410,10 +412,10 @@ class LocalKV:
 
 
     def random_choice(self):
-        ''' Returns a single random item from the store, specifically a (key, value) pair
-
-            Convenience function, because doing this properly takes a few lines 
-              (you can't random.choice/sample a view, so to do it properly you have to materialize all keys - and not accidentally all values).
+        ''' Returns a single (key, value) item from the store, selected randomly.
+        
+            Convenience function, because doing this properly yourself takes two or three lines 
+              (you can't random.choice/random.sample a view,  so to do it properly you basically have to materialize all keys - and not accidentally all values)
             BUT assume this is slower than working on the keys yourself.
         '''
         all_keys = list( self.keys() )
@@ -421,15 +423,15 @@ class LocalKV:
         return chosen_key, self.get(chosen_key)
 
 
-    def random_sample(self, k):
-        ''' Returns a selection of items from the store, specifically a [(key, value), ...] list
-
+    def random_sample(self, amount):
+        ''' Returns an amount of [(key, value), ...] list from the store, selected randomly.
+        
             Convenience function, because doing this properly yourself takes two or three lines 
-              (you can't random.choice/sample a view, so to do it properly you have to materialize all keys - and not accidentally all values)
+              (you can't random.choice/random.sample a view,  so to do it properly you basically have to materialize all keys - and not accidentally all values)
             BUT assume this is slower than working on the keys yourself.
         '''
         all_keys = list( self.keys() )
-        chosen_keys = random.sample( all_keys, k=k )
+        chosen_keys = random.sample( all_keys, amount )
         return list( (chosen_key, self.get(chosen_key))  for chosen_key in chosen_keys)
          
 
