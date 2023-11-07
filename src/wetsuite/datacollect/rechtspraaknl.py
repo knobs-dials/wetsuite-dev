@@ -15,11 +15,12 @@
     I'm not sure whether we're supposed to use it like this, but it's one of the better APIs I've seen in this context :)
 '''
 
-import json, requests, urllib.parse
+import json, re, requests, urllib.parse, pprint
 
-import wetsuite.helpers.etree
 import wetsuite.helpers.net
+import wetsuite.helpers.etree
 import wetsuite.helpers.escape
+import wetsuite.helpers.koop_parse
 
 
 base_url = "https://data.rechtspraak.nl/"
@@ -104,12 +105,87 @@ def parse_search_results(tree):
     return ret
 
 
-def _para_text(tree):
-    import wetsuite.helpers.koop_parse
-    alinea_data = wetsuite.helpers.koop_parse.alineas_with_selective_path( tree, alinea_elemname='para' )
-    #import pprint
-    #pprint.pprint(alinea_data)
-    return wetsuite.helpers.koop_parse.merge_alinea_data( alinea_data )
+def _para_text(treenode):
+    ret = []
+
+    for ch in treenode.getchildren():
+        
+        if isinstance(ch, wetsuite.helpers.etree._Comment) or isinstance(ch, wetsuite.helpers.etree._ProcessingInstruction): 
+            continue
+
+        if ch.tag in ('para', 'title', 'bridgehead', 'nr',
+                      'footnote'):
+            if len( ch.getchildren() )>0:
+                # HACK: just assume it's flattenable 
+                ret.extend( wetsuite.helpers.etree.all_text_fragments( ch ) )
+                #raise ValueError("para has children")
+            else:
+                if ch.text == None:
+                    ret.append('')
+                else:
+                    ret.append(ch.text)
+
+
+        elif ch.tag in ('orderedlist','itemizedlist'):
+            ret.append('')
+            ret.extend(_para_text(ch))
+            ret.append('')
+
+        elif ch.tag in ('listitem',):
+            ret.append('')
+            ret.extend(_para_text(ch))
+            ret.append('')
+
+
+        elif ch.tag in ('informaltable', 'table'):
+            ret.append('')
+            # HACK: just pretend it's flattenable 
+            ret.extend( wetsuite.helpers.etree.all_text_fragments( ch ) )
+            ret.append('')
+        #elif ch.tag in ('tgroup','colspec','tobody','row','entry',''):
+        #    ret.append('')
+        #    ret.append(_para_text(ch))
+        #   ret.append('')
+
+
+        elif ch.tag in ('mediaobject','inlinemediaobject','imageobject', 'imagedata'):
+            pass  # TODO: 
+
+        elif ch.tag =='uitspraak.info': 
+            #TODO: parse this
+            pass
+        elif ch.tag =='conclusie.info': 
+            #TODO: parse this
+            pass        
+
+        elif ch.tag =='section':
+            ret.append('')
+            ret.extend(_para_text(ch))
+            ret.append('')
+
+        elif ch.tag =='parablock':
+            ret.append('')
+            ret.extend(_para_text(ch))
+            ret.append('')
+
+        elif ch.tag =='paragroup':
+            ret.append('')
+            ret.extend(_para_text(ch))
+            ret.append('')
+
+        else:
+            raise ValueError("Do not understand tag name %r"%ch.tag)
+
+
+    return ret # '\n'.join( ret )
+
+
+    # # we try to abuse our own 
+    # alinea_data = wetsuite.helpers.koop_parse.alineas_with_selective_path( tree, alinea_elemname='para' )
+    # #pprint.pprint(alinea_data)
+    # merged = wetsuite.helpers.koop_parse.merge_alinea_data( alinea_data ) # TODO: explicit if_same ?   
+    # #pprint.pprint(merged)
+    # return merged
 
     # for elem in tree.getchildren():
     #     if elem.tag == 'para':
@@ -165,7 +241,7 @@ def parse_content(tree):
         # other specific cases
         #hasVersion 
 
-        break # for now assume that the most recent update is the first, and the most detailed
+        break # for now assume that the most recent update (RDF/Description block) is the first, and the most detailed
 
     #for elem in list(RDF):
     #    print( wetsuite.helpers.etree.debug_pretty(elem))
@@ -173,15 +249,19 @@ def parse_content(tree):
 
     inhoudsindicatie = tree.find('inhoudsindicatie')
     if inhoudsindicatie is not None:
-        ret['inhoudsindicatie'] = _para_text( inhoudsindicatie )
+        ret['inhoudsindicatie'] = re.sub(  '[\n]{2,}','\n\n',   '\n'.join( _para_text( inhoudsindicatie ) )  )
 
     conclusie = tree.find('conclusie')
     if conclusie is not None:
-        ret['conclusie'] = _para_text( conclusie )
+        ret['conclusie'] = re.sub(  '[\n]{2,}','\n\n',   '\n'.join( _para_text( conclusie ) )  )
+        #_, t = _para_text( uitspraak )
+        #ret['conclusie'] = ' '.join(t)
 
     uitspraak = tree.find('uitspraak')
     if uitspraak is not None:
-        ret['uitspraak'] = _para_text( uitspraak )
+        ret['uitspraak'] = re.sub(  '[\n]{2,}','\n\n',   '\n'.join( _para_text( uitspraak ) )  )
+        #_, t = _para_text( uitspraak )
+        #ret['uitspraak'] = ' '.join(t)
 
     return ret
 
@@ -199,7 +279,7 @@ nietnederlandseuitspraken_url = urllib.parse.urljoin(base_url, "/Waardelijst/Nie
 
 
 def parse_instanties():
-    ' returns a list of flat dicts, with keys   Naam, Afkorting, Type, BeginDate, Identifier '
+    ' Parse that fairly fixed list - returns a list of flat dicts, with keys   Naam, Afkorting, Type, BeginDate, Identifier '
     instanties_bytestring = wetsuite.helpers.net.download( instanties_url )
     tree  = wetsuite.helpers.etree.fromstring( instanties_bytestring )
     ret = []
@@ -210,7 +290,7 @@ def parse_instanties():
 
 
 def parse_instanties_buitenlands():
-    ' returns a ist of flat dicts, with keys   Naam, Identifier, Afkorting, Type, BeginDate '
+    ' Parse that fairly fixed list -returns a ist of flat dicts, with keys   Naam, Identifier, Afkorting, Type, BeginDate '
     instanties_buitenlands_bytestring = wetsuite.helpers.net.download( instanties_buitenlands_url )
     tree  = wetsuite.helpers.etree.fromstring( instanties_buitenlands_bytestring )
     ret = []
@@ -221,7 +301,7 @@ def parse_instanties_buitenlands():
 
 
 def parse_proceduresoorten():
-    ' returns a list of flat dicts, with keys   Naam, Identifier '
+    ' Parse that fairly fixed list -returns a list of flat dicts, with keys   Naam, Identifier '
     proceduresoorten_bytestring = wetsuite.helpers.net.download( proceduresoorten_url )
     tree  = wetsuite.helpers.etree.fromstring( proceduresoorten_bytestring )
     ret = []
@@ -232,7 +312,7 @@ def parse_proceduresoorten():
 
 
 def parse_rechtsgebieden():
-    ''' The rechtsgebieden document seems to be a depth-2 tree.
+    ''' Parse that fairly fixed list - which seems to be a depth-2 tree.
      
         Returns a dict from identifiers to a list of names, which will e.g. contain 
             'http://psi.rechtspraak.nl/rechtsgebied#bestuursrecht':                   ['Bestuursrecht']
@@ -263,6 +343,7 @@ def parse_rechtsgebieden():
 
 
 def parse_nietnederlandseuitspraken():
+    ''' Parse that fairly fixed list '''
     nietnederlandseuitspraken_bytestring = wetsuite.helpers.net.download( nietnederlandseuitspraken_url )
     tree  = wetsuite.helpers.etree.fromstring( nietnederlandseuitspraken_bytestring )
     ret = []
