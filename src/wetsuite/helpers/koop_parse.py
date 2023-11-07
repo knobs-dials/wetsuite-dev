@@ -882,7 +882,9 @@ def alineas_with_selective_path(tree, start_at_path=None, alinea_elemname='al'):
         Whenever we hit an <al>, we emit a dict that details all the interesting elements between body and this <al>
         This is intended as the lower-level half of potential cleanup, grouping, etc.
 
-        Returns a list of dicts, one for each <al>. Such a dict looks like:
+        Returns a list of dicts, one for each <al>.
+        
+        Each such dict should look like:
         {
             'parts': [   {'what': 'hoofdstuk',  'hoofdstuklabel': 'Hoofdstuk', 'hoofdstuknr': '1', 'hoofdstuktitel': 'Algemene bepalingen',},
                          {'what': 'artikel',    'artikellabel': 'Artikel',     'artikelnr': '1:1', 'artikeltitel': 'Begripsomschrijvingen',}  ],
@@ -897,14 +899,15 @@ def alineas_with_selective_path(tree, start_at_path=None, alinea_elemname='al'):
             'text-flat': 'In deze verordening wordt verstaan dan wel mede verstaan onder:'
         }
         Where:
-        - 'text-flat' is plain text, with any markup elements flattened out 
-        - 'path' is the xpath of the item we're describing, in case you want to quickly find this element in etree form
         - 'parts' details each structural element (boek, hoofdstuk, afdeling paragraaf, artikel, lid)
-           the ...label keys seem entirely redundant, but there are documents that abuse these, which you may want to know.
+             that encompasses this fragment
+             the ...label keys are largely entirely redundant, but there are documents that abuse these, which you may want to know.
         - 'merged' is the part dicts, without the 'what' key, update()d into one dict.
-           In simpler documents, e.g. where you just haev artikel and lid, this makes for an easier way to filter out the part you want.
-           In complex documents, this may (for a smallish amount of cases) be incorrect because when you e.g. have an afdeling nested in an afdeling, values from one overwrite the other.
-        - currently NONE of the keys in parts/merged are settled on yet. 
+             In simpler documents, e.g. where you just haev artikel and lid, this makes for an easier way to filter out the part you want.
+             In complex documents, this may (for a smallish amount of cases) be incorrect because when you e.g. have an afdeling nested in an afdeling, values from one overwrite the other.
+        - 'path' is the xpath of the item we're describing, in case you want to find this element in XML / etree form
+        - 'text-flat' is plain text, with any markup elements flattened out 
+        - WARNING: currently NONE of these keys in parts/merged are settled on yet, things may change.
     '''
     import warnings
     warnings.warn('The behaviour of alineas_with_selective_path() is not fully decided, and may still change')
@@ -1014,15 +1017,17 @@ def merge_alinea_data( alinea_dicts, if_same={
     'uitspraak.info':None,
     'section':'nr',
     } ):
-    ''' If you want relatively flat text, but want it grouped by logical units within a document,
-        this function will help be what you want.
+    ''' Takes the output of alineas_with_selective_path()
+        puts text fragments together when their specified ['parts'] values are the same.
 
-        Takes output from alineas_with_selective_path(), 
-        merges text it if specified ['parts'] values values in the parts are the same - 
-        ...currently aiming to defaulting to artikel (number) and lid (number) 
-           i.e. merging things within a lid (e.g. flattening lists)
+        In other words, this lets you control just how flat to make the text, e.g. 
+        - flatten all text within a lid (e.g. flattening lists), 
+        - smush all lid text within an article together, etc.
+        - mostly flatten out the text, but still group it by hoofdstuk if those are present
+        ...etc.
 
-        TODO: return a meta dict for each such grouped text (instead of the raw key)
+        CONSIDER:
+        - return a meta dict for each such grouped text (instead of the raw key)
     '''
     from collections import OrderedDict
 
@@ -1066,11 +1071,13 @@ def merge_alinea_data( alinea_dicts, if_same={
 
 
 def iter_chunks_xml(xml):
-    """
-    Sloppy initial implementation; merges alineas_with_selective_path and merge_alinea_data while attempting to handle tables.
-    Currently geared specifically to CVDR xml.
-    """
+    """ The combination of  alineas_with_selective_path()  and  merge_alinea_data()  
 
+        Notes:
+        - Sloppy initial implementation
+        - attempts to handle tables
+        - Currently geared specifically to CVDR xml
+    """
     tree = wetsuite.helpers.etree.fromstring(xml)
     tree_stripped = wetsuite.helpers.etree.strip_namespace(tree)
 
@@ -1086,11 +1093,12 @@ def iter_chunks_xml(xml):
         table.getparent().remove(table)
 
     alinea_dicts = alineas_with_selective_path(tree_stripped, start_at_path='body/regeling/regeling-tekst')
-    merged = merge_alinea_data(alinea_dicts, if_same={'hoofdstuk':'hoofdstuknr',
-    'afdeling':'afdelingnr',
-    'paragraaf':'paragraafnr',
-    'sub-paragraaf':'subparagraafnr',
-    'artikel':'artikelnr',})
+    merged = merge_alinea_data(alinea_dicts, if_same={  'hoofdstuk':'hoofdstuknr',
+                                                        'afdeling':'afdelingnr',
+                                                        'paragraaf':'paragraafnr',
+                                                        'sub-paragraaf':'subparagraafnr',
+                                                        'artikel':'artikelnr',
+                                                    })
 
     for n, (label, content) in enumerate(merged):
         text = '\n'.join(content)
@@ -1103,3 +1111,4 @@ def iter_chunks_xml(xml):
                    'text': text,
                    'from_table': False,
                    }
+            
