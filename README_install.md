@@ -1,11 +1,12 @@
 
 ## Install and use
 
-Requirements: python3, and a bunch of libraries that will be included via setup.py
+Requirements: python3, and a bunch of libraries that  _should_ all be included via setup.py
 
 
 ### Quick experiments
-The easiest way to experiment, without wotting about installation, is probably notebooks on google colab - open an interesting example [from the `examples` directory](../../examples) and click on `Open in colab` - it will install the latest code from this github repository.
+The easiest way to experiment, without installation, is probably notebooks on google colab - go to the [from the `notebook/into` directory](notebooks/intro),
+open one that interests you, and click the `Open in colab` that it starts with - this will open that notebook in colabl, and there should be a cell that install the latest wetsuite from this repository.
 
 
 ### Local install
@@ -24,7 +25,7 @@ though if you like to work from notebooks, this is more complex to set up.
 TODO: write more text until this becomes fairly obvious and copy-pasteable.
 
 
-#### spacy and GPU
+### spacy and GPU
 Various example code defaults to the CPU variant of spacy so that it functions everywhere.
 
 If you have a GPU then it is eventually worth using it.

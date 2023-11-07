@@ -26,6 +26,7 @@ Plans and extras
 
 
 # Repo
+
 This repository is split into:
 - [examples](notebooks/) - python notebooks that demonstrate the use of varied package tools,  datasets,  and related things
   - ...things marked 'extras' are not core functionality, there more for showing our work and potentially useful to other programemrs (and includes some demos of cod e in  [extras/ in src](src/wetsuite/extras/))
