@@ -63,7 +63,7 @@ def fetch_index():
             'bwb-mostrecent-xml':{
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/bwb_latestonly_xml.db.xz',
                                                 'version':'preliminary',
-                                      'short_description':'The latest revision from each BWB-id',
+                                      'short_description':'Raw XML for the latest revision from each BWB-id',
                                           'download_size':-1,
                                               'real_size':-1,
                                                    'type':'application/json',
@@ -71,7 +71,7 @@ def fetch_index():
             'bwb-mostrecent-meta':{
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/bwb_latestonly_meta.db.xz',
                                                 'version':'preliminary',
-                                      'short_description':'The latest revision from each BWB-id',
+                                      'short_description':'Metadata for the latest revision from each BWB-id',
                                           'download_size':-1,
                                               'real_size':-1,
                                                    'type':'application/json',
@@ -79,7 +79,7 @@ def fetch_index():
             'bwb-mostrecent-text':{
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/bwb_latestonly_text.db.xz',
                                                 'version':'preliminary',
-                                      'short_description':'The latest revision from each BWB-id',
+                                      'short_description':'Plain text for the latest revision from each BWB-id',
                                           'download_size':-1,
                                               'real_size':-1,
                                                    'type':'application/json',
@@ -89,7 +89,7 @@ def fetch_index():
             'cvdr-mostrecent-xml':{
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/cvdr_latestonly_xml.db.xz',
                                                 'version':'preliminary',
-                                      'short_description':'The latest expression from each CVDR work',
+                                      'short_description':'Raw XML for the latest expression from each CVDR work',
                                           'download_size':603843736,
                                               'real_size':5586030592,
                                                    'type':'application/json',
@@ -97,7 +97,7 @@ def fetch_index():
             'cvdr-mostrecent-meta':{
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/cvdr_latestonly_meta.db.xz',
                                                 'version':'preliminary',
-                                      'short_description':'The latest expression from each CVDR work',
+                                      'short_description':'Metadata for the latest expression from each CVDR work',
                                           'download_size':603843736,  
                                               'real_size':5586030592,
                                                    'type':'application/json',
@@ -105,9 +105,19 @@ def fetch_index():
             'cvdr-mostrecent-text':{
                                                     'url':'https://wetsuite.knobs-dials.com/datasets/cvdr_latestonly_text.db.xz',
                                                 'version':'preliminary',
-                                      'short_description':'The latest expression from each CVDR work',
+                                      'short_description':'Text contents of the latest expression from each CVDR work',
                                           'download_size':603843736,  
                                               'real_size':5586030592,
+                                                   'type':'application/json',
+            },
+
+
+            'rechtspraaknl-struc':{
+                                                    'url':'https://wetsuite.knobs-dials.com/datasets/rechtspraaknl_extracted.db.xz',
+                                                'version':'preliminary',
+                                      'short_description':'Metadata and plain text for each uitspraak and conclusie that actually contains text',
+                                          'download_size':-1,  
+                                              'real_size':-1,
                                                    'type':'application/json',
             },
 
