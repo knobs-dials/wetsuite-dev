@@ -114,7 +114,7 @@ def _para_text(treenode):
             continue
 
         if ch.tag in ('para', 'title', 'bridgehead', 'nr',
-                      'footnote'):
+                      'footnote', 'blockquote'):
             if len( ch.getchildren() )>0:
                 # HACK: just assume it's flattenable 
                 ret.extend( wetsuite.helpers.etree.all_text_fragments( ch ) )
