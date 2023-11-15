@@ -20,11 +20,6 @@ Plans and extras
 - a better trained Named Entity Recognition for more 
 
 
-# A set of minimal examples
-
-[some minimal examples](notebooks/intro/some_minimal_examples.ipynb)
-
-
 # Repo
 
 This repository is split into:
@@ -36,19 +31,31 @@ This repository is split into:
 
 
 
+# A set of minimal examples
+
+[some minimal examples](notebooks/intro/some_minimal_examples.ipynb)
+
 
 # More detailed examples as notebooks
 
-[notebooks/examples](notebooks/examples) has python notebooks that lets us demonstrate code, with annotation, and some easier visualisation.  
+[notebooks/](notebooks/) has python notebooks that lets us demonstrate code, with annotation, and some easier visualisation.  
 
-They should also ease you working on a copy such notebooks to ease some interactive experimentation -- When you view the notebooks (e.g. here on github) and click the "Open in Colab" link, you will get a copy running in [google colab](https://colab.research.google.com/), which gives you a temporary sandbox in which you can freely play, useful for experimentation and demonstrations without requiring any setup in your own infrastructure - but note, also without long term storage. 
+* [notebooks/intro](notebooks/intro) should be a gentler introduction, including demonstrations of how to use datasets
 
-Currently these notebooks focus on some specific wetsuite functionality, datasets, and/or explaining some backing techniques.
+* [notebooks/intermediate](notebooks/intermediate) dives a little deeper, e.g. explaining some of the tools to get things done with code on your own
+
+* [notebooks/extras](notebooks/extras) are experiments, and some cases of showing our work (e.g. some polishing  tuning necessary to create datasets), but not centrally important
+
+
+Notebooks are easily copied, so that you can do some interactive experimentation without having to worry you're editing our code.
+
+And, if you put a copy on [google colab](https://colab.research.google.com/) (particularly the intro notebooks have a "Open in Colab" link to ease this),
+you don't even need to install anything on one of your own computers before you can freely play with these.
 
 
 Once you care to use this as a library in more serious projects, consider installing the library onto your own infrastructure.
 
-
+<!--
 - The `dataset_` notebooks are provided for the datasets we provide, usually brief looks at what they even contain, and what the step 2 might be if your step 1 is `wetsuite.datasets.load()`
 
 - The `methods_` notebooks are what about you could do with your data once you have it
@@ -64,7 +71,7 @@ Once you care to use this as a library in more serious projects, consider instal
   - how to extact data from well-structured web pages
   - how to apply OCR
   - Some are actually all the code that generated a dataset.
-
+-->
 
 
 
