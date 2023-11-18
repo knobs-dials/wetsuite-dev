@@ -12,9 +12,9 @@
 
 #try:
 import lxml.etree
-from lxml.etree import ElementTree,  fromstring, tostring,   register_namespace, Element, _Comment, _ProcessingInstruction 
+from lxml.etree import ElementTree,  fromstring, tostring,   register_namespace, Element, _Comment, _ProcessingInstruction
 #except  ImportError:
-#from xml.etree import ElementTree 
+#from xml.etree import ElementTree
 #from xml.etree.ElementTree import fromstring, tostring,   register_namespace, Element, _Comment, _ProcessingInstruction
 
 
@@ -147,7 +147,7 @@ def kvelements_to_dict(under, strip_text=True, ignore_tagnames=()):
     '''
     ret = {}
     for ch in under:
-        if isinstance(ch, _Comment) or isinstance(ch, _ProcessingInstruction): 
+        if isinstance(ch, _Comment) or isinstance(ch, _ProcessingInstruction):
             continue
         if ch.tag in ignore_tagnames:
             continue
@@ -195,23 +195,23 @@ def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_ta
     '''
     ret = []
     for elem in under.iter(): # walks the subtree
-        if isinstance(elem, _Comment) or isinstance(elem, _ProcessingInstruction): 
+        if isinstance(elem, _Comment) or isinstance(elem, _ProcessingInstruction):
             continue
         #print("tag %r in ignore_tags (%r): %s"%(elem.tag, ignore_tags, elem.tag in ignore_tags))
-        if elem.text != None:
+        if elem.text is not None:
             if elem.tag not in ignore_tags: # only ignore contents of ignored tags; tail is considered outside
                 etss = elem.text.strip(strip)
                 if ignore_empty and len(etss)==0:
                     pass
                 else:
                     ret.append( etss )
-        if elem.tail != None:
+        if elem.tail is not None:
             etss = elem.tail.strip(strip)
             if ignore_empty and len(etss)==0:
                 pass
             else:
                 ret.append( etss )
-        if stop_at is not None  and  elem.tag in stop_at: 
+        if stop_at is not None  and  elem.tag in stop_at:
             break
 
     if join is not None:
@@ -241,7 +241,7 @@ def strip_namespace(tree, remove_from_attr=True):
             import xml.etree
             if isinstance(tree, xml.etree.ElementTree.Element):
                 tree = lxml.etree.fromstring( xml.etree.ElementTree.tostring( tree ) )  # copy it the dumb way - could possibly be done faster?
-            # implied else: hope for the best                
+            # implied else: hope for the best  
         except ImportError as ie:
             pass # no fix for you, then.
         _strip_namespace_inplace(tree, remove_from_attr=remove_from_attr)
@@ -304,13 +304,13 @@ def _indent_inplace(elem, level=0, whitespacestrip=True):
     ''' Alters the text nodes so that the tostring()ed version will look nice and indented when printed as plain text.
     '''
     i = "\n" + level*"  "
- 
+
     if whitespacestrip:
         if elem.text:
             elem.text=elem.text.strip()
         if elem.tail:
             elem.tail=elem.tail.strip()
- 
+
     if len(elem):
         if not elem.text or not elem.text.strip():
             elem.text = i + "  "
@@ -368,7 +368,6 @@ def node_walk(under, max_depth=None):  # Based on https://stackoverflow.com/ques
             for child in reversed( element ):
                 if max_depth is None or (max_depth is not None and len(path_to_element) < max_depth):
                     element_stack.append( child )
-                
 
 
 def path_count(under, max_depth=None):
@@ -383,14 +382,14 @@ def path_count(under, max_depth=None):
     '''
     count = {}
     for node_path, n in node_walk( under, max_depth=max_depth ):
-        if isinstance(n, _Comment) or isinstance(n, _ProcessingInstruction): 
+        if isinstance(n, _Comment) or isinstance(n, _ProcessingInstruction):
             continue # ignore things that won't have a .tag
         path = "/".join([n.tag  for n in node_path] + [n.tag] )  # includes `under`` element, which is a little redundant, but more consistent
         if path not in count:
             count[ path ] = 1
         else:
             count[ path ] += 1
-    return count    
+    return count
 
 
 
@@ -414,5 +413,5 @@ def debug_pretty(tree, reindent=True, strip_namespaces=True, encoding='unicode')
 
     if reindent:
         tree = indent( tree )
-        
+
     return tostring( tree, encoding=encoding )
