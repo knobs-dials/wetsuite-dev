@@ -10,7 +10,7 @@
     - have a fromstring() as a thin wrapper but with strip_namespace in there? (saves a lines but might be a confusing API change)
 '''
 
-#try: 
+#try:
 import lxml.etree
 from lxml.etree import ElementTree,  fromstring, tostring,   register_namespace, Element, _Comment, _ProcessingInstruction 
 #except  ImportError:
@@ -19,7 +19,7 @@ from lxml.etree import ElementTree,  fromstring, tostring,   register_namespace,
 
 
 
-some_ns_prefixes = { # CONSIDER: renaming to something like _some_ns_prefixes_presetation_only 
+some_ns_prefixes = { # CONSIDER: renaming to something like _some_ns_prefixes_presetation_only
     # Web and data
     'http://www.w3.org/2000/xmlns/':'xmlns',
     'http://www.w3.org/2001/XMLSchema':'xsd',
@@ -89,7 +89,6 @@ some_ns_prefixes = { # CONSIDER: renaming to something like _some_ns_prefixes_pr
     'http://standaarden.overheid.nl/buza/terms/':'overheid-buza',
     'http://standaarden.overheid.nl/oep/meta/':'overheid-oep', 
     'http://standaarden.overheid.nl/op/terms/':'overheid-op', 
-    'http://standaarden.overheid.nl/vergunningen/terms/':'overheid-vg',
     'http://standaarden.overheid.nl/product/terms/':'overheid-product',
     'http://standaarden.overheid.nl/cvdr/terms/':'overheid-rg', # decentrale regelgeving
     'http://standaarden.overheid.nl/vac/terms/':'overheid-vac', # ?vocabularies?
@@ -99,7 +98,6 @@ some_ns_prefixes = { # CONSIDER: renaming to something like _some_ns_prefixes_pr
 
     'http://standaarden.overheid.nl/dcatnl/terms/':'dcatnl',
     'http://publications.europa.eu/resource/authority/file-type/':'file-type',
-    'http://standaarden.overheid.nl/inspectieloket/terms/':'inspectieloket',
     'http://standaarden-acc.overheid.nl/owms/oquery/':'oquery',
 
     'https://identifier.overheid.nl/tooi/id/ministerie/':'ministerie',
@@ -129,7 +127,7 @@ some_ns_prefixes = { # CONSIDER: renaming to something like _some_ns_prefixes_pr
 #   | sort | uniq -c | sort -rn
 
 
-def kvelements_to_dict(under, strip_text=True, ignore_tagnames=[]):
+def kvelements_to_dict(under, strip_text=True, ignore_tagnames=()):
     ''' Where people use elements for single text values, it's convenient to get them as a dict.
         
         Given an etree element containing a series of such values,
@@ -161,7 +159,7 @@ def kvelements_to_dict(under, strip_text=True, ignore_tagnames=[]):
     return ret
 
 
-def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_tags=[], join:str=None, stop_at=None): # , add_spaces=['extref',]
+def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_tags=(), join:str=None, stop_at=None): # , add_spaces=['extref',]
     ''' Returns all fragments of text contained in a subtree, as a list of strings.
 
         For example,  all_text_fragments( fromstring('<a>foo<b>bar</b></a>') ) == ['foo', 'bar']
