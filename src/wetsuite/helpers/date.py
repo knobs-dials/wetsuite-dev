@@ -1,7 +1,3 @@
-import datetime, re
-
-import dateutil.parser
-
 ''' While bulk fetching, we frequently need code like "search for a range of days"
 
     Note that this module is focused only on days, not on precise times. 
@@ -10,6 +6,9 @@ import dateutil.parser
     CONSIDER: making everything generators, for large ranges 
 '''
 
+import datetime, re
+
+import dateutil.parser
 
 class DutchParserInfo(dateutil.parser.parserinfo):
     JUMP = [" ", ".", ",", ";", "-", "/", "'", "op", "en",  "m", "t", "van", 
@@ -35,7 +34,6 @@ class DutchParserInfo(dateutil.parser.parserinfo):
         ("s", "seconde", "secondes")
     ]
 
-    
 
 def parse(text, prefer_none_over_exception=True):
     ''' Mostly just calls dateutil.parser.parse(),  a library that deals with more varied date formats
@@ -71,7 +69,7 @@ _re_isolike_date  = re.compile(r'\b[12][0-9][0-9][0-9]-[0-9]{1,2}-[0-9]{1,2}\b')
 _re_dutch_date_1  = re.compile(r'\b[0-9]{1,2} (%s),? [0-9]{2,4}\b'%_maand_res, re.I)
 _re_dutch_date_2  = re.compile(r'\b(%s) [0-9]{1,2},? [0-9]{2,4}\b'%_maand_res, re.I) # this is more an english-style thing
 
-def find_dates_in_text(text:str, try_parsing=True):
+def find_dates_in_text(text:str):
     ''' Tries to fish out date-like strings from free-form text.  
 
         Currently looks only for three specific patterns (1980-01-01, 1 jan 1980, jan 1 1980, the latter two in both Dutch and English),
@@ -132,7 +130,6 @@ def date_range( frm, to ):
     elif isinstance( frm, datetime.date):
         pass
     elif isinstance( frm, str ):
-        import dateutil.parser 
         frm = dateutil.parser.parse( frm ).date()
     else:
         raise ValueError("Do not understand date of type %s (%s)"%(type(frm), frm))
@@ -142,7 +139,6 @@ def date_range( frm, to ):
     elif isinstance( to, datetime.date):
         pass
     elif isinstance( to, str ):
-        import dateutil.parser 
         to = dateutil.parser.parse( to ).date()
     else:
         raise ValueError("Do not understand date of type %s (%s)"%(type(to), to))
