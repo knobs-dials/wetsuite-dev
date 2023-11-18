@@ -216,20 +216,20 @@ class HostedSearch(_SearchBase):
 #         dcterms.identifier = BWBR0045754
 
 
-class CVDRLiveSearch:
-    " Search CVDR via KOOP's SRU interface "
-    def __init__(self):
-        self.sru = wetsuite.datacollect.koop_repositories.CVDR()
+# class CVDRLiveSearch:
+#     " Search CVDR via KOOP's SRU interface "
+#     def __init__(self):
+#         self.sru = wetsuite.datacollect.koop_repositories.CVDR()
 
 
-    def search(self, q):
-        sru_bwb.search_retrieve_many( 'dcterms.identifier = BWBR0045754', up_to=5 )
+#     def search(self, q):
+#         sru_bwb.search_retrieve_many( 'dcterms.identifier = BWBR0045754', up_to=5 )
 
-        query = []
-        q = kwargs.get('q')
-        if q is not None:
-            query.append()
-        identifier = identifier.get('q')
+#         query = []
+#         q = kwargs.get('q')
+#         if q is not None:
+#             query.append()
+#         identifier = identifier.get('q')
 
 
 #class RechtspraakLiveSearch:
