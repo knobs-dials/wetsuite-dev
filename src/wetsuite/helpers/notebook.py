@@ -15,19 +15,19 @@ def detect_env():
     ret = {}
 
     if 'pytest' in sys.modules:  # pytest seems to mock IPython, which confuses the below
-        ret['ipython']     = False 
+        ret['ipython']     = False
         ret['interactive'] = False
         ret['notebook']    = False
         return ret
-    
+
     try: # probably slightly less nasty than by-classname below
         import google.colab
-        ret['ipython']     = True 
+        ret['ipython']     = True
         ret['interactive'] = True
         ret['notebook']    = True
-        ret['colab']       = True 
+        ret['colab']       = True
         return ret
-    except:
+    except: # certainly ImportError, but maybe also more?  Nothing else that can error out here so keep like this for now?
         pass
 
     try:
@@ -44,9 +44,8 @@ def detect_env():
             ret['interactive'] = True
             ret['notebook']    = False
         else:
-            pass
             raise ValueError("we probably want to understand %r"%ipyshell)
-        
+
     except ImportError: # no IPython, no notebook, but possibly interactive
         ret['ipython']     = False
         ret['notebook']     = False
@@ -59,26 +58,27 @@ def detect_env():
 
 
 def is_notebook():
-    " returns whether we're running in a notebook (see detect_env) "
+    ' returns whether we are running in a notebook (see detect_env) '
     return detect_env()['notebook']
 
 
 def is_ipython():
-    " returns whether IPython is available (see detect_env)  -  note that depending on what you're testing, you might want to combine this with is_interactive "
+    ' returns whether IPython is available (see detect_env)  -  note that depending on what you are testing, you might want to combine this with is_interactive '
     return detect_env()['ipython']
 
 
 def is_interactive():
-    " returns whether we're using an interactive thing (see detect_env) "
+    ' returns whether we are using an interactive thing (see detect_env) '
     return detect_env()['interactive']
 
 
 def is_ipython_interactive():
+    ' return whether this seems to be interactive (in the sense of REPL-ish) '
     env = detect_env()
     return env['ipython'] and detect_env()['interactive']
 
 
-def progress_bar(max, description='', display=True): # , **kwargs
+def progress_bar(maxval, description='', display=True): # , **kwargs
     ''' Wrapper that prefers tqdm, falls back to ipywidgets's IntProgress progress bar.
         
         You can set (and get) .value and .description and they should be shown,
@@ -122,11 +122,11 @@ def progress_bar(max, description='', display=True): # , **kwargs
 
             description = property(get_description, set_description)
 
-        return TqdmWrap(max, description)
+        return TqdmWrap(maxval, description)
     
     except ImportError:
         import IPython.display, ipywidgets 
-        prog = ipywidgets.IntProgress(max=max, description=description)
+        prog = ipywidgets.IntProgress(max=maxval, description=description)
         if display:
             IPython.display.display(prog)
         return prog
@@ -168,7 +168,7 @@ class etree_visualize_selection(object):
 
 
     def _repr_html_(self):
-        from wetsuite.helpers.escape import attr, nodetext
+        from wetsuite.helpers.escape import attr#, nodetext
         from lxml.etree import _Comment, _ProcessingInstruction 
         ret = ['<pre>']
 
