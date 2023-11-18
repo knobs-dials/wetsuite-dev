@@ -59,36 +59,36 @@ def find_abbrevs(text: str):
     '''
     matches = []
 
-    toks       = simple_tokenize(text)
-    toks_lower = list(tok.lower() for tok in toks)
+    toks       = simple_tokenize( text )
+    toks_lower = list( tok.lower()  for tok in toks )
 
-    ### Patterns where the abbreviation is bracketed 
+    ### Patterns where the abbreviation is bracketed
     # look for bracketed letters, check against context
-    for tok_offset, tok in enumerate(toks): # 
+    for tok_offset, tok in enumerate(toks):
         match = re.match(r'[(]([A-Za-z][.]?){2,}[)]', tok) # does this look like a bracketed abbreviation?
-        if match:  # (we over-accept some things, because we'll be checking them against contxt anyway.   We could probably require that more than one capital should be involved)
+        if match:   # (we over-accept some things, because we'll be checking them against contxt anyway.   We could probably require that more than one capital should be involved)
             abbrev = match.group().strip('()')
             letters_lower = abbrev.replace('.','').lower()
 
             match_before = []
             for check_offset, l in enumerate(letters_lower):
-                check_at_pos = tok_offset-len(letters_lower)+check_offset
+                check_at_pos = tok_offset - len(letters_lower) + check_offset
                 if check_at_pos < 0:
                     break
-                if toks_lower[check_at_pos].startswith(letters_lower[check_offset]):
+                if toks_lower[check_at_pos].startswith( letters_lower[check_offset] ):
                     match_before.append( toks[check_at_pos] )
                 else:
                     match_before = []
                     break
             if len(match_before) == len(letters_lower):
-                matches.append( (abbrev,match_before)  )
+                matches.append( (abbrev,match_before) )
 
             match_after = []
-            for check_offset, l in enumerate(letters_lower):
+            for check_offset, l in enumerate( letters_lower ):
                 check_at_pos = tok_offset+1+check_offset
                 if check_at_pos >= len(toks):
                     break
-                if toks_lower[check_at_pos].startswith(letters_lower[check_offset]):
+                if toks_lower[check_at_pos].startswith( letters_lower[check_offset] ):
                     match_after.append( toks[check_at_pos] )
                 else:
                     match_after = []
@@ -98,7 +98,7 @@ def find_abbrevs(text: str):
                 matches.append( (abbrev,match_after)  )
 
     ### Patterns where the explanation is bracketed
-    # Look for the expanded form based on the brackets, make that into an abbreviation 
+    # Look for the expanded form based on the brackets, make that into an abbreviation
     # this is a little more awkward given the above tokenization.  We could consider putting brackets into separate tokens.  TODO: check how spacy tokenizes brackets
     for start_offset, tok in enumerate(toks):
         expansion = []
@@ -112,12 +112,12 @@ def find_abbrevs(text: str):
 
         if len(expansion) > 1: # really >0, but >1 helps at end of the list
             expansion = list( w.strip('()')  for w in expansion if len(w.lstrip('()'))>0) # our tokenization leaves brackets on words (rather than being seprate tokens)
-            expected_abbrev_noperiods = ''.join(w[0]       for w   in expansion)
-            expected_abbrev_periods   = ''.join('%s.'%let  for let in expected_abbrev_noperiods)
+            expected_abbrev_noperiods = ''.join(w[0]        for w   in expansion)
+            expected_abbrev_periods   = ''.join('%s.'%let   for let in expected_abbrev_noperiods)
             if start_offset >= 1        and  toks_lower[start_offset-1] in (expected_abbrev_noperiods.lower(), expected_abbrev_periods.lower()):
                 matches.append( (toks[start_offset-1], expansion ))   # (add the actual abbreviated form used)
             if end_offset < len(toks)-1 and  toks_lower[end_offset+1] in (expected_abbrev_noperiods.lower(), expected_abbrev_periods.lower()):
-                matches.append( (toks[end_offset+1], expansion )) 
+                matches.append( (toks[end_offset+1], expansion ))
 
     return matches
 
@@ -139,9 +139,9 @@ def count_results(l, remove_dots=True):
         CONSIDER: 
         - case insensitive mode where it counts lowercase, but report whatever the most common capitalisation is
     '''
-    ret = {}  
+    ret = {}
     for doc_result in l:
-        for ab, words in doc_result: 
+        for ab, words in doc_result:
             words = tuple(words)
             if remove_dots:
                 ab = ab.replace('.','')
@@ -159,8 +159,7 @@ def count_results(l, remove_dots=True):
 
     return counted
 
-    
+
 
 if __name__ == '__main__':
     pprint.pprint( find_abbrevs( find_abbrevs.__doc__ ) )
-
