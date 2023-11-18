@@ -217,8 +217,7 @@ def tty_size(debug=False):                   # pragma: no cover     because it's
         res  = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
         if res:
             import struct
-            (bufx, bufy, curx, cury, wattr,
-             left, top, right, bottom, maxx, maxy) = struct.unpack("hhhhHhhhhhh", csbi.raw)
+            bufx, bufy, curx, cury, wattr, left, top, right, bottom, maxx, maxy = struct.unpack("hhhhHhhhhhh", csbi.raw)
             ret['cols'] = right - left + 1
             ret['rows'] = bottom - top + 1
     except:
@@ -230,8 +229,6 @@ def tty_size(debug=False):                   # pragma: no cover     because it's
     # Last because this won't change on resize (most others will)
     #shutil.get_terminal_size  (py3 only) seems to just do the following
     try:
-        import os
-    
         if 'LINES' in os.environ and 'COLUMNS' in os.environ:
             ret['rows'] = os.environ['LINES']
             ret['cols'] = os.environ['COLUMNS']
@@ -340,9 +337,9 @@ def brightcyan(s, prepend=''):
     return _add_color_if_supported(s,BRIGHTCYAN,prepend=prepend)
 def gray(s, prepend=''):           
     return _add_color_if_supported(s,GREY,prepend=prepend)
-def grey(s, prepend=''):           
+def grey(s, prepend=''):
     return _add_color_if_supported(s,GREY,prepend=prepend)
-def brightgrey(s, prepend=''):     
+def brightgrey(s, prepend=''):
     return _add_color_if_supported(s,BRIGHTGREY,prepend=prepend)
 def brightgray(s, prepend=''):     
     return _add_color_if_supported(s,BRIGHTGRAY,prepend=prepend)
@@ -466,8 +463,8 @@ def closest_from_rgb255(r,g,b, mid=170,full=255, nobright=False):
             continue
         dist = math.sqrt( (r-mr)**2 + (g-mg)**2 + (b-mb)**2 )
         if dist < mindist:
-           mindist = dist
-           min_index = i
+            mindist = dist
+            min_index = i
     return colors[min_index][-1]
            
         
@@ -478,20 +475,18 @@ def _format_segment(s):
         e.g. '  \x1b[33mfork\x1b[0m\x1b[39m'   ->   ['  ', '\x1b[33m', 'fork', '\x1b[0m', '\x1b[39m']
         The numbers are the bytestring length and the print length
     """
-    bslen=len(s)
-    esclen=0
+    bslen, esclen = len(s), 0
     ret=[]
     while True:
-        if len(s)==0: # we're done
+        if len(s) == 0: # we're done
             break
         esc = s.find('\x1b')
-        if esc==-1:   # we're done
+        if esc == -1:   # we're done
             ret.append(s)
             break
         else:
-            if esc>0:
-                instr = s[:esc]
-                ret.append(s[:esc])
+            if esc > 0:
+                ret.append( s[:esc] )
             end = s.find('m',esc+1)
             esclen+=(end-esc+1)
             ret.append( s[esc:end+1] )
@@ -611,7 +606,7 @@ def color_degree(s, v, fromv=0, tov=0, colors=[BRIGHTBLACK, GRAY, WHITE, YELLOW,
     # hacky
     v = float(v)
     tov = float(tov)
-    fromvv = float(fromv)
+    #fromvv = float(fromv)
     vrange = tov-fromv
 
     tov -= 1./(len(colors)-1)
@@ -625,30 +620,30 @@ def color_degree(s, v, fromv=0, tov=0, colors=[BRIGHTBLACK, GRAY, WHITE, YELLOW,
 
 
 def true_colf(s, r,g,b):
-     ' true-color escape from 0..255 r,g,b '
-     r = min(255,max(0, int(r) ))
-     g = min(255,max(0, int(g) ))
-     b = min(255,max(0, int(b) ))
-     RGBCOL = '\x1b[38;2;%s;%s;%sm'%(r,g,b)
-     return _add_color_if_supported(s,RGBCOL)
+    ' true-color escape from 0..255 r,g,b '
+    r = min(255,max(0, int(r) ))
+    g = min(255,max(0, int(g) ))
+    b = min(255,max(0, int(b) ))
+    RGBCOL = '\x1b[38;2;%s;%s;%sm'%(r,g,b)
+    return _add_color_if_supported(s,RGBCOL)
 
 
 def redgreen(s, frac):
-     ' turns a fraction in 0..1 to red..green '
-     r = min(255,max(0, int( (255-(255*frac)) ) ))
-     g = min(255,max(0, int( (255*frac)) ))
-     b = 0
-     RGBCOL = '\x1b[38;2;%s;%s;%sm'%(r,g,b)
-     return _add_color_if_supported(s,RGBCOL)
+    ' turns a fraction in 0..1 to red..green '
+    r = min(255,max(0, int( (255-(255*frac)) ) ))
+    g = min(255,max(0, int( (255*frac)) ))
+    b = 0
+    RGBCOL = '\x1b[38;2;%s;%s;%sm'%(r,g,b)
+    return _add_color_if_supported(s,RGBCOL)
 
 
 def blend(s, frac, rgb1, rgb2):
-     r = int(  min(255,max(0,  255*( (1-frac)*rgb1[0] + frac*rgb2[0] ) ))  )
-     g = int(  min(255,max(0,  255*( (1-frac)*rgb1[1] + frac*rgb2[1] ) ))  )
-     b = int(  min(255,max(0,  255*( (1-frac)*rgb1[2] + frac*rgb2[2] ) ))  )
-     #print(r,g,b)
-     RGBCOL = '\x1b[38;2;%s;%s;%sm'%(r,g,b)
-     return _add_color_if_supported(s,RGBCOL)
+    r = int(  min(255,max(0,  255*( (1-frac)*rgb1[0] + frac*rgb2[0] ) ))  )
+    g = int(  min(255,max(0,  255*( (1-frac)*rgb1[1] + frac*rgb2[1] ) ))  )
+    b = int(  min(255,max(0,  255*( (1-frac)*rgb1[2] + frac*rgb2[2] ) ))  )
+    #print(r,g,b)
+    RGBCOL = '\x1b[38;2;%s;%s;%sm'%(r,g,b)
+    return _add_color_if_supported(s,RGBCOL)
 
 
 def hash_color(s, rgb=False, append=RESET, prepend='', hash_instead=None, on=None):
