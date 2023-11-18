@@ -1,4 +1,4 @@
-''' This is intended to store store collections of data on disk,
+''' This is intended to store store collections of data on disk,'
       relatively unobtrusive to use    (better than e.g. lots of files),
       and with quick random access     (better than e.g. JSONL).
 
@@ -13,7 +13,7 @@
 
     Notes:
     - on the path/name argument:
-        - just a name ( without os.sep, that is, / or \ ) will be resolved to a path where wetsuite keeps various stores
+        - just a name ( without os.sep, that is, / or \\ ) will be resolved to a path where wetsuite keeps various stores
         - an absolute path will be passed through             
         ...but this isn't very portable until you do things like   os.path.join( myproject_data_dir, 'docstore.db')
         - a relative path with os.sep will be passed through  
@@ -124,7 +124,8 @@ class LocalKV:
         ''' Open the path previously set by init.
             This function could probably be merged into init, it was separated mostly with the idea that we could keep it closed when not using it. 
         ''' 
-        #make_tables = (self.path==':memory:')  or  ( not os.path.exists( self.path ) )    # will be creating that file, or are using an in-memory database ?  Also how to combine with read_only?
+        #make_tables = (self.path==':memory:')  or  ( not os.path.exists( self.path ) )    
+        #    will be creating that file, or are using an in-memory database ?  Also how to combine with read_only?
         self.conn = sqlite3.connect( self.path, timeout=timeout )
         # Note: curs.execute is the regular DB-API way,  conn.execute is a shorthand that gets a temporary cursor
         with self.conn:
@@ -434,7 +435,7 @@ class LocalKV:
         all_keys = list( self.keys() )
         chosen_keys = random.sample( all_keys, amount )
         return list( (chosen_key, self.get(chosen_key))  for chosen_key in chosen_keys)
-         
+
 
 
 
@@ -469,7 +470,7 @@ try:
             value = super(MsgpackKV, self).get( key )
             unpacked = msgpack.loads(value)
             return unpacked
-            
+
         def put(self, key:str, value, commit:bool=True):
             " See LocalKV.put().   Unlike that, value is not checked for type, just pickled. Which can fail. "
             packed = msgpack.dumps(value)
@@ -484,15 +485,14 @@ try:
             curs = self.conn.cursor()
             for row in curs.execute('SELECT key, value FROM kv'):
                 yield row[0], msgpack.loads( row[1], strict_map_key=False )
-                
 except ImportError:
     # warning?
     pass
 
 
 # class PickleKV(LocalKV):
-#     ''' Like localKV, but 
-#         - typing fixed at str:bytes 
+#     ''' Like localKV, but
+#         - typing fixed at str:bytes
 #         - put() stores using pickle, get() unpickles
 #         Will be a bit slower, but lets you more transpoarently store e.g. nested python structures, like dicts
 
@@ -503,7 +503,7 @@ except ImportError:
 
 #         Note that this does _not_ change how the meta table works.
 
-#         Currently only intended to be used by datasets, though feel free to 
+#         Currently only intended to be used by datasets, though feel free to
 #     '''
 #     def __init__(self, path, protocol_version=3):
 #         ''' defaults to pickle protocol 3 to support all of py3.x (though not 2)
@@ -517,7 +517,7 @@ except ImportError:
 #         value = super(PickleKV, self).get( key )
 #         unpickled = pickle.loads(value)
 #         return unpickled
-        
+
 #     def put(self, key:str, value):
 #         " See LocalKV.put().   Unlike that, value is not checked for type, just pickled. Which can fail. "
 #         pickled = pickle.dumps(value, protocol=self.protocol_version)
@@ -558,18 +558,18 @@ def cached_fetch(store, url:str, force_refetch:bool=False) -> Tuple[bytes, bool]
     if store.key_type not in (str,None)  or  store.value_type not in (bytes, None):
         raise TypeError('cached_fetch() expects a str:bytes store (or for you to disable checks with None,None),  not a %r:%r'%(store.key_type.__name__, store.value_type.__name__))
     # yes, the following could be a few lines shorter, but this is arguably a little more readable
-    if force_refetch == False:
+    if force_refetch is False:
         try:
             ret = store.get(url)
             #print("CACHED")
             return ret, True
         except KeyError:
-            data = wetsuite.helpers.net.download( url ) 
+            data = wetsuite.helpers.net.download( url )
             #print("FETCHED")
             store.put( url, data )
             return data, False
-    else: # force_refetch == True
-        data = wetsuite.helpers.net.download( url ) 
+    else: # force_refetch is True
+        data = wetsuite.helpers.net.download( url )
         #print("FORCE-FETCHED")
         store.put( url, data )
         return data, False
@@ -650,7 +650,7 @@ def resolve_path( name:str ):
 #     elif os.sep in dbname:
 #         ret = inst( dbname, key_type=key_type, value_type=value_type )
 
-#     else: # bare name, 
+#     else: # bare name,
 #         _docstore_path = store_in_profile(dbname)
 #         ret = inst( _docstore_path, key_type=key_type, value_type=value_type, read_only=read_only )
 #     return ret
@@ -681,7 +681,7 @@ def list_stores( skip_table_check=True, get_num_items=False ):
                     'bytesize':bytesize,
                     'bytesize_readable':wetsuite.helpers.format.kmgtp( bytesize ),
                 }
-                if get_num_items: 
+                if get_num_items:
                     itemdict['num_items'] = len( kv )
                 
                 itemdict['description'] = kv._get_meta('description', True)
