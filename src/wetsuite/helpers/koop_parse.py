@@ -478,7 +478,7 @@ def bwb_searchresult_meta(record): # TODO: rename bwb_meta to this in files
     #recordSchema   = record.find('recordSchema')      # e.g. <recordSchema>http://standaarden.overheid.nl/sru/</recordSchema>
     #recordPacking  = record.find('recordPacking')     # probably <recordPacking>xml</recordPacking>
     recordData     = record.find('recordData')        # the actual record 
-    recordPosition = record.find('recordPosition')    # e.g. <recordPosition>12</recordPosition>
+    #recordPosition = record.find('recordPosition')    # e.g. <recordPosition>12</recordPosition>
     payload = recordData[0]
     #print( etree.ElementTree.tostring( payload, encoding='unicode' ) )
 
@@ -625,14 +625,11 @@ def bwb_merge_usefuls(toestand_usefuls=None, wti_usefuls=None, manifest_usefuls=
             if k not in ('algemene_informatie',):
                 merged[k] = wti_usefuls[k]
 
-    #if manifest_usefuls is not None:
-    #    merged.update( manifest_usefuls )
+    if manifest_usefuls is not None:
+        merged.update( manifest_usefuls )
 
     if toestand_usefuls is not None:
         merged.update( toestand_usefuls )
-
-    merged.update( toestand_usefuls )
-    #merged.update( meta['manifest'] )
 
     return merged
 
@@ -652,6 +649,7 @@ def bwb_toestand_text(tree):
         * generalize to have a parameter ignore_tags=['li.nr', 'meta-data', 'kop', 'tussenkop', 'plaatje', 'adres', 'specificatielijst', 'artikel.toelichting', 'citaat', 'wetcitaat']
     '''
     ret=[]
+    tree = wetsuite.helpers.etree.strip_namespace( tree )
 
     bwb_id = tree.get('bwb-id')    # only used in debug
     wetgeving = tree.find('wetgeving')
