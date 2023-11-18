@@ -6,7 +6,7 @@
     * look at different scoring methods, e.g. NLTK's association.py
 '''
 
-from functools import reduce  
+from functools import reduce
 import operator, re
 from collections import defaultdict
 
@@ -18,7 +18,7 @@ def product(l):
 
 class Collocation:
     ''' A basic collocation calculator class. '''
-    def __init__(self, connectors=[]):
+    def __init__(self, connectors=()):
         ''' connectors takes a list of words that, 
               are removed from the _edge_ of an n-gram (for n>1),
               but are left if they are inside (so for n>=3)
@@ -34,8 +34,8 @@ class Collocation:
             Counts unigram and n-gram from it, for given values of n. 
         """
         self.saw_tokens += len(token_list)
-        for i in range(len(token_list)):
-            self.add_uni( token_list[i] )
+        for i, val in enumerate(token_list):
+            self.add_uni( val )
 
         for gramlen in gramlens:
             for i in range(len(token_list)-(gramlen-1)):
@@ -56,7 +56,7 @@ class Collocation:
         if strtup[-1] in self.connectors:
             #print("IGNORE %r because of connector at pos -1"%(strtup,))
             return
-        self.grams[strtup] += 1
+        self.grams[strtup] += cnt
 
 
     def cleanup_unigrams(self, mincount=2):
@@ -135,11 +135,11 @@ class Collocation:
 
 if __name__ == '__main__':
     ''' when run as a script, it will take arguments it expects to be plain text files.    You probably want moderately large files ''' 
-    import time, sys
+    import sys
 
     def simple_tokenize(s):
         ' simple split into words ' 
-        l = re.split('[\s!@#$%^&*()"\':;/.,?\xab\xbb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a\u2358\u275b\u275c\u275d\u275e\u275f\u2760\u276e\u276f\u2e42\u301d\u301e\u301f\uff02\U0001f676\U0001f677\U0001f678-]+', s)
+        l = re.split(r'[\s!@#$%^&*()"\':;/.,?\xab\xbb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a\u2358\u275b\u275c\u275d\u275e\u275f\u2760\u276e\u276f\u2e42\u301d\u301e\u301f\uff02\U0001f676\U0001f677\U0001f678-]+', s)
         return list(e   for e in l  if len(e)>0)
 
 
