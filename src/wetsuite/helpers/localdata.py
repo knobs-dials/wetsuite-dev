@@ -13,7 +13,7 @@
 
     Notes:
     - on the path/name argument:
-        - just a name (without os.sep, i.e. / or \) will be resolved to a path where wetsuite keeps various stores
+        - just a name ( without os.sep, that is, / or \ ) will be resolved to a path where wetsuite keeps various stores
         - an absolute path will be passed through             
         ...but this isn't very portable until you do things like   os.path.join( myproject_data_dir, 'docstore.db')
         - a relative path with os.sep will be passed through  
@@ -362,6 +362,7 @@ class LocalKV:
     ### Convenience functions, not core functionality
 
     def estimate_waste(self):
+        ' Estimate how many bytes might be cleaned by a .vacuum() '
         return self.conn.execute('SELECT (freelist_count*page_size) as FreeSizeEstimate  FROM pragma_freelist_count, pragma_page_size').fetchone()[0]
 
 
@@ -463,7 +464,8 @@ try:
                 self._put_meta('valtype','msgpack')
 
         def get(self, key:str):
-            " Note that unpickling could fail "
+            " Note that unpickling could fail " 
+            # TODO: clarify the missing missing_as_none
             value = super(MsgpackKV, self).get( key )
             unpacked = msgpack.loads(value)
             return unpacked
@@ -561,7 +563,7 @@ def cached_fetch(store, url:str, force_refetch:bool=False) -> Tuple[bytes, bool]
             ret = store.get(url)
             #print("CACHED")
             return ret, True
-        except KeyError as ke:
+        except KeyError:
             data = wetsuite.helpers.net.download( url ) 
             #print("FETCHED")
             store.put( url, data )
@@ -696,7 +698,7 @@ def is_file_a_store(path, skip_table_check=False):
     '''
     is_sqlite3 = None
     with open(path, 'rb') as f:
-        is_sqlite3 = (f.read(15) == b'SQLite format 3' )
+        is_sqlite3 = (f.read(15) == b'SQLite format 3')
     if not is_sqlite3:
         return False
 
