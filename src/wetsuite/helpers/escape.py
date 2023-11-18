@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-""" Escaping text for different contexts, mostly HTML/XML.
+''' Escaping text for different contexts, mostly HTML/XML.
 
     Should make code more readable (than combinations of cgi.escape(), urllib.quote(), ''.encode() and such)
 
@@ -8,7 +8,7 @@
     ...or use a templating library that does this for you.
 
     uri() and uri_component() are like javascript's encodeURI and encodeURIcomponent.
-"""
+'''
 #import html, re
 import urllib.parse
 
@@ -27,8 +27,8 @@ def nodetext(s, if_none=None):
     if s is None:
         return if_none
 
-    if type(s) is bytes:
-        ret = s.replace(  b"&",  b"&amp;")   
+    if isinstance(s, bytes):
+        ret = s.replace(  b"&",  b"&amp;")
         ret = ret.replace(b"<",  b"&lt;")
         ret = ret.replace(b">",  b"&gt;")
     else:
@@ -38,7 +38,7 @@ def nodetext(s, if_none=None):
     return ret
 
 
-def attr(s): 
+def attr(s):
     ''' Escapes for use in HTML(/XML) node attributes:
         Replaces <, >, &, ', " with entities
 
@@ -65,7 +65,7 @@ def attr(s):
 
         Passes non-ascii through. It is expected that you want to apply that to the document as a whole, or to document writing/appending.
     '''
-    if type(s) is bytes:
+    if isinstance(s, bytes):
         ret = s.replace(  b"&",  b"&amp;")   
         ret = ret.replace(b"<",  b"&lt;")
         ret = ret.replace(b">",  b"&gt;")
@@ -91,7 +91,7 @@ def uri(uri, same_type=True):
         Handles Unicode by by converting it into url-encoded UTF8 bytes (quote() defaults to encoding to UTF8)
     '''
     given_bytes = type(uri) is bytes
-    if type(uri) is str: 
+    if isinstance(uri, str): 
         uri = uri.encode('utf8')
     ret = urllib.parse.quote(uri,b':/;?')
     if same_type and given_bytes:
@@ -110,7 +110,7 @@ def uri_component(uri, same_type=True):
         If given unicode, converting it into url-encoded UTF8 bytes first (quote() defaults to encoding to UTF8)
     '''
     given_bytes = type(uri) is bytes
-    if type(uri) is str: #py3 only
+    if isinstance(uri, str): #py3 only
         uri = uri.encode('utf8')
 
     ret = urllib.parse.quote(uri,b'')
@@ -132,7 +132,7 @@ def uri_dict(d, join='&', astype=str):
 
         (you could also abuse it to avoid an attr()/nodetext() by handing it &amp; but that gets confusing)
     '''
-    if type(join) is bytes:
+    if isinstance(join, bytes):
         join = join.decode('u8') # this function itself works in str, and  
 
     parts=[]
@@ -143,7 +143,7 @@ def uri_dict(d, join='&', astype=str):
             #var = str(var)
         if type(val) is not str: # TODO: rethink: this may make sense for numbers, byte not e.g. bytes objects
             raise ValueError("uri_dict doesn't deal with type %r"%str(type(val)))
-            #val = str(val)      
+            #val = str(val)
         parts.append( '%s=%s'%(uri_component(var),
                                uri_component(val)) )
     if astype is bytes:
