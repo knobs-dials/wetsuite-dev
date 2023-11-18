@@ -12,7 +12,8 @@ import wetsuite.helpers.meta
 
 import wetsuite.helpers.etree
 
-from lxml.etree import _Comment, _ProcessingInstruction, tostring   # CONSIDER: import these via wetsuite.helpers.etree ?
+#from lxml.etree import _Comment, _ProcessingInstruction, tostring   # CONSIDER: import these via wetsuite.helpers.etree ?
+from wetsuite.helpers.etree import _Comment, _ProcessingInstruction, tostring   # CONSIDER: import these via wetsuite.helpers.etree ?
 
 
 
@@ -361,19 +362,19 @@ def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False):
         if len(source_text)==0:
             continue
 
-        if resourceIdentifier.startswith('CVDR://') or 'CVDR' in resourceIdentifier:
+        if resourceIdentifier.startswith('CVDR://')  or  'CVDR' in resourceIdentifier:
             orig = resourceIdentifier
             if resourceIdentifier.startswith('CVDR://'):
                 resourceIdentifier = resourceIdentifier[7:]
             try:
-                parsed = cvdr_parse_identifier(resourceIdentifier)
+                parsed = cvdr_parse_identifier( resourceIdentifier )
                 specref = parsed[1]
                 if specref is None:
                     specref = parsed[0]
                 ret.append( ('CVDR', orig, specref, None, source_text) )
             except ValueError as ve:
                 if debug:
-                    print( 'failed to parse CVDR in %s'%resourceIdentifier, file=sys.stderr)
+                    print( 'failed to parse CVDR in %s (%s)'%(resourceIdentifier, ve), file=sys.stderr )
 
             #print( '%r -> %r'%(orig, parsed ))
 
@@ -391,7 +392,7 @@ def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False):
                 if debug:
                     print( 'BWB://-style   %r  %r'%(bwb, params), file=sys.stderr )
 
-        elif resourceIdentifier.startswith('http://') or resourceIdentifier.startswith('https://'):
+        elif resourceIdentifier.startswith('http://')  or  resourceIdentifier.startswith('https://'):
             # TODO: centralize a 'reference_from_url' function, because there is more than this one style, and we can extract more
 
             # http://wetten.overheid.nl/BWBR0013016
@@ -724,7 +725,7 @@ def bwb_toestand_text(tree):
                     print( wetsuite.helpers.etree.tostring(ch).decode('u8') )
 
             lid_text = (' '.join(text)).rstrip()
-            lid_text = re.sub('\s+',' ', lid_text).strip()
+            lid_text = re.sub(r'[\s]+',' ', lid_text).strip()
             ret.append( lid_text )
 
     return '\n\n'.join(ret)
@@ -865,7 +866,7 @@ def cvdr_versions_for_work( cvdrid:str ) -> list:
         result_expression_id = meta['identifier'][0]['text']
         ret.append( result_expression_id )
     ret = sorted( ret )
-    _versions_cache[cvdrid] = ret        
+    _versions_cache[cvdrid] = ret 
     return ret
 
 
