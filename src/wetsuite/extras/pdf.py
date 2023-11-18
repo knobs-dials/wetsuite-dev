@@ -12,13 +12,10 @@
 
     Render PDF pages as a PIL image.
     Used to feed PDFs that contain scanned images to OCR.
-''' 
-
-import warnings, io
-
+'''
 
 # def text_is_mainly_number(s:str):
-#     ' meant to help ignore serial numbers and such     TODO: move to helpers.string ' 
+#     ' meant to help ignore serial numbers and such     TODO: move to helpers.string '
 #     nonnum = re.sub('[^0-9.]','',s)
 #     print([s,nonnum])
 #     if float(len(nonnum))/len(s) < 0.05:
@@ -69,23 +66,22 @@ def count_pages_with_text( filedata_or_list, char_threshold=200 ):
 
         Mainly intended to detect PDFs that are partly or fully images-of-text.
     """
-    ret = None,None
-    if type(filedata_or_list) is bytes:
+    if isinstance(filedata_or_list, bytes):
         it = page_text(filedata_or_list)
     else:
         it = filedata_or_list
 
     chars_per_page = []
     count_pages = 0
-    count_pages_with_text  = 0
+    count_pages_with_text_count  = 0
 
     for page in it:
         count_pages += 1
         chars_per_page.append( len(page.strip() ))
         if len(page) >= char_threshold:
-            count_pages_with_text += 1 
+            count_pages_with_text_count += 1
 
-    return chars_per_page, count_pages_with_text, count_pages
+    return chars_per_page, count_pages_with_text_count, count_pages
 
 
 def pdf_text_ocr(bytedata: bytes):
@@ -106,12 +102,12 @@ def pdf_text_ocr(bytedata: bytes):
     import wetsuite.extras.ocr
     for page_image in pages_as_images(bytedata):
         fragments = wetsuite.extras.ocr.easyocr( page_image )
-        for bbox, text_fragment, cert in fragments:
+        for bounding_box, text_fragment, certainty in fragments:
             ret.append( text_fragment )
     return ' '.join( ret )
 
 
-def pages_as_images( filedata, dpi=150, antialiasing=True ):
+def pages_as_images( filedata, dpi=150 ):
     """ Yields one page of the PDF at a time, as a PIL image object.
 
         A generator because consider what a 300-page PDF would do to RAM use.
@@ -120,36 +116,34 @@ def pages_as_images( filedata, dpi=150, antialiasing=True ):
     """
     #pymupdf
     from PIL import Image
-    import fitz 
+    import fitz   # (PyMuPDF)
 
     with fitz.open( stream=filedata, filetype="pdf") as document:
         for page in document:
             page_pixmap = page.get_pixmap(dpi=dpi)
-            im = Image.frombytes(mode='RGB', 
-                                    size=[page_pixmap.width, page_pixmap.height], 
+            im = Image.frombytes(mode='RGB',
+                                    size=[page_pixmap.width, page_pixmap.height],
                                     data=page_pixmap.samples)
             yield im
-            
+
     # else:
     #     import poppler
     #     dpi = int(dpi)
     #     pdf_doc = poppler.load_from_data( filedata )
     #     num_pages = pdf_doc.pages # zero-based
-        
+
     #     pr = poppler.PageRenderer() # I'm not sure the python wrapper can be told to use another pixel format?
-        
+
     #     for page_num in range(num_pages):
     #         page = pdf_doc.create_page(page_num)
-            
+
     #         if antialiasing:
     #             try:
     #                 import poppler.cpp.page_renderer
-    #                 pr.set_render_hint( poppler.cpp.page_renderer.render_hint.text_antialiasing, True) 
+    #                 pr.set_render_hint( poppler.cpp.page_renderer.render_hint.text_antialiasing, True)
     #             except Exception as e: # who knows when and why this might break
     #                 warnings.warn('set-antialiasing complained: %s'%str(e))
     #                 pass
     #         poppler_im = pr.render_page( page, xres=dpi, yres=dpi )
     #         pil_im = Image.frombytes( "RGBA",  (poppler_im.width, poppler_im.height), poppler_im.data, "raw", str(poppler_im.format), )
     #         yield pil_im
-
-

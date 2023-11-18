@@ -12,11 +12,12 @@ from typing import List
 
 # The wordcloud module imports matplotlib so we might need to ensure a non-graphical backend
 #   TODO: read up, it's probably good to do this conditionally -- and lazily?
-import matplotlib 
-matplotlib.use('Agg') 
+import matplotlib
+matplotlib.use('Agg')
 
 import wordcloud  #  if not installed, do  pip3 install wordcloud
                   # note that it draws in matplotlib, numpy, and PIL
+                  # and unlike the linter suggests, it should _NOT_ be above the matplotlib import 
 
 
 # the wordcloud module loads some english stopwords by default.
@@ -40,7 +41,7 @@ stopwords_en = [ # wordcloud.STOPWORDS loads:
     "what's", "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom", 
     "why", "why's", "with", "won't", "would", "wouldn't", "www", "you", "you'd", "you'll", 
     "you're", "you've", "your", "yours", "yourself", "yourselves" 
-] 
+]
 
 stopwords_nl = (
     'de','het', 'een', 'en','of', 'die','van', 'op','aan','door','voor','tot','bij', 'kan','wordt',
@@ -59,7 +60,7 @@ def wordcloud_from_freqs(freqs: dict, width:int=1200, height:int=300, background
 
 
 
-def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  normalize_func=None, stopwords=[], stopwords_i=[])  ->  dict:
+def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  normalize_func=None, stopwords=(), stopwords_i=() )  ->  dict:
     ''' Takes a list of strings, returns a { string: count } dict.
 
         ...with some extra processing.
@@ -112,20 +113,20 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
             continue
         if string.lower() in stop_lower:
             continue
-        
+
         norm_string = string
         if normalize_func is not None: 
             norm_string = normalize_func(string)
-        
+
         if len(norm_string) < min_word_length:
             continue
         count[ norm_string ][ string ] += 1
-    
+
     # filter counts, choose preferred form
     ret = {}
     #print( dict(count) )
     # could do this with expression-fu but let's keep it readable
-    max_count = 0 
+    max_count = 0
     for normform in count:
         for _, varamt in count[normform].items():
             max_count = max(max_count, varamt)
@@ -133,10 +134,10 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
     for normform in count:
         variants_dict = sorted( count[normform].items(), key=lambda x:x[1], reverse=True )
         sum_count = sum( cnt  for _,cnt in variants_dict )
-        if type(min_count) is int or min_count > 1:
+        if isinstance(min_count, int)  or  min_count > 1:
             if sum_count >= min_count:
                 ret[ variants_dict[0][0] ] = sum_count
-        elif type(min_count) is float: 
+        elif isinstance(min_count, float):
             # TODO: complain if not in 0.0 .. 1.0 range
             if sum_count >= min_count*max_count:
                 ret[ variants_dict[0][0] ] = sum_count
@@ -146,7 +147,7 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
 
 
 
-def count_case_insensitive(strings: List[str],  min_count=1,  min_word_length=0,  stopwords=[])  ->  dict:
+def count_case_insensitive(strings: List[str],  min_count=1,  min_word_length=0,  stopwords=())  ->  dict:
     ''' Calls count_normalized()  with  normalize_func=lambda s:s.lower() 
           which means it is case insensitive in counting strings, but it reports the most common capitalisation.
 
@@ -190,7 +191,7 @@ def count_from_spacy_document(doc_or_sequence_of_docs, remove_stop=True, restric
             if restrict_to_tags is not None  and  token.pos_ not in restrict_to_tags:
                 #print( "SKIP %r - based on tag %s"%(token.text, token.pos_))
                 continue
-
+        # TODO: REVIEW, THIS SEEMS INCORRECT
         counts[ token.text  ] += 1
 
         # TODO: take dict of weighs
@@ -201,7 +202,7 @@ def count_from_spacy_document(doc_or_sequence_of_docs, remove_stop=True, restric
                 counts[ token.text ] += weigh_deps[token.dep_]
             else:
                 counts[ token.text ] += 1
-        
+
         if add_ents  and  hasattr(thing, 'ents'): # TODO: tests
             for ent in  thing.ents:
                 #print( "ENT %s"%ent.text )
@@ -226,7 +227,7 @@ def simple_tokenize(text: str):
 
 if __name__ == '__main__':
     # quick and dirty tests from text files handed in
-    import sys, re
+    import sys
 
     for fn in sys.argv[1:]:
         with open(fn) as f:
@@ -236,6 +237,3 @@ if __name__ == '__main__':
             #print( freqs )
         im = wordcloud_from_freqs(freqs)
         im.show() # show in GUI
-
-
-

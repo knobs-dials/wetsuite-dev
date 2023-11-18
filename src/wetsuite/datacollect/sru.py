@@ -38,13 +38,13 @@ class SRUBase(object):
         self.verbose         = verbose
         self.numberOfRecords = None # hackish, TODO: rethink
 
-        
+
     def _url(self):
         """ combines the basic URL parts given to the constructor, and ensures there's a ?  (so you know you can add &k=v)
             This can probably go into the constructor, when I know how much is constant across SRU URLs
         """
         ret = self.base_url
-        if '?' not in ret: 
+        if '?' not in ret:
             ret += '?'
         #escape.uri_dict might be a little clearer/cleaner
         if self.sru_version not in ('',None):
@@ -53,8 +53,8 @@ class SRUBase(object):
             ret += '&x-connection=%s'%wetsuite.helpers.escape.uri_component(self.x_connection)   # #all the x-connection values I've seen are [a-z] so the escape is superfluous
         return ret
 
-    
-    def explain(self, readable=True, strip_namespaces=True): 
+
+    def explain(self, readable=True, strip_namespaces=True, timeout=10): 
         ''' Does an explain operation,
             Returns the XML
             - if readable==False, it returns it as-is
@@ -63,12 +63,12 @@ class SRUBase(object):
                 - reindent 
             The XML is a unicode string (for consistency with other parts of this codebase)
         '''
-        url = self._url() 
+        url = self._url()
         url += '&operation=explain'
-        r = requests.get( url )
+        r = requests.get( url, timeout=timeout )
         if readable:
             tree = wetsuite.helpers.etree.fromstring(r.content)
-            if strip_namespaces==True:
+            if strip_namespaces is True:
                 tree = wetsuite.helpers.etree.strip_namespace(tree) # easier without namespaces
             tree = wetsuite.helpers.etree.indent(tree)
             return wetsuite.helpers.etree.tostring(tree, encoding='unicode')
@@ -76,13 +76,13 @@ class SRUBase(object):
             return r.content.decode('utf-8')
 
 
-    def explain_parsed(self):
+    def explain_parsed(self, timeout=10):
         ''' Does an explain operation,
             Returns a dict with some of the more interesting details.
             
             TODO: actually read the standard instead of assuming things.
         '''
-        url = self._url() 
+        url = self._url()
         url += '&operation=explain'
 
         ret = {
@@ -91,9 +91,9 @@ class SRUBase(object):
 
         if self.verbose:
             print( url )
-        r = requests.get( url )
+        r = requests.get( url, timeout=timeout )
         tree = wetsuite.helpers.etree.fromstring( r.content )
-        tree = wetsuite.helpers.etree.strip_namespace(tree) # easier without namespaces
+        tree = wetsuite.helpers.etree.strip_namespace( tree ) # easier without namespaces
 
         explain = tree.find('record/recordData/explain')
 
@@ -102,7 +102,7 @@ class SRUBase(object):
             if treenode is not None:
                 node = treenode.find(name)
                 if node is not None:
-                    return name, attr, node.get(attr)
+                    return name, attr, node.get( attr )
         
         def get_nodetext(treenode, name):
             ' under etree object :treenode:, find a node called :name:, and get the inital text under it '
@@ -112,7 +112,7 @@ class SRUBase(object):
                     return node.text
             return None
         
-        for (treenode, name, attr) in ( 
+        for (treenode, name, attr) in (
             (explain.find('serverInfo'), 'database', 'numRecs'),
         ):
             name, attr, val = get_attrtext(treenode, name, attr)
@@ -185,12 +185,12 @@ class SRUBase(object):
 
             CONSIDER:
             - option to returning URL instead of searching
-        ''' 
+        '''
 
         if self.extra_query is not None:
             query = '%s and %s'%(self.extra_query, query)
         
-        url = self._url() 
+        url = self._url()
         url += '&operation=searchRetrieve'
 
         if start_record is not None:
@@ -215,7 +215,7 @@ class SRUBase(object):
 
         # easier without namespaces, they serve no disambiguating function in most of these cases anyway
         # TODO: think about that, user code may not expact that
-        tree = wetsuite.helpers.etree.strip_namespace(tree) 
+        tree = wetsuite.helpers.etree.strip_namespace(tree)
 
         if tree.tag=='diagnostics': # TODO: figure out if this actually happened 
             raise RuntimeError( wetsuite.helpers.etree.strip_namespace(tree).find( 'diagnostic/message' ).text )
@@ -275,12 +275,12 @@ class SRUBase(object):
                 ret.append( record )
                 if callback is not None:
                     callback( record )
-                
+
                 if offset+chunk_offset >= up_to: # we fetched more than was needed
                     break
 
             offset += at_a_time
-            
+
             if offset >= up_to: # crossed beyond what was asked for  (we don't return it even if we fetched it)
                 break
 
@@ -290,4 +290,3 @@ class SRUBase(object):
             time.sleep( wait_between_sec ) # note that this is avoided if a single fetch was enough
 
         return ret
-

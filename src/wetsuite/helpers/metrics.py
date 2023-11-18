@@ -22,7 +22,7 @@ def sentence_complexity_spacy( span ):
     for tok in span:
         dist = tok.head.i - tok.i
         #print("%s --%s--> %s (dist %d)"%(tok, tok.dep_, tok.head, dist) )
-        dists.append( dist ) 
+        dists.append( dist )
         # no abs, we may want to weigh forward referenes harder than backwards -- but probably check that with each specific dependency type?
     #print( dists, sent )
     abs_dists = list( abs(d)  for d in dists )

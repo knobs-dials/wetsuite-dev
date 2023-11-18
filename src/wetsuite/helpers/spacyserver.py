@@ -1,11 +1,12 @@
 ''' Functions to help access a running instance of extas/spacy_server.py
 '''
-import requests, json, time
+import json, time
 
+import requests
 
 ######### Spacy-server-specific
 
-def http_api(q, ip='127.0.0.1', port=8282, want_svg=False, as_text=False):
+def http_api(q, ip='127.0.0.1', port=8282, want_svg=False, as_text=False, timeout=10):
     """ Feed through a query (by default just text in q) to spacy_server
         Return the data it gives us as a dict
 
@@ -20,13 +21,15 @@ def http_api(q, ip='127.0.0.1', port=8282, want_svg=False, as_text=False):
 
         - want_svg requests spacy_server to sump dependencies SVG in a value (yes, that's cheating encoding-wise).
           Defaults to False because it's large, and there are various uses where you don't want it.
+        
+        - timeout mostly to avoid the possibility of hanging forever if you don't specify one
     """
     if want_svg:
         want_svg = 'y'
     else:
         want_svg = 'n'
     url = 'http://%s:%s/'%(ip,port)
-    res = requests.post(url, data={'q':q, 'want_svg':want_svg})
+    res = requests.post(url, data={'q':q, 'want_svg':want_svg}, timeout=timeout)
     if res.status_code == 500:
         raise RuntimeError('Error reaching spacy API: %s'%res.text)
     if as_text:
@@ -87,8 +90,8 @@ def parse(nlp, query_string, nlp_lock=None, want_svg=True, want_sims=False):
     ret['sentences'] = []
     sent_i = 0
     for sent in doc.sents:
-        # TODO: decide what exactly to do with spaces, and consistency between sentence_ranges and sents_svgs, 
-        #       and duplication, and off-by-one mistakes I probably made, 
+        # TODO: decide what exactly to do with spaces, and consistency between sentence_ranges and sents_svgs,
+        #       and duplication, and off-by-one mistakes I probably made,
         #       and the easiest way for people to use this.
         ss, se = sent.start, sent.end
 
@@ -111,8 +114,8 @@ def parse(nlp, query_string, nlp_lock=None, want_svg=True, want_sims=False):
 
             if want_svg:
                 svg_text = displacy.render(
-                        doc[ss:se], 
-                        style="dep", 
+                        doc[ss:se],
+                        style="dep",
                         options={'compact':True, 'bg':'#ffffff00', 'distance':85, 'word_spacing':40, 'arrow_stroke':1}
                     )
                 # hack to get 100%-width behaviour
@@ -211,6 +214,3 @@ def parse(nlp, query_string, nlp_lock=None, want_svg=True, want_sims=False):
     ret['overall_msec'] = '%d'%(1000.*(time.time()-start_time))
     #ret['docdir'] = dir(doc)
     return ret
-
-
-

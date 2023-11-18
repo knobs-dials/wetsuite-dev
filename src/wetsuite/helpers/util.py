@@ -28,13 +28,14 @@ def wetsuite_dir():
 
     ret = {}
 
-    # Note: expanduser("~") would do most of the work, as it works on win+linx+osx. 
+    # Note: expanduser("~") would do most of the work, as it works on win+linx+osx.
     #   These additional tests are mainly for the case of AD-managed workstations, to try to direct it to store it in a shared area
     #   HOMESHARE is picked up (and preferred over USERPROFILE) because in this context, USERPROFILE might be a local, non-synced directory
     #     (even if most of its contents are junctions to places that _are_)
     # Yes, we do assume this will stay constant over time.
-    userprofile = os.environ.get('USERPROFILE') # we assume these are only filled when it's actually windows - we could test that too via os.name or platform.system()
-    homeshare   = os.environ.get('HOMESHARE')
+    # we assume the following are only filled when it's actually windows - we could test that too via os.name or platform.system()
+    userprofile = os.environ.get('USERPROFILE', None) 
+    homeshare   = os.environ.get('HOMESHARE', None)
     chose_dir = None
     if homeshare is not None:
         r_via_hs = os.path.join(homeshare, 'AppData', 'Roaming')
@@ -68,7 +69,7 @@ def wetsuite_dir():
         os.makedirs( ret['stores_dir'] )
     if not os.access(ret['stores_dir'], os.W_OK):
         raise OSError("We cannot write to our local directory of datasets, %r"%ret['stores_dir'])
-    
+
     return ret
 
 
@@ -116,15 +117,12 @@ def hash_hex(data: bytes):
     
         Deals with unicode by UTF8-encoding it, which isn't _always_ what you want.
     '''
-    if type(data) is bytes:
+    if isinstance(data, bytes):
         pass
-    elif type(data) is str: # assume you are using this in a "I just want a consistent hash value for the same input", not necessarily according to any standard
+    elif isinstance(data, str): # assume you are using this in a "I just want a consistent hash value for the same input", not necessarily according to any standard
         data = data.encode('u8')
     else:
         raise TypeError('hash_hex() only accepts byte/str data')
     s1h = hashlib.sha1()
     s1h.update( data )
     return s1h.hexdigest()
-
-
-

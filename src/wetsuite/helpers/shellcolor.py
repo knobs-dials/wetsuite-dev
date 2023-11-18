@@ -301,69 +301,69 @@ RESET        = NOCOLOR + DEFAULT
 
 
 # ease-of-use globals
-def brightblack(s, prepend=''): 
+def brightblack(s, prepend=''):
     return _add_color_if_supported(s,BRIGHTBLACK,prepend=prepend)
-def darkgray(s, prepend=''):       
+def darkgray(s, prepend=''):
     return _add_color_if_supported(s,BRIGHTBLACK,prepend=prepend)
-def darkgrey(s, prepend=''):       
+def darkgrey(s, prepend=''):
     return _add_color_if_supported(s,BRIGHTBLACK,prepend=prepend)
-def black(s, prepend=''):          
+def black(s, prepend=''):
     return _add_color_if_supported(s,BLACK,prepend=prepend)
-def red(s, prepend=''):            
+def red(s, prepend=''):
     return _add_color_if_supported(s,RED,prepend=prepend)
-def brightred(s, prepend=''):      
+def brightred(s, prepend=''):
     return _add_color_if_supported(s,BRIGHTRED,prepend=prepend)
-def green(s, prepend=''):          
+def green(s, prepend=''):
     return _add_color_if_supported(s,GREEN,prepend=prepend)
-def brightgreen(s, prepend=''):    
+def brightgreen(s, prepend=''):
     return _add_color_if_supported(s,BRIGHTGREEN,prepend=prepend)
-def orange(s, prepend=''):         
+def orange(s, prepend=''):
     return _add_color_if_supported(s,ORANGE,prepend=prepend)
-def yellow(s, prepend=''):         
+def yellow(s, prepend=''):
     return _add_color_if_supported(s,YELLOW,prepend=prepend)
-def brightyellow(s, prepend=''):   
+def brightyellow(s, prepend=''):
     return _add_color_if_supported(s,BRIGHTYELLOW,prepend=prepend)
-def blue(s, prepend=''):           
+def blue(s, prepend=''):
     return _add_color_if_supported(s,BLUE,prepend=prepend)
-def brightblue(s, prepend=''):     
+def brightblue(s, prepend=''):
     return _add_color_if_supported(s,BRIGHTBLUE,prepend=prepend)
-def magenta(s, prepend=''):        
+def magenta(s, prepend=''):
     return _add_color_if_supported(s,MAGENTA,prepend=prepend)
-def brightmagenta(s, prepend=''):  
+def brightmagenta(s, prepend=''):
     return _add_color_if_supported(s,BRIGHTMAGENTA,prepend=prepend)
-def cyan(s, prepend=''):           
+def cyan(s, prepend=''):
     return _add_color_if_supported(s,CYAN,prepend=prepend)
-def brightcyan(s, prepend=''):     
+def brightcyan(s, prepend=''):
     return _add_color_if_supported(s,BRIGHTCYAN,prepend=prepend)
-def gray(s, prepend=''):           
+def gray(s, prepend=''):
     return _add_color_if_supported(s,GREY,prepend=prepend)
 def grey(s, prepend=''):
     return _add_color_if_supported(s,GREY,prepend=prepend)
 def brightgrey(s, prepend=''):
     return _add_color_if_supported(s,BRIGHTGREY,prepend=prepend)
-def brightgray(s, prepend=''):     
+def brightgray(s, prepend=''):
     return _add_color_if_supported(s,BRIGHTGRAY,prepend=prepend)
-def white(s, prepend=''):          
+def white(s, prepend=''):
     return _add_color_if_supported(s,WHITE,prepend=prepend)
 
-def bgblack(s, prepend=''):        
+def bgblack(s, prepend=''):
     return _add_color_if_supported(s,BGBLACK,prepend=prepend)
-def bgred(s, prepend=''):          
+def bgred(s, prepend=''):
     return _add_color_if_supported(s,BGRED,prepend=prepend)
-def bggreen(s, prepend=''):        
+def bggreen(s, prepend=''):
     return _add_color_if_supported(s,BGGREEN,prepend=prepend)
-def bgblue(s, prepend=''):         
+def bgblue(s, prepend=''):
     return _add_color_if_supported(s,BGBLUE,prepend=prepend)
-def bgyellow(s, prepend=''):       
+def bgyellow(s, prepend=''):
     return _add_color_if_supported(s,BGYELLOW,prepend=prepend)
-def bgorange(s, prepend=''):       
+def bgorange(s, prepend=''):
     return _add_color_if_supported(s,BGORANGE,prepend=prepend)
-def bgmagenta(s, prepend=''):      
+def bgmagenta(s, prepend=''):
     return _add_color_if_supported(s,BGMAGENTA,prepend=prepend)
-def bgcyan(s, prepend=''):         
+def bgcyan(s, prepend=''):
     return _add_color_if_supported(s,BGCYAN,prepend=prepend)
 
-def default(s, prepend=''):        
+def default(s, prepend=''):
     return _add_color_if_supported(s,DEFAULT,prepend=prepend)
 def reset():                       
     return _add_color_if_supported('',RESET)
@@ -378,7 +378,7 @@ def clearscreen():
 
 
 # match percent formatting:
-pre = re.compile(r'((%)([+\ -]+)?([0-9]*)([.][0-9]*)?([%csdiuxXoeEfFgGpr]))') 
+pre = re.compile(r'((%)([+\ -]+)?([0-9]*)([.][0-9]*)?([%csdiuxXoeEfFgGpr]))')
 # match some escapes (needs work!)
 ere = re.compile(r'\x1b[^ABCDEFGHJKSTfmnsulnh]*[ABCDEFGHJKSTfmnsulnh]')
 
@@ -444,7 +444,7 @@ def closest_from_rgb255(r,g,b, mid=170,full=255, nobright=False):
         ('cyan',        0,mid,mid,    cyan),
         ('yellow',      mid,mid,0,    yellow),
         ('magenta',     mid,0,mid,    magenta),
-        
+
         ('bright red',         full,0,0,    brightred),
         ('bright green',       0,full,0,    brightgreen),
         ('bright blue',        0,0,full,    brightblue),
@@ -454,7 +454,7 @@ def closest_from_rgb255(r,g,b, mid=170,full=255, nobright=False):
 
         ('grey',  mid,mid,mid,            grey),
         ('bright white', full,full,full,  brightgrey),
-        ('black', 0,0,0,                  black),        
+        ('black', 0,0,0,                  black),
     )
     mindist   = 999
     min_index = None
@@ -466,8 +466,6 @@ def closest_from_rgb255(r,g,b, mid=170,full=255, nobright=False):
             mindist = dist
             min_index = i
     return colors[min_index][-1]
-           
-        
 
 
 def _format_segment(s):
@@ -508,15 +506,15 @@ def _percent_parse(s, add=[]):
         if len(s)==0:
             break
         ip = s.find('%')
-        if ip==-1:
-            ret.append(s)
+        if ip == -1:
+            ret.append( s )
             break
         if ip>0:
-            ret.append(s[:ip])            
+            ret.append( s[:ip] )
             s=s[ip:]
-        m=pre.match(s)
+        m  = pre.match( s )
         ml = m.groups()
-        
+
         addnow=0
         if addi>=len(add):
             raise ValueError('Not enough values to add')
@@ -524,18 +522,18 @@ def _percent_parse(s, add=[]):
             addnow=add[addi]
 
         rps = ['%']
-        if ml[2]!=None:
-            rps.append(ml[2])
+        if ml[2] is not None:
+            rps.append( ml[2] )
         if ml[3] not in (None,''):
-            rps.append( str( int(ml[3])+addnow ) )            
-        if ml[4]!=None:
-            rps.append(ml[4])
-        rps.append(ml[5])
+            rps.append( str( int(ml[3])+addnow ) )   
+        if ml[4] is not None:
+            rps.append( ml[4] )
+        rps.append( ml[5] )
         ret.append( ''.join(rps) )
-            
-        s=s[len(ml[0]):]
+
+        s = s[ len(ml[0]): ]
         addi+=1
-        
+
     return ''.join(ret)
 
 

@@ -14,10 +14,9 @@
 
 def reload():
     ' quick and dirty way to save some time reloading during development' 
+    import importlib
     import wetsuite.helpers.spacy
-    from importlib import reload
-    reload( wetsuite.helpers.spacy )
-
+    importlib.reload( wetsuite.helpers.spacy )
 
 
 def span_as_doc(span):
@@ -28,7 +27,7 @@ def span_as_doc(span):
 class ipython_content_visualisation(object):
     ''' Python notebook visualisation to give some visual idea of contents:
         marks out-of-vocabulary tokens red, and highlight the more interesting words (by POS).
-    '''    
+    '''
     def __init__(self, doc, mark_oov=True, highlight_content=True):
         self.doc = doc
         self.mark_oov = mark_oov
@@ -39,10 +38,10 @@ class ipython_content_visualisation(object):
         ret = []
         for token in list(self.doc):
             style='padding:1px 4px; outline:1px solid #0002'
-            if self.highlight_content: 
-                if token.pos_ in ( 'PUNCT','SPACE', 'X',   'AUX','DET','CCONJ',): 
+            if self.highlight_content:
+                if token.pos_ in ( 'PUNCT','SPACE', 'X',   'AUX','DET','CCONJ',):
                     style+=';opacity:0.3'
-                elif token.pos_ in ( 'ADP', 'VERB', ): 
+                elif token.pos_ in ( 'ADP', 'VERB', ):
                     style+=';opacity:0.7'
             if self.mark_oov  and  token.is_oov  and  token.pos_ not in ('SPACE',):
                 style+=';background-color:#833'
@@ -53,7 +52,7 @@ class ipython_content_visualisation(object):
 
 
 
-def interesting_words(span, ignore_stop=True, ignore_pos_=['PUNCT','SPACE','X', 'AUX','DET','CCONJ']):
+def interesting_words(span, ignore_stop=True, ignore_pos_=('PUNCT','SPACE','X', 'AUX','DET','CCONJ')):
     ''' Takes a spacy span (or something else that iterates as tokens), 
         returns only the more interesting tokens, ignoring stopwords, function words, and such.
 
@@ -70,7 +69,7 @@ def interesting_words(span, ignore_stop=True, ignore_pos_=['PUNCT','SPACE','X', 
     #import spacy
     import spacy.tokens.span_group
     import spacy.tokens.span
-    
+
     docref = span.doc
 
     ret = [] #spacy.tokens.span_group.SpanGroup(docref)
@@ -81,11 +80,9 @@ def interesting_words(span, ignore_stop=True, ignore_pos_=['PUNCT','SPACE','X', 
         elif tok.pos_ in ignore_pos_:
             pass
         elif tok.pos_ in ('NOUN','PROPN','NUM'):
-            pass
             ret.append( spacy.tokens.span.Span(docref, tok.i,tok.i+1 ) )
             #print( '1 %s/%s'%(tok.text, tok.pos_) )
         elif tok.pos_ in ('ADJ','VERB','ADP', 'ADV'):
-            pass
             ret.append( spacy.tokens.span.Span(docref, tok.i,tok.i+1 ) )
             #print( '2 %s/%s'%(tok.text, tok.pos_) )
         else:
@@ -135,7 +132,7 @@ def subjects_in_span(span):
         if hasattr(tok, 'tok.dep_'): # maybe warn otherwise?
             if tok.dep_ == 'nsubj':
                 pass
-            
+
     return ret
 
 
@@ -201,7 +198,7 @@ def detect_language(text: str):
         CONSIDER: truncate the text to something reasonable to not use too much memory.   On parameter?
     '''
     # monkey patch done before the import to suppress "`load_model` does not return WordVectorModel or SupervisedModel any more, but a `FastText` object which is very similar."
-    try: 
+    try:
         import fasttext   # we depend on spacy_fastlang and fasttext
         fasttext.FastText.eprint = lambda x: None
     except:
@@ -209,7 +206,7 @@ def detect_language(text: str):
 
     import spacy_fastlang, spacy
     global _langdet_model
-    if _langdet_model == None:
+    if _langdet_model is None:
         #print("Loading spacy_fastlang into pipeline")
         _langdet_model = spacy.blank("xx")
         _langdet_model.add_pipe( "language_detector")
@@ -233,7 +230,7 @@ def sentence_split(text, as_plain_sents=False):
     '''
     import spacy
     global _xx_sent_model
-    if _xx_sent_model==None:
+    if _xx_sent_model is None:
         _xx_sent_model  = spacy.load("xx_sent_ud_sm")
 
     doc = _xx_sent_model(text)
@@ -252,5 +249,3 @@ def sentence_split(text, as_plain_sents=False):
 #         _xx_ner_model  = spacy.load("xx_ent_wiki_sm")
 #     doc = _xx_ner_model(text)
 #     return doc
-
-

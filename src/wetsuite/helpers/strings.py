@@ -29,7 +29,7 @@ def contains_any_of( haystack:str, needles:List[str], case_sensitive=True, regex
         else:
             if needle in haystack:
                 return True
-            
+
     return False
 
 
@@ -52,7 +52,7 @@ def contains_all_of( haystack:str, needles:List[str], case_sensitive=True, regex
         else:
             if needle not in haystack:
                 return False
-            
+
     return True
 
 
@@ -95,19 +95,18 @@ def findall_with_context(pattern:str, s:str, context_amt:int):
 
         For example
     '''
-    ret = []
     for match_object in re.finditer( pattern, s ):
         st, en = match_object.span()
         yield (
             s[max(0, st-context_amt):st],
-            s[st:en], 
+            s[st:en],
             match_object,
             s[en:en+context_amt],
         )
 
 
 
-re_combining = re.compile(u'[\u0300-\u036f\u1dc0-\u1dff\u20d0-\u20ff\ufe20-\ufe2f]',re.U)
+re_combining = re.compile(r'[\u0300-\u036f\u1dc0-\u1dff\u20d0-\u20ff\ufe20-\ufe2f]',re.U)
 " helps remove diacritics - list a number of combining (but not actually combin*ed*) character ranges in unicode, since you often want to remove these (after decomposition) " 
 
 def remove_diacritics(s: str):
@@ -121,14 +120,14 @@ def remove_diacritics(s: str):
 
 def is_numeric(string: str):
     ''' Does this string contain only a number?    That is, [0-9.,] and optional whitespace around it '''
-    return  ( re.match(r'^\s*[0-9,.]+\s*$', string) is not None )
+    return  re.match(r'^\s*[0-9,.]+\s*$', string) is not None
 
 
 def simplify_whitespace(string: str): #, strip=True, newline_to_space=True, squeeze_space=True)
     ''' remove newlines, squeeze spaces, strip the whole
         (largely imitates   tr -s '\n' ' '  )
     '''
-    return re.sub(r'[\s\n]+', ' ', string.strip()).strip() 
+    return re.sub(r'[\s\n]+', ' ', string.strip()).strip()
 
 
 
@@ -244,6 +243,4 @@ def ordinal_nl(i:int):
         return '%s%s'%( tigste1_rev[i1], tigste10_rev[i10] )
     raise ValueError("can't yet do integers > 99")
 
-
 #def match_ordinal(s):
-

@@ -4,7 +4,7 @@
     CONSIDER: ...and then unify the data format we hand around (particularly because of the helper functions)
     TODO: add those helper functions
 '''
-import sys, re, numpy
+import sys, re
 
 from PIL import ImageDraw
 import numpy
@@ -13,7 +13,7 @@ import numpy
 _eocr_reader = None  # keep in memory to save time when you call it repeatedly
 
 
-def easyocr(image, pythontypes=True, use_gpu=True, languages=['nl','en']):
+def easyocr(image, pythontypes=True, use_gpu=True, languages=('nl','en')):
     ''' Takes a single PIL image.
        
         Returns EasyOCR's results, which is a list of:
@@ -40,7 +40,7 @@ def easyocr(image, pythontypes=True, use_gpu=True, languages=['nl','en']):
         if use_gpu:
             where = 'GPU'
         print("first use of ocr() - loading EasyOCR model (into %s)"%where, file=sys.stderr)
-        _eocr_reader = easyocr.Reader( languages, gpu=use_gpu) 
+        _eocr_reader = easyocr.Reader( languages, gpu=use_gpu)
 
     if image.getbands() != 'L': # grayscale
         image = image.convert('L')
@@ -90,12 +90,11 @@ def easyocr_draw_eval(image, ocr_results):
     for bbox, text, conf in ocr_results:
         topleft, topright, botright, botleft = bbox
         xy=[tuple(topleft), tuple(botright)]
-        draw.rectangle( xy, 
-                        outline=10, 
-                        fill=( int((1-conf)*255), int(conf*255), 0, 125) 
+        draw.rectangle( xy,
+                        outline=10,
+                        fill=( int((1-conf)*255), int(conf*255), 0, 125)
                       )
     return image
-    
 
 #def tesseract():
 # #https://github.com/sirfz/tesserocr
@@ -103,10 +102,10 @@ def easyocr_draw_eval(image, ocr_results):
 
 
 
-# 
+#
 # functions that help deal with Easy OCR-detected fragments,
 # when they are grouped into pages, then a collection of fragments
-# 
+#
 # ...and potentially also other OCR and PDF-extracted text streams, once I get to it.
 #
 # Note: Y origin is on top
@@ -170,7 +169,12 @@ def page_extent( page_ocr_fragments, percentile_x=(1,99), percentile_y=(1,99) ):
     xs, ys = page_allxy(page_ocr_fragments)
     #print( xs, numpy.percentile(xs, percentile_x[0]), numpy.percentile(xs, percentile_x[1]))
     #print( ys,  numpy.percentile(ys, percentile_y[0]), numpy.percentile(ys, percentile_y[1]))
-    return numpy.percentile(xs, percentile_x[0]), numpy.percentile(xs, percentile_x[1]), numpy.percentile(ys, percentile_y[0]), numpy.percentile(ys, percentile_y[1])
+    return (
+        numpy.percentile(xs, percentile_x[0]),
+        numpy.percentile(xs, percentile_x[1]),
+        numpy.percentile(ys, percentile_y[0]),
+        numpy.percentile(ys, percentile_y[1])
+    )
     #return min(xs), min(ys), max(xs), max(ys)
 
 
@@ -212,13 +216,13 @@ def page_fragment_filter( page_ocr_fragments,  textre=None,  q_min_x=None, q_min
     else:
         page_min_x, page_min_y, page_max_x, page_max_y = page_extent( page_ocr_fragments )
 
-    if type(q_min_x) is float: # assume it was a fraction
+    if isinstance(q_min_x, float): # assume it was a fraction
         q_min_x = q_min_x * (1.15*page_max_x) # times a fudge factor because we assume there is right margin that typically has no detected text, and we want this to be a fraction to be of the page, not of the use of the page
-    if type(q_max_x) is float:
+    if isinstance(q_max_x, float):
         q_max_x = q_max_x * (1.15*page_max_x)
-    if type(q_min_y) is float:
+    if isinstance(q_min_y, float):
         q_min_y = q_min_y * page_max_y
-    if type(q_max_y) is float:
+    if isinstance(q_max_y, float):
         q_max_y = q_max_y * page_max_y
 
     #print( 'minx:%s maxx:%s miny:%s maxy:%s'%(q_min_x, q_max_x, q_min_y, q_max_y ) )
