@@ -5,8 +5,6 @@ import sys
 import requests
 
 import wetsuite.helpers.format
-from wetsuite.helpers.notebook import is_interactive
-
 
 
 def download( url:str, tofile_path:str = None, show_progress=None, chunk_size=131072 ):
@@ -31,15 +29,15 @@ def download( url:str, tofile_path:str = None, show_progress=None, chunk_size=13
             ret.append(data)
 
     def progress_update():
-        bar = ''
+        bar_str = ''
         if total_length is not None:
             frac = float(fetched)/total_length
             width = 50
-            bar = '[%s%s]'%(
+            bar_str = '[%s%s]'%(
                 '=' * int(frac*width), 
                 ' ' * (width-int(frac*width))
             )
-        return "\rDownloaded %8sB  %s"%(wetsuite.helpers.format.kmgtp( fetched, kilo=1024 ), bar)
+        return "\rDownloaded %8sB  %s"%(wetsuite.helpers.format.kmgtp( fetched, kilo=1024 ), bar_str)
 
     response = requests.get(url, stream=True,
                             headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'}
@@ -49,17 +47,17 @@ def download( url:str, tofile_path:str = None, show_progress=None, chunk_size=13
     if not response.ok:
         raise ValueError( str(response.status_code) )
 
-    if total_length is not None: 
+    if total_length is not None:
         total_length = int(total_length)
         #show_progress = True
-        #chunkrange = range(total_length/chunksize) 
+        #chunkrange = range(total_length/chunksize)
 
     fetched = 0
     for data in response.iter_content(chunk_size=chunk_size):
         handle_chunk(data)
         fetched += len(data)
         if show_progress:
-            sys.stderr.write( progress_update() )    
+            sys.stderr.write( progress_update() )
             sys.stderr.flush()
 
     if show_progress:
@@ -68,4 +66,3 @@ def download( url:str, tofile_path:str = None, show_progress=None, chunk_size=13
 
     if tofile_path is None:
         return b''.join( ret )
-
