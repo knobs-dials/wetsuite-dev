@@ -41,15 +41,15 @@ def parse_jci(text: str):
         #   The below is somewhat manual, but might prove more robust then just   d['params']  = urllib.parse.parse_qs(rest)
         params = collections.OrderedDict()
         for param in rest.split('&'):
-            pd = urllib.parse.parse_qs(param)
-            for key in pd:
-                out_key = key
+            param_dict = urllib.parse.parse_qs(param)
+            for key, value in param_dict.items():
+                out_key = key # we rewrite some keys
                 if key.startswith('amp;'):    # this variation seems to be a fairly common mistake in general, so try to be robust to it
                     out_key = key[4:]         #   ...though it may well be better to handle this earlier in the function
                 if key not in params:
-                    params[out_key] = pd[key]
+                    params[out_key] = value
                 else:
-                    params[out_key].extend( pd[key] )
+                    params[out_key].extend( value )
         ret['params'] = params
 
     return ret
@@ -216,19 +216,19 @@ CELEX_DOCTYPES = (
     ('5', 'TA', 'European Court of Auditors - ECA Reports'),
     ('5', 'SA', 'European Court of Auditors - ECA Special reports'),
     ('5', 'XA', 'European Court of Auditors - Other documents of the ECA'),
-    ('5', 'AB', 'European Central Bank - ECB Opinions'), 
-    ('5', 'HB', 'European Central Bank - ECB Recommendations'), 
-    ('5', 'XB', 'European Central Bank - Other documents of the ECB'), 
-    ('5', 'AE', 'European Economic and Social Committee - EESC Opinions on consultation'), 
-    ('5', 'IE', 'European Economic and Social Committee - EESC Own-initiative opinions'), 
-    ('5', 'AC', 'European Economic and Social Committee - EESC Opinions'), 
-    ('5', 'XE', 'European Economic and Social Committee - Other documents of the EESC'), 
-    ('5', 'AR', 'European Committee of the Regions - CoR Opinions on consultation'), 
-    ('5', 'IR', 'European Committee of the Regions - CoR Own-initiative opinions'), 
-    ('5', 'XR', 'European Committee of the Regions - Other documents of the CoR'), 
-    ('5', 'AK', 'ECSC Commitee - ECSC Consultative Committee Opinions'), 
-    ('5', 'XK', 'ECSC Commitee - Other documents of the ECSC Committee'), 
-    ('5', 'XX', 'Other organs - Other documents'), 
+    ('5', 'AB', 'European Central Bank - ECB Opinions'),
+    ('5', 'HB', 'European Central Bank - ECB Recommendations'),
+    ('5', 'XB', 'European Central Bank - Other documents of the ECB'),
+    ('5', 'AE', 'European Economic and Social Committee - EESC Opinions on consultation'),
+    ('5', 'IE', 'European Economic and Social Committee - EESC Own-initiative opinions'),
+    ('5', 'AC', 'European Economic and Social Committee - EESC Opinions'),
+    ('5', 'XE', 'European Economic and Social Committee - Other documents of the EESC'),
+    ('5', 'AR', 'European Committee of the Regions - CoR Opinions on consultation'),
+    ('5', 'IR', 'European Committee of the Regions - CoR Own-initiative opinions'),
+    ('5', 'XR', 'European Committee of the Regions - Other documents of the CoR'),
+    ('5', 'AK', 'ECSC Commitee - ECSC Consultative Committee Opinions'),
+    ('5', 'XK', 'ECSC Commitee - Other documents of the ECSC Committee'),
+    ('5', 'XX', 'Other organs - Other documents'),
 
     ('6', 'CJ', 'Court of Justice - Judgment'),
     ('6', 'CO', 'Court of Justice - Order'),
