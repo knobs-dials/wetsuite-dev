@@ -126,7 +126,7 @@ def progress_bar(max, description='', display=True): # , **kwargs
     
     except ImportError:
         import IPython.display, ipywidgets 
-        prog = ipywidgets.IntProgress(max=max, description=description, **kwargs)
+        prog = ipywidgets.IntProgress(max=max, description=description)
         if display:
             IPython.display.display(prog)
         return prog
