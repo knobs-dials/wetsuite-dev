@@ -74,7 +74,7 @@ def findall_ecli(s:str, rstrip_dot=True):
         if rstrip_dot:
             match_str = match_str.rstrip('.')
         ret.append( match_str )
-    return ret 
+    return ret
 
 
 def parse_ecli(text:str):
@@ -85,9 +85,9 @@ def parse_ecli(text:str):
     ecli_list = text.strip().split(':')
     if len(ecli_list) != 5:
         raise ValueError("ECLI is expected to have five elements separated by four colons, %r does not"%text)
-    
-    ECLI, country_code, court_code, year, caseid = ecli_list
-    if ECLI.upper() != 'ECLI':
+
+    uppercase_ecli, country_code, court_code, year, caseid = ecli_list
+    if uppercase_ecli.upper() != 'ECLI':
         raise ValueError("First ECLI string isn't 'ECLI' in %r"%text)
 
     if len(country_code)!=2:
@@ -115,9 +115,9 @@ def parse_ecli(text:str):
 
 # member countries slowly change over time, of course, so maybe we should just accept any three letters,
 #  or more pragmatically, any existing nearby country?
-CELEX_COUNTRIES = [ 
-    'BEL', 'DEU', 'FRA', 'CZE', 'ESP', 'PRT', 'AUT', 'CYP', 'BGR', 'EST', 'FIN', 'GBR', 'HUN', 'IRL', 
-    'LTU', 'MLT', 'LVA', 'SVN', 'SWE', 'GRC,' 'POL', 'DNK', 'ITA', 'LUX', 'NLD', 'SVK', 'ROU', 'HRV',
+CELEX_COUNTRIES = [
+    'BEL', 'DEU', 'FRA', 'CZE', 'ESP', 'PRT',  'AUT', 'CYP', 'BGR', 'EST', 'FIN', 'GBR', 'HUN', 'IRL', 
+    'LTU', 'MLT', 'LVA', 'SVN', 'SWE', 'GRC,', 'POL', 'DNK', 'ITA', 'LUX', 'NLD', 'SVK', 'ROU', 'HRV',
 ]
 
 CELEX_SECTORS = {
