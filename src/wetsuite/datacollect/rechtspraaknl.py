@@ -60,7 +60,7 @@ def search(params):
     url = urllib.parse.urljoin(base_url, "/uitspraken/zoeken?"+urllib.parse.urlencode(params))
     print( url )
     results = wetsuite.helpers.net.download( url )
-    tree = wetsuite.helpers.etree.fromstring( results ) 
+    tree = wetsuite.helpers.etree.fromstring( results )
     return tree
 
 
@@ -109,18 +109,18 @@ def _para_text(treenode):
     ret = []
 
     for ch in treenode.getchildren():
-        
-        if isinstance(ch, wetsuite.helpers.etree._Comment) or isinstance(ch, wetsuite.helpers.etree._ProcessingInstruction): 
+
+        if isinstance(ch, wetsuite.helpers.etree._Comment) or isinstance(ch, wetsuite.helpers.etree._ProcessingInstruction):
             continue
 
         if ch.tag in ('para', 'title', 'bridgehead', 'nr',
                       'footnote', 'blockquote'):
             if len( ch.getchildren() )>0:
-                # HACK: just assume it's flattenable 
+                # HACK: just assume it's flattenable
                 ret.extend( wetsuite.helpers.etree.all_text_fragments( ch ) )
                 #raise ValueError("para has children")
             else:
-                if ch.text == None:
+                if ch.text is None:
                     ret.append('')
                 else:
                     ret.append(ch.text)
@@ -151,10 +151,10 @@ def _para_text(treenode):
         elif ch.tag in ('mediaobject','inlinemediaobject','imageobject', 'imagedata'):
             pass  # TODO: 
 
-        elif ch.tag =='uitspraak.info': 
+        elif ch.tag =='uitspraak.info':
             #TODO: parse this
             pass
-        elif ch.tag =='conclusie.info': 
+        elif ch.tag =='conclusie.info':
             #TODO: parse this
             pass        
 
