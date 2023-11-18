@@ -11,19 +11,21 @@ import datetime, re
 import dateutil.parser
 
 class DutchParserInfo(dateutil.parser.parserinfo):
-    JUMP = [" ", ".", ",", ";", "-", "/", "'", "op", "en",  "m", "t", "van", 
+    ' specific configuration for dateutil for dutch month and week names '
+    JUMP = [" ", ".", ",", ";", "-", "/", "'", "op", "en",  "m", "t", "van",
             "e", "sten",
             ]    # TODO: figure out what exactly these are (presumably tokens that can be ignored, no meaning to their position?)
-            
+
     MONTHS =  [
-        ('Jan', 'Januari'), ('Feb', 'Februari'), ('Mar', 'Maart'), ('Apr', 'April'), ('Mei'), ('Jun', 'Juni'), 
-        ('Jul', 'Juli'), ('Aug', 'Augustus'), ('Sep', 'Sept', 'September'), ('Oct', 'October', 'Okt', 'Oktober'), ('Nov', 'November', 'november'), ('Dec', 'December')
+        ('Jan', 'Januari'), ('Feb', 'Februari'), ('Mar', 'Maart'), ('Apr', 'April'), ('Mei'),
+        ('Jun', 'Juni'), ('Jul', 'Juli'), ('Aug', 'Augustus'), ('Sep', 'Sept', 'September'),
+        ('Oct', 'October', 'Okt', 'Oktober'), ('Nov', 'November', 'november'), ('Dec', 'December')
     ]
     WEEKDAYS = [
         ("Ma", "Maandag"),
-        ("Di", "Dinsdag"), 
+        ("Di", "Dinsdag"),
         ("Wo", "Woensdag"),
-        ("Do", "Donderdag"), 
+        ("Do", "Donderdag"),
         ("Vr", "Vrijdag"),
         ("Za", "Zaterdag"),
         ("Zo", "Zondag")
@@ -53,8 +55,7 @@ def parse(text, prefer_none_over_exception=True):
         (None,              lambda x:x.split('+')[0])):
         try:
             return dateutil.parser.parse(transform(text), parserinfo=lang)
-        except dateutil.parser._parser.ParserError as pe:
-            #print(pe)
+        except dateutil.parser._parser.ParserError:
             continue
     if prefer_none_over_exception:
         return None
@@ -63,11 +64,11 @@ def parse(text, prefer_none_over_exception=True):
     
     
 
-_maand_res = 'januar[iy]|jan|februar[yi]|feb|maart|march|mar|april|apr|mei|may|jun|jun[ei]|jul|jul[iy]|august|augustus|aug|o[ck]tober|o[ck]t|november|nov|december|dec'
+_MAAND_RES = 'januar[iy]|jan|februar[yi]|feb|maart|march|mar|april|apr|mei|may|jun|jun[ei]|jul|jul[iy]|august|augustus|aug|o[ck]tober|o[ck]t|november|nov|december|dec'
 
 _re_isolike_date  = re.compile(r'\b[12][0-9][0-9][0-9]-[0-9]{1,2}-[0-9]{1,2}\b')
-_re_dutch_date_1  = re.compile(r'\b[0-9]{1,2} (%s),? [0-9]{2,4}\b'%_maand_res, re.I)
-_re_dutch_date_2  = re.compile(r'\b(%s) [0-9]{1,2},? [0-9]{2,4}\b'%_maand_res, re.I) # this is more an english-style thing
+_re_dutch_date_1  = re.compile(r'\b[0-9]{1,2} (%s),? [0-9]{2,4}\b'%_MAAND_RES, re.I)
+_re_dutch_date_2  = re.compile(r'\b(%s) [0-9]{1,2},? [0-9]{2,4}\b'%_MAAND_RES, re.I) # this is more an english-style thing
 
 def find_dates_in_text(text:str):
     ''' Tries to fish out date-like strings from free-form text.  
@@ -168,4 +169,4 @@ def format_date_range(rng, strftime_format='%Y-%m-%d'):
         would return:
             ['2022-01-29', '2022-01-30', '2022-01-31', '2022-02-01', '2022-02-02']
     '''
-    return list( format_date(d,strftime_format)   for d in rng  )  
+    return list( format_date(d,strftime_format)   for d in rng  )
