@@ -1,12 +1,11 @@
 ' Formatting values into text '
 
-
-import os, re, urllib
+import os, urllib
 
 
 
 def kmgtp(amount,kilo=1000, append='',thresh=15, nextup=0.9, rstrip0=True, extradigits=0, i_for_1024=True):
-    """ For more easily skimmable sizes
+    ''' For more easily skimmable sizes
 
         e.g.
              kmgtp(3429873278462) == '3.4T'
@@ -35,7 +34,7 @@ def kmgtp(amount,kilo=1000, append='',thresh=15, nextup=0.9, rstrip0=True, extra
         
         rstrip0     whether to take off '.0' if present (defaults to true)
         append      is mostly meant for optional space between number and unit.
-    """
+    '''
     mega  = kilo*kilo
     giga  = mega*kilo
     tera  = giga*kilo
