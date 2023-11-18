@@ -49,7 +49,8 @@ def kmgtp(amount,kilo=1000, append='',thresh=15, nextup=0.9, rstrip0=True, extra
     if abs(amount) < nextup*kilo: # less than a kilo; omits multiplier and i
         showval = amount
     else:
-        for csize, mchar in ( (peta, 'P'), (tera, 'T'), (giga, 'G'), (mega, 'M'), (kilo, 'K'), ): # exa, zetta, yotta is shown as peta amounts. Too large to comprehend anyway.
+        for csize, mchar in ( (peta, 'P'), (tera, 'T'), (giga, 'G'), (mega, 'M'), (kilo, 'K'), ):
+            # exa, zetta, yotta is shown as peta amounts.  Too large to comprehend anyway.
             if abs(amount)  >  nextup * csize:
                 showval = float(amount) / float(csize)
                 if showval < thresh:
@@ -76,7 +77,3 @@ def url_basename(url):
         Yes, basename(url) will often work - except if there's query parameters.
     '''
     return os.path.basename( urllib.parse.urlparse(url).path )
-
-
-
-
