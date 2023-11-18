@@ -55,7 +55,7 @@ def fetch_by_resource_type(typ='JUDG'):
       FILTER not exists{?work cdm:do_not_index "true"^^<http://www.w3.org/2001/XMLSchema#boolean>}. }'''%typ
 
     url = 'http://publications.europa.eu/webapi/rdf/sparql?default-graph-uri=&query='+urllib.parse.quote(query)+'&format=application%2Fsparql-results%2Bjson&timeout=0&debug=on&run=+Run+Query+'
-    resp = requests.get(url)
+    resp = requests.get(url, timeout=30)
     return resp.json()
 
 
@@ -217,7 +217,7 @@ def extract_html(htmlbytes):
             for maybe_format in ul.get('class'):
                 if maybe_format.startswith('PubFormat'):
                     format = maybe_format[9:]
-            if format != None:
+            if format is not None:
                 for li in ul.findAll('li'):
                     if 'disabled' not in li.get('class',''):
                         a = li.find('a')
@@ -251,7 +251,7 @@ def extract_html(htmlbytes):
 
         for iterate_under in titerate:
             for node in iterate_under.children:
-                if type(node) is bs4.element.NavigableString:
+                if isinstance(node, bs4.element.NavigableString):
                     s = node.string.strip()
                     if len(s)>0:
                         cur_section_txt.append(s)
@@ -277,7 +277,7 @@ def extract_html(htmlbytes):
                     elif node.name in ('a',): # seem to be used mainly as anchors for browsers to #go to, so skippable
                         if len(node.text.strip())>0:
                             cur_section_txt.extend( node.text.strip() ) # probably used as a header
-                            #raise ValueError("Bad assumption, that an  a  tag has no text, in %r"%(node)) 
+                            #raise ValueError("Bad assumption, that an  a  tag has no text, in %r"%(node))
 
                     # not really inspected, add flattened for now
                     elif node.name in (
@@ -306,11 +306,11 @@ def extract_html(htmlbytes):
                         print('NONE', node)
 
                     else:
-                        raise ValueError( "Don't yet handle %r"%node.name  )
+                        raise ValueError( "Don't yet handle %r"%node.name )
 
         if len(cur_section_txt) > 0: # final flush
             txt.append( (cur_section_name, cur_section_txt) )
-        
+
     ret['text'] = txt
 
 
