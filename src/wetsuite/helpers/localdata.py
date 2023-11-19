@@ -133,7 +133,9 @@ class LocalKV:
                 self.conn.execute("PRAGMA query_only = true")   # https://www.sqlite.org/pragma.html#pragma_query_only
                 # if read-only, we assume you are opening something that was aleady created before, so we don't do...
             else:
-                self.conn.execute("PRAGMA auto_vacuum = INCREMENTAL")  # TODO: see that this does what I think it does    https://www.sqlite.org/pragma.html#pragma_auto_vacuum
+                # TODO: see that this pragma does what I think it does    https://www.sqlite.org/pragma.html#pragma_auto_vacuum
+                self.conn.execute("PRAGMA auto_vacuum = INCREMENTAL")
+
                 self.conn.execute("CREATE TABLE IF NOT EXISTS meta (key text unique NOT NULL, value text)")
                 self.conn.execute("CREATE TABLE IF NOT EXISTS kv   (key text unique NOT NULL, value text)")
 
@@ -286,7 +288,6 @@ class LocalKV:
     def keys(self):
         """ Returns an iterable of all keys.  (a view with a len, rather than just a generator) """
         return collections.abc.KeysView( self ) # TODO: check that this is enough
-        #return list( self.iterkeys() )
 
 
     def itervalues(self):
@@ -370,7 +371,8 @@ class LocalKV:
 
 
     # def incremental_vacuum(self):
-    #     ''' assuming we created with "PRAGMA auto_vacuum = INCREMENTAL" we can do cleanup. Ideally you do with some interval when you remove/update things
+    #     ''' assuming we created with "PRAGMA auto_vacuum = INCREMENTAL" we can do cleanup.
+    #         deally you do with some interval when you remove/update things
     #         CONSIDER our own logic to that?  Maybe purely per interpreter (after X puts/deletes),  and maybe do it on close?
     #     '''
     #     # https://www.sqlite.org/pragma.html#pragma_auto_vacuum
@@ -421,7 +423,8 @@ class LocalKV:
         ''' Returns a single (key, value) item from the store, selected randomly.
         
             Convenience function, because doing this properly yourself takes two or three lines 
-              (you can't random.choice/random.sample a view,  so to do it properly you basically have to materialize all keys - and not accidentally all values)
+              (you can't random.choice/random.sample a view,  
+               so to do it properly you basically have to materialize all keys - and not accidentally all values)
             BUT assume this is slower than working on the keys yourself.
         '''
         all_keys = list( self.keys() )
@@ -464,9 +467,10 @@ try:
         def __init__(self, path, key_type=str, value_type=None, read_only=False):
             ''' value_type is ignored; I need to restructure this
             '''
-            super(MsgpackKV, self).__init__( path, key_type=str, value_type=None, read_only=read_only )
+            super().__init__( path, key_type=str, value_type=None, read_only=read_only )
 
-            if self._get_meta('valtype', missing_as_none=True) is None: # this is meant to be able to detect/signal incorrect interpretation, not fully used yet
+            # this is meant to be able to detect/signal incorrect interpretation, not fully used yet
+            if self._get_meta('valtype', missing_as_none=True) is None:
                 self._put_meta('valtype','msgpack')
 
 
@@ -474,7 +478,7 @@ try:
             ''' Note that unpickling could fail 
                 TODO: clarify the missing missing_as_none
             '''
-            value = super(MsgpackKV, self).get( key )
+            value = super().get( key )
             unpacked = msgpack.loads(value)
             return unpacked
 
@@ -482,7 +486,7 @@ try:
         def put(self, key:str, value, commit:bool=True):
             " See LocalKV.put().   Unlike that, value is not checked for type, just pickled. Which can fail. "
             packed = msgpack.dumps(value)
-            super(MsgpackKV, self).put( key, packed, commit )
+            super().put( key, packed, commit )
 
 
         def itervalues(self):
@@ -712,7 +716,7 @@ def is_file_a_store(path, skip_table_check=False):
     '''
     is_sqlite3 = None
     with open(path, 'rb') as f:
-        is_sqlite3 = (f.read(15) == b'SQLite format 3')
+        is_sqlite3 =   f.read(15) == b'SQLite format 3'
     if not is_sqlite3:
         return False
 
