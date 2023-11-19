@@ -67,7 +67,8 @@ class LocalKV:
         Notes:
         - It is a good idea to open the store with the same typing each  or you will still confuse yourself.
             CONSIDER: storing typing in the file in the meta table
-        - doing it via functions is a little more typing yet also exposes some sqlite things (using transactions, vacuum) for when you know how to use them.
+        - doing it via functions is a little more typing yet also exposes some sqlite things 
+            (using transactions, vacuum) for when you know how to use them.
             and is arguably clearer than 'this particular dict-like happens to get stored magically'
         - On concurrency: As per basic sqlite behaviour, multiple processes can read the same database,
           but only one can write, and when you leave a writer with uncommited data for nontrivial amounts of time,
@@ -106,14 +107,13 @@ class LocalKV:
         self.path = path
         self.path = resolve_path(self.path)   # tries to centralize the absolute/relative path handling code logic
 
-        # 
         self.read_only = read_only
         self._open()
         # here in part to remind us that we _could_ be using converters  https://docs.python.org/3/library/sqlite3.html#sqlite3-converters
         if key_type not in (str, bytes, int, None):
-            raise ValueError("We are currently a little overly paranoid about what to allow as key types (%r not allowed)"%key_type.__name)
+            raise ValueError("We are currently a little overly paranoid about what to allow as key types (%r not allowed)"%key_type.__name__)
         if value_type not in (str, bytes, int, float, None):
-            raise ValueError("We are currently a little overly paranoid about what to allow as value types (%r not allowed)"%value_type.__name)
+            raise ValueError("We are currently a little overly paranoid about what to allow as value types (%r not allowed)"%value_type.__name__)
 
         self.key_type = key_type
         self.value_type = value_type
@@ -123,8 +123,8 @@ class LocalKV:
     def _open(self, timeout=2.0):
         ''' Open the path previously set by init.
             This function could probably be merged into init, it was separated mostly with the idea that we could keep it closed when not using it. 
-        ''' 
-        #make_tables = (self.path==':memory:')  or  ( not os.path.exists( self.path ) )    
+        '''
+        #make_tables = (self.path==':memory:')  or  ( not os.path.exists( self.path ) )
         #    will be creating that file, or are using an in-memory database ?  Also how to combine with read_only?
         self.conn = sqlite3.connect( self.path, timeout=timeout )
         # Note: curs.execute is the regular DB-API way,  conn.execute is a shorthand that gets a temporary cursor
@@ -140,7 +140,7 @@ class LocalKV:
 
     def _checktype_key(self, val):
         ' checks a value according to the key_type you handed into the constructor '
-        if self.key_type is not None  and  not isinstance(val, self.key_type): # None means don't check 
+        if self.key_type is not None  and  not isinstance(val, self.key_type): # None means don't check
             raise TypeError('Only keys of type %s are allowed, you gave a %s'%(self.key_type.__name__, type(val).__name__))
 
 
@@ -150,7 +150,7 @@ class LocalKV:
             raise TypeError('Only values of type %s are allowed, you gave a %s'%(self.value_type.__name__, type(val).__name__))
 
 
-    def get(self, key, missing_as_none:bool=False): 
+    def get(self, key, missing_as_none:bool=False):
         ''' Gets value for key. 
             The key type is checked against how you constructed this localKV class (doesn't guarantee it matches what's in the database)
             If not present, this will raise KeyError (by default) or return None (if you set missing_as_None=True)
@@ -263,14 +263,13 @@ class LocalKV:
 
 
     def close(self):
+        ' Closes file if still open. Note that if there was a transaction still open, it will be rolled back, not committed. '
         if self._in_transaction:
-            pass # DECIDE 
+            self.rollback()
         self.conn.close()
 
 
-
-
-    #TODO: see if the view's semantics in keys(), values(), and items() are actually correct. 
+    #TODO: see if the view's semantics in keys(), values(), and items() are actually correct.
     #      Note there's a bunch of implied heavy lifting in hnading self to those view classes,
     #         which require that that relies on __iter__ and __getitem__ to be there
 
@@ -283,10 +282,12 @@ class LocalKV:
             yield row[0]
         curs.close()
 
+
     def keys(self):
         """ Returns an iterable of all keys.  (a view with a len, rather than just a generator) """
         return collections.abc.KeysView( self ) # TODO: check that this is enough
         #return list( self.iterkeys() )
+
 
     def itervalues(self):
         """ Returns a generator that yields all values. 
@@ -297,10 +298,11 @@ class LocalKV:
             yield row[0]
         curs.close()
 
+
     def values(self):
         """ Returns an iterable of all values.  (a view with a len, rather than just a generator)  """
         return collections.abc.ValuesView( self )
-        
+
 
     def iteritems(self):
         """ Returns a generator that yields all items """
@@ -336,7 +338,7 @@ class LocalKV:
         if ret is None:
             raise KeyError()
         return ret
-        
+
     #def __setitem__(self, key, value):
     #    self.put(key, value)
 
@@ -344,7 +346,7 @@ class LocalKV:
     #    # TODO: check whether we can ignore it not being there, or must raise KeyError for interface correctness
     #    #if key not in self:
     #    #    raise KeyError(key)
-    #    self.conn.execute('DELETE FROM kv WHERE key = ?', (key,)) 
+    #    self.conn.execute('DELETE FROM kv WHERE key = ?', (key,))
 
     # ...but we still sneakily have:
     def __contains__(self, key):
@@ -389,13 +391,15 @@ class LocalKV:
 
 
     def bytesize(self) -> int:
-        ''' Returns the approximate amount of the contained data, in bytes  (may be a few dozen kilobytes off, or more, because it counts in pages) '''
+        ''' Returns the approximate amount of the contained data, in bytes  
+            (may be a few dozen kilobytes off, or more, because it counts in pages) 
+        '''
         #if self.path == ':memory:'
         curs = self.conn.cursor()
         curs.execute("select page_size, page_count from pragma_page_count, pragma_page_size")
         page_size, page_count = curs.fetchone()
         curs.close()
-        return (page_size * page_count)
+        return   page_size * page_count
         #else:
         #    return os.stat( self.path ).st_size
 
@@ -429,7 +433,8 @@ class LocalKV:
         ''' Returns an amount of [(key, value), ...] list from the store, selected randomly.
         
             Convenience function, because doing this properly yourself takes two or three lines 
-              (you can't random.choice/random.sample a view,  so to do it properly you basically have to materialize all keys - and not accidentally all values)
+              (you can't random.choice/random.sample a view,  
+               so to do it properly you basically have to materialize all keys - and not accidentally all values)
             BUT assume this is slower than working on the keys yourself.
         '''
         all_keys = list( self.keys() )
@@ -464,27 +469,33 @@ try:
             if self._get_meta('valtype', missing_as_none=True) is None: # this is meant to be able to detect/signal incorrect interpretation, not fully used yet
                 self._put_meta('valtype','msgpack')
 
+
         def get(self, key:str):
-            " Note that unpickling could fail " 
-            # TODO: clarify the missing missing_as_none
+            ''' Note that unpickling could fail 
+                TODO: clarify the missing missing_as_none
+            '''
             value = super(MsgpackKV, self).get( key )
             unpacked = msgpack.loads(value)
             return unpacked
+
 
         def put(self, key:str, value, commit:bool=True):
             " See LocalKV.put().   Unlike that, value is not checked for type, just pickled. Which can fail. "
             packed = msgpack.dumps(value)
             super(MsgpackKV, self).put( key, packed, commit )
 
+
         def itervalues(self):
             curs = self.conn.cursor()
             for row in curs.execute('SELECT value FROM kv'):
                 yield msgpack.loads( row[0], strict_map_key=False )
 
+
         def iteritems(self):
             curs = self.conn.cursor()
             for row in curs.execute('SELECT key, value FROM kv'):
                 yield row[0], msgpack.loads( row[1], strict_map_key=False )
+
 except ImportError:
     # warning?
     pass
@@ -556,7 +567,10 @@ def cached_fetch(store, url:str, force_refetch:bool=False) -> Tuple[bytes, bool]
         - if URL not in store,          do wetsuite.helpers.net.download(url), store in store, and return its value
     '''
     if store.key_type not in (str,None)  or  store.value_type not in (bytes, None):
-        raise TypeError('cached_fetch() expects a str:bytes store (or for you to disable checks with None,None),  not a %r:%r'%(store.key_type.__name__, store.value_type.__name__))
+        raise TypeError('cached_fetch() expects a str:bytes store (or for you to disable checks with None,None),  not a %r:%r'%(
+            store.key_type.__name__,
+            store.value_type.__name__
+        ))
     # yes, the following could be a few lines shorter, but this is arguably a little more readable
     if force_refetch is False:
         try:
@@ -623,28 +637,28 @@ def resolve_path( name:str ):
     if isinstance(name, pathlib.Path):
         name = str(name)
 
-    if name == ':memory:':  # special-case the sqlite value of ':memory:' (pass it through) 
+    if name == ':memory:':  # special-case the sqlite value of ':memory:' (pass it through)
         return name
     elif os.sep in name:    # assume it's an absolute path, or a relative one you _want_ resolved relative to cwd
         return name
-    else:                     # bare name, do our "put in homedir" logic 
+    else:                     # bare name, do our "put in homedir" logic
         dirs = wetsuite.helpers.util.wetsuite_dir()
         return os.path.join( dirs['stores_dir'], name )
 
 
 # def open_store(dbname:str, key_type, value_type, inst=LocalKV, read_only=False) -> LocalKV:
 #     ''' For notes on key_type and value_type, see LocalKV.__init__()
-        
+
 #         dbname can be
 #         - :memory:
-#         - an absolute path (you decide where to put it) 
+#         - an absolute path (you decide where to put it)
 #         - a relative path with os.sep in it (resolved relative to cwd)
 #         - a bare name without os.sep in it (we place it somewhere in your home dir)
 
 #         inst is currently a hack, this might actually need to become a factory
 #     '''
 #     # CONSIDER: sanitize filename?
-#     if dbname == ':memory:':  # special-case the sqlite value of ':memory:' (pass it through) 
+#     if dbname == ':memory:':  # special-case the sqlite value of ':memory:' (pass it through)
 #         ret = inst( dbname, key_type=key_type, value_type=value_type, read_only=read_only )
 
 #     elif os.sep in dbname:
@@ -672,7 +686,7 @@ def list_stores( skip_table_check=True, get_num_items=False ):
     for basename in os.listdir( stores_dir ):
         abspath = os.path.join( stores_dir, basename )
         if os.path.isfile( abspath ):
-            if is_file_a_store( abspath, skip_table_check=skip_table_check ): 
+            if is_file_a_store( abspath, skip_table_check=skip_table_check ):
                 bytesize = os.stat(abspath).st_size
                 kv = LocalKV(abspath, key_type=None, value_type=None, read_only=True)
                 itemdict = {
@@ -683,7 +697,7 @@ def list_stores( skip_table_check=True, get_num_items=False ):
                 }
                 if get_num_items:
                     itemdict['num_items'] = len( kv )
-                
+
                 itemdict['description'] = kv._get_meta('description', True)
                 ret.append( itemdict )
                 kv.close()
