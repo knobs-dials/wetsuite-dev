@@ -60,22 +60,22 @@ def document_url_by_identifier(ident, type_hint=None):
 #    return wetsuite.helpers.net.download(url)
 
 
-def plaintext_by_identifier(ident, type_hint=None):
-    pass
+#def plaintext_by_identifier(ident, type_hint=None):
+#    pass
 
 
 
 class _SearchBase:
     ''' The communication part, so we can share it '''
     def __init__(self, base_url='https://labs.scarfboy.com/wet/search-api?reload=y'):
-        self.base_url = base_url 
+        self.base_url = base_url
 
 
     def _interact(self):
         ''' Sends self.form to self.base_url.
             This lets us share interaction between things like search() and fetch_identifers()
         '''
-        resp = requests.post( self.base_url, data=self.form ) 
+        resp = requests.post( self.base_url, data=self.form )
         try:
             self.response = resp.json()
         except Exception as e:
@@ -116,7 +116,7 @@ class _SearchBase:
             #if _source.get('identifier') == ident:
             if 'identifier' in _source:
                 resp_ident = _source.get('identifier')
-                if resp_ident is not None and resp_ident not in ret['identifier']: 
+                if resp_ident is not None and resp_ident not in ret['identifier']:
                     ret['identifier'].append( resp_ident )
             if 'web_url' in _source:
                 ret['web_urls'].append( _source['web_url'] )
@@ -134,7 +134,7 @@ class HostedSearch(_SearchBase):
     '''
 
     def __init__(self, base_url='https://labs.scarfboy.com/wet/search-api'):
-        super(HostedSearch, self).__init__(base_url)
+        super().__init__(base_url)
         #self.hit_ids = []
         self.response = None
 
@@ -165,7 +165,7 @@ class HostedSearch(_SearchBase):
         '''
         if self.response is None:
             raise ValueError('You need to search before you can have a result.')
-        self.response['hits']['total']
+        return self.response['hits']['total']
 
 
     def hits(self):
@@ -173,15 +173,15 @@ class HostedSearch(_SearchBase):
         
         '''
         #return self.response['hits']['hits']
-    
+
         ret = []
         for hit in self.response['hits']['hits']:
             # merge _source into the top level dict
-            _source = hit['_source'] 
+            _source = hit['_source']
             del hit['_source']
             hit.update(_source)
             ret.append( hit )
-            
+
         return ret
 
 
@@ -210,7 +210,7 @@ class HostedSearch(_SearchBase):
 #         #if q is not None:
 #         #    query.append()
 #         identifier = identifier.get('q')
-#         if 
+#         if
 
 #         identifier=None
 #         dcterms.identifier = BWBR0045754
@@ -233,7 +233,7 @@ class HostedSearch(_SearchBase):
 
 
 #class RechtspraakLiveSearch:
-#    pass   
+#    pass
 
 
 
@@ -251,7 +251,7 @@ class HostedSearch(_SearchBase):
 
 
 
-# class _LazyDoc: 
+# class _LazyDoc:
 #     ''' we parse lazily. CONSIDER: a document collection so we can do that en masse '''
 #     def _lazy_load(self):
 #         if self.etree == None:
@@ -264,7 +264,7 @@ class HostedSearch(_SearchBase):
 #     ''' A class that tries to present documents a little nicer than "here is some XML, good luck" '''
 #     def __init__(self, xml_bytestring):
 #         self.xml_bytestring = xml_bytestring
-#         self.etree = None 
+#         self.etree = None
 
 #     def plain_text(self):
 #         self._lazy_load()
@@ -280,7 +280,7 @@ class HostedSearch(_SearchBase):
 #     ''' A class that tries to present documents a little nicer than "here is some XML, good luck" '''
 #     def __init__(self, xml_bytestring):
 #         self.xml_bytestring = xml_bytestring
-#         self.etree = None 
+#         self.etree = None
 
 #     def plain_text(self):
 #         self._lazy_load()
@@ -296,7 +296,7 @@ class HostedSearch(_SearchBase):
 #     ''' A class that tries to present documents a little nicer than "here is some XML, good luck" '''
 #     def __init__(self, toestand_bytestring): # maybe also the wti and metadata?  Maybe separate laziness because they would probably be used less?
 #         self.toestand_bytestring = toestand_bytestring
-#         self.etree = None 
+#         self.etree = None
 
 
 ####################################
