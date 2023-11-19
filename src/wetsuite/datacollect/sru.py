@@ -22,6 +22,7 @@ import wetsuite.helpers.etree
 
 
 class SRUBase(object):
+    ' Very minimal SRU implementation - just enough to access the KOOP repositories. '
     def __init__(self, base_url:str, x_connection:str=None, extra_query:str=None, verbose=False):
         ''' base_url should be everything up to the ?
             
@@ -31,12 +32,12 @@ class SRUBase(object):
             - extra_query is used to let us AND something into the query, and is intended to restrict to a subset of documents
               in these cases, x_connection seems to include in extra sets, and the combination is sometimes too much (?)
         '''
-        self.base_url        = base_url
-        self.x_connection    = x_connection
-        self.sru_version     = '1.2'
-        self.extra_query     = extra_query
-        self.verbose         = verbose
-        self.numberOfRecords = None # hackish, TODO: rethink
+        self.base_url          = base_url
+        self.x_connection      = x_connection
+        self.sru_version       = '1.2'
+        self.extra_query       = extra_query
+        self.verbose           = verbose
+        self.number_of_records = None # hackish, TODO: rethink
 
 
     def _url(self):
@@ -50,11 +51,11 @@ class SRUBase(object):
         if self.sru_version not in ('',None):
             ret += '&version=%s'%self.sru_version
         if self.x_connection not in ('',None):
-            ret += '&x-connection=%s'%wetsuite.helpers.escape.uri_component(self.x_connection)   # #all the x-connection values I've seen are [a-z] so the escape is superfluous
+            ret += '&x-connection=%s'%wetsuite.helpers.escape.uri_component(self.x_connection)
         return ret
 
 
-    def explain(self, readable=True, strip_namespaces=True, timeout=10): 
+    def explain(self, readable=True, strip_namespaces=True, timeout=10):
         ''' Does an explain operation,
             Returns the XML
             - if readable==False, it returns it as-is
@@ -103,7 +104,7 @@ class SRUBase(object):
                 node = treenode.find(name)
                 if node is not None:
                     return name, attr, node.get( attr )
-        
+
         def get_nodetext(treenode, name):
             ' under etree object :treenode:, find a node called :name:, and get the inital text under it '
             if treenode is not None:
@@ -111,7 +112,7 @@ class SRUBase(object):
                 if node is not None:
                     return node.text
             return None
-        
+
         for (treenode, name, attr) in (
             (explain.find('serverInfo'), 'database', 'numRecs'),
         ):
@@ -129,20 +130,20 @@ class SRUBase(object):
             ret[name] = val
 
         indices, sets = [], []
-        indexInfo = explain.find('indexInfo')
-        for index in indexInfo.findall('index'):
-            map  = index.find('map')
-            name = map.find('name')
-            set  = name.get('set')
-            val  = name.text
-            indices.append( (set, val) )
+        index_info = explain.find('indexInfo')
+        for index in index_info.findall('index'):
+            map_elem  = index.find('map')
+            name      = map_elem.find('name')
+            set_attr  = name.get('set')
+            val       = name.text
+            indices.append( (set_attr, val) )
 
-        for set in indexInfo.findall('set'):
-            name       = set.get('name')
-            identifier = set.get('identifier')
+        for set_attr in index_info.findall('set'):
+            name       = set_attr.get('name')
+            identifier = set_attr.get('identifier')
             title = None
-            if set.find('title') is not None:
-                title = set.find('title').text
+            if set_attr.find('title') is not None:
+                title = set_attr.find('title').text
             sets.append( (name, identifier, title) )
 
         ret['indices'] = indices
@@ -155,16 +156,17 @@ class SRUBase(object):
             
             This function may change.
         '''
-        if self.numberOfRecords is None:
+        if self.number_of_records is None:
             raise ValueError("num_records is not filled in before you do a search")
-        return self.numberOfRecords
+        return self.number_of_records
 
 
     def search_retrieve(self, query:str, start_record=None, maximum_records=None, callback=None, verbose=False):
         ''' Fetches a range of results for a particular query. 
             Returns each result record as a separate ElementTree object.
 
-            Exactly what record contains varies per repo, but you may well _want_ this raw because it can contain metadata not easily fetched from the results themselves.
+            Exactly what record contains varies per repo, but you may well _want_ this raw 
+            because it can contain metadata not easily fetched from the results themselves.
 
             You mat want to fish out the number of results (TODO: make that easier)
             
@@ -189,7 +191,7 @@ class SRUBase(object):
 
         if self.extra_query is not None:
             query = '%s and %s'%(self.extra_query, query)
-        
+
         url = self._url()
         url += '&operation=searchRetrieve'
 
@@ -205,9 +207,9 @@ class SRUBase(object):
 
         try:
             r = requests.get( url, timeout=(20,20) ) # CONSIDER: use general fetcher?
-        except requests.exceptions.ReadTimeout: 
+        except requests.exceptions.ReadTimeout:
             r = requests.get( url, timeout=(20,20) ) # TODO: this makes no sense, don't do it
-            
+
         if r.status_code == 500:
             raise RuntimeError( "SRU server reported an Internal Server Error (HTTP status 500) for %r"%url )
 
@@ -217,7 +219,7 @@ class SRUBase(object):
         # TODO: think about that, user code may not expact that
         tree = wetsuite.helpers.etree.strip_namespace(tree)
 
-        if tree.tag=='diagnostics': # TODO: figure out if this actually happened 
+        if tree.tag=='diagnostics': # TODO: figure out if this actually happened
             raise RuntimeError( wetsuite.helpers.etree.strip_namespace(tree).find( 'diagnostic/message' ).text )
         elif tree.find( 'diagnostics') is not None:
             raise RuntimeError( wetsuite.helpers.etree.strip_namespace(tree).find( 'diagnostics/diagnostic/message' ).text )
@@ -225,23 +227,25 @@ class SRUBase(object):
         elif tree.tag=='explainResponse':
             tree = wetsuite.helpers.etree.strip_namespace(tree) # bit lazy
             raise RuntimeError( 'search returned explain response instead' )
-        
+
         if verbose:
             print( wetsuite.helpers.etree.tostring( wetsuite.helpers.etree.indent( tree )) .decode('u8') )
 
-        self.numberOfRecords = int(tree.find('numberOfRecords').text)
+        self.number_of_records = int(tree.find('numberOfRecords').text)
         if verbose:
-            print('numberOfRecords:', self.numberOfRecords, file=sys.stderr)
-        
+            print('numberOfRecords:', self.number_of_records, file=sys.stderr)
+
         ret = []
-        for record in tree.findall('records/record'):  
+        for record in tree.findall('records/record'):
             ret.append(record)
             if callback is not None:
                 callback( record )    # CONSIDER: callback( record, query )  and possibly pas other things
         return ret # maybe return list, like _many does?
 
 
-    def search_retrieve_many(self, query:str, at_a_time:int=10, start_record:int=1, up_to:int=250, callback=None, wait_between_sec:float=0.5, verbose=False):
+    def search_retrieve_many(self, query:str, at_a_time:int=10, start_record:int=1, up_to:int=250,
+                             callback=None,
+                             wait_between_sec:float=0.5, verbose:bool=False):
         ''' This function builds on search_retrieve() to "fetch _many_ results results in chunks", by calling search_retrieve() repeatedly.
             (search_retrieve() will have a limit on how many to search at once, though is still useful to see e.g. if there are results at all)
 
@@ -284,7 +288,7 @@ class SRUBase(object):
             if offset >= up_to: # crossed beyond what was asked for  (we don't return it even if we fetched it)
                 break
 
-            if self.numberOfRecords is not None and offset > self.numberOfRecords: # crossed beyond what exists in the search result
+            if self.number_of_records is not None and offset > self.number_of_records: # crossed beyond what exists in the search result
                 break
 
             time.sleep( wait_between_sec ) # note that this is avoided if a single fetch was enough
