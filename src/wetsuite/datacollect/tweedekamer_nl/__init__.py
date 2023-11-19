@@ -18,7 +18,7 @@
 import wetsuite.helpers.net
 import wetsuite.helpers.etree
 
-resource_types = ( 
+resource_types = (
     'Activiteit', 'ActiviteitActor', 'Agendapunt', 'Besluit', 'Commissie', 'CommissieContactinformatie', 'CommissieZetel', 
     'CommissieZetelVastPersoon', 'CommissieZetelVastVacature', 'CommissieZetelVervangerPersoon', 'CommissieZetelVervangerVacature', 
     'Document', 'DocumentActor', 'DocumentVersie', 'Fractie', 'FractieAanvullendGegeven', 'FractieZetel', 'FractieZetelPersoon', 
@@ -29,29 +29,26 @@ resource_types = (
 
 
 
-
-
 ## First interface: SyncFeed/Atom
 
-syncfeed_base = 'https://gegevensmagazijn.tweedekamer.nl/SyncFeed/2.0/'
+SYNCFEED_BASE = 'https://gegevensmagazijn.tweedekamer.nl/SyncFeed/2.0/'
 #                        gegevensmagazijn.tweedekamer.nl/SyncFeed/2.0/Feed
-#                        gegevensmagazijn.tweedekamer.nl/SyncFeed/2.0/Entiteiten/<id>     single entity. The type 
+#                        gegevensmagazijn.tweedekamer.nl/SyncFeed/2.0/Entiteiten/<id>     single entity. The type
 #                        gegevensmagazijn.tweedekamer.nl/SyncFeed/2.0/Resources/<id>      resources for entity
-
 
 
 #Feed?category
 #Resources seem to be either
 #- referenced e.g. in enclosure tags
-#- implied, e.g. each Document can be fetched its listed Id, 
+#- implied, e.g. each Document can be fetched its listed Id,
 
-#/Resources 
+#/Resources
 #/Entiteiten is the document metadata
 
 
-def fetch_resource(id):
+def fetch_resource(resource_id):
     ''' Note that if these don't exist, they will cause a 500 Internal Server Error '''
-    url = f'{syncfeed_base}Resources/%s'%id
+    url = f'{SYNCFEED_BASE}Resources/%s'%resource_id
     return wetsuite.helpers.net.download( url )
 
 
@@ -64,10 +61,9 @@ def fetch_all(soort="Persoon"):
         Returns as a list of etree documents
         which are also stripped of namespaces (atom for the wrapper, tweedekamer for <content>).
     '''
-    url = f'{syncfeed_base}Feed?category=%s'%soort
+    url = f'{SYNCFEED_BASE}Feed?category=%s'%soort
     ret = []
     while True:
-        #print( url )
         xml  = wetsuite.helpers.net.download( url )
         tree = wetsuite.helpers.etree.fromstring( xml )
         tree = wetsuite.helpers.etree.strip_namespace( tree )
@@ -75,18 +71,20 @@ def fetch_all(soort="Persoon"):
         # is there a next page?
         url = None
         links = tree.findall('link')
-        for link in links:   # we're looking for something like    <link rel="next" href="https://gegevensmagazijn.tweedekamer.nl/SyncFeed/2.0/Feed?category=Persoon&amp;skiptoken=11902974"/>
+        for link in links:
+            # we're looking for something like
+            #   <link rel="next" href="https://gegevensmagazijn.tweedekamer.nl/SyncFeed/2.0/Feed?category=Persoon&amp;skiptoken=11902974"/>
             rel = link.get('rel')
             href = link.get('href')
             if rel == 'next':
                 url = href
             # edict['links'].append( (rel,href) )
 
-        ret.append( tree ) 
+        ret.append( tree )
 
         if url is None: # no 'next' link, we're done.
             break
-        
+
     return ret
 
 
@@ -96,7 +94,7 @@ def merge_etrees( trees ):
     '''
     ret = wetsuite.helpers.etree.Element('feed') # decide what to call that document
     for tree in trees:
-        tree = wetsuite.helpers.etree.strip_namespace( tree ) # redundant if you use fetch_all,  still here in case you're reading your own separate documents
+        tree = wetsuite.helpers.etree.strip_namespace( tree ) # redundant if you use fetch_all, here in case you're reading your own documents
         for entry in tree.findall('entry'):
             ret.append(entry)
     return ret
@@ -125,21 +123,13 @@ def entries(feed_etree):
                 continue
 
             refval = elem.attrib.get('ref', None)
-            if refval != None:
+            if refval is not None:
                 edict[ elem.tag ] = ('ref', refval)
                 continue
 
             raise ValueError( "ERROR: programmer didn't think of case like %r"%wetsuite.helpers.etree.tostring(elem) )
-            # as debug
-            #print(  )
-            #print( elem )
-            #print( elem.attrib )
-        edict['id'] = item.get('id') # it's in three places and should aways be identical, but this seems the most sensible place, should it ever change
-
-        #print()
-        #print( wetsuite.helpers.etree.tostring( wetsuite.helpers.etree.indent(content) ).decode('u8') )
-        #import pprint
-        #pprint.pprint( edict )
+        edict['id'] = item.get('id') # it's in three places and should aways be identical,
+                                     # but this seems the most sensible place, should it ever change
 
         ret.append( edict )
     return ret
@@ -150,7 +140,7 @@ def entries(feed_etree):
 
 ## Other interface: OData
 
-odata_base = 'https://gegevensmagazijn.tweedekamer.nl/OData/v4/2.0/'
+ODATA_BASE = 'https://gegevensmagazijn.tweedekamer.nl/OData/v4/2.0/'
 
 # list all items of soort:
 # url = f'{odata_base}/{%s}'%(soort,)
@@ -164,9 +154,7 @@ odata_base = 'https://gegevensmagazijn.tweedekamer.nl/OData/v4/2.0/'
 
 # Searches are done with a filter function, often added to the query for a specific soort
 # url = f'{odata_base}/{%s}?$filter=$s'%(
-#   'Persoon', 
-#   escape_uri('Verwijderd eq false and (Functie eq 'Eerste Kamerlid' or Functie eq 'Tweede Kamerlid')') 
+#   'Persoon',
+#   escape_uri('Verwijderd eq false and (Functie eq 'Eerste Kamerlid' or Functie eq 'Tweede Kamerlid')')
 # )
 # /Persoon?$filter=Verwijderd%20eq%20false%20and%20(Functie%20eq%20%27Eerste%20Kamerlid%27%20or%20Functie%20eq%20%27Tweede%20Kamerlid%27)
-
-
