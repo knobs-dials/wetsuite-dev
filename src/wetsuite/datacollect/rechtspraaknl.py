@@ -15,7 +15,11 @@
     I'm not sure whether we're supposed to use it like this, but it's one of the better APIs I've seen in this context :)
 '''
 
-import json, re, requests, urllib.parse, pprint
+import json
+import re
+import urllib.parse
+
+import requests
 
 import wetsuite.helpers.net
 import wetsuite.helpers.etree
@@ -23,7 +27,7 @@ import wetsuite.helpers.escape
 import wetsuite.helpers.koop_parse
 
 
-base_url = "https://data.rechtspraak.nl/"
+BASE_URL = "https://data.rechtspraak.nl/"
 
 
 def search(params):
@@ -57,7 +61,7 @@ def search(params):
         - https://www.rechtspraak.nl/SiteCollectionDocuments/Technische-documentatie-Open-Data-van-de-Rechtspraak.pdf
     '''
     # constructs something like 'http://data.rechtspraak.nl/uitspraken/zoeken?type=conclusie&date=2011-05-01&date=2011-05-30'
-    url = urllib.parse.urljoin(base_url, "/uitspraken/zoeken?"+urllib.parse.urlencode(params))
+    url = urllib.parse.urljoin(BASE_URL, "/uitspraken/zoeken?"+urllib.parse.urlencode(params))
     print( url )
     results = wetsuite.helpers.net.download( url )
     tree = wetsuite.helpers.etree.fromstring( results )
@@ -97,7 +101,7 @@ def parse_search_results(tree):
             elif ch.tag=='updated':
                 entry_dict['updated'] = ch.text
             elif ch.tag=='link':
-                entry_dict['link'] = ch.get('href') 
+                entry_dict['link'] = ch.get('href')
                 #entry_dict['links'].append( ch.get('href') ) # maybe also type?
             else: # don't think this happens, but it'd be good to know when it does.
                 raise ValueError( "Don't understand tag %r"%wetsuite.helpers.etree.tostring(ch) )
@@ -139,7 +143,7 @@ def _para_text(treenode):
 
         elif ch.tag in ('informaltable', 'table'):
             ret.append('')
-            # HACK: just pretend it's flattenable 
+            # HACK: just pretend it's flattenable
             ret.extend( wetsuite.helpers.etree.all_text_fragments( ch ) )
             ret.append('')
         #elif ch.tag in ('tgroup','colspec','tobody','row','entry',''):
@@ -149,14 +153,14 @@ def _para_text(treenode):
 
 
         elif ch.tag in ('mediaobject','inlinemediaobject','imageobject', 'imagedata'):
-            pass  # TODO: 
+            pass
 
         elif ch.tag =='uitspraak.info':
             #TODO: parse this
             pass
         elif ch.tag =='conclusie.info':
             #TODO: parse this
-            pass        
+            pass
 
         elif ch.tag =='section':
             ret.append('')
@@ -180,10 +184,10 @@ def _para_text(treenode):
     return ret # '\n'.join( ret )
 
 
-    # # we try to abuse our own 
+    # # we try to abuse our own
     # alinea_data = wetsuite.helpers.koop_parse.alineas_with_selective_path( tree, alinea_elemname='para' )
     # #pprint.pprint(alinea_data)
-    # merged = wetsuite.helpers.koop_parse.merge_alinea_data( alinea_data ) # TODO: explicit if_same ?   
+    # merged = wetsuite.helpers.koop_parse.merge_alinea_data( alinea_data ) # TODO: explicit if_same ?
     # #pprint.pprint(merged)
     # return merged
 
@@ -191,7 +195,7 @@ def _para_text(treenode):
     #     if elem.tag == 'para':
     #         if elem.text is not None:
     #             ret.append( elem.text )
-    #         pass 
+    #         pass
     #     elif elem.tag == 'parablock':
     #         #print('parablock')
     #         pbtext = []
@@ -200,7 +204,7 @@ def _para_text(treenode):
     #                 pbtext.append( elem.text )
     #         if len(pbtext)>0:
     #             ret.append( pbtext )
-    #     else: 
+    #     else:
     #         raise ValueError("Don't know element %r"%elem.tag)
 
     # return ret
@@ -218,7 +222,7 @@ def parse_content(tree):
     ret = {}
     tree = wetsuite.helpers.etree.strip_namespace( tree )
 
-    for descr in tree.findall('RDF/Description'): # TODO: figure out why there are multiple 
+    for descr in tree.findall('RDF/Description'): # TODO: figure out why there are multiple
         for key in ('identifier', 'issued', 'publisher', 'replaces', 'date', 'type',  # maybe make this a map so we can give it better names
                     #'format', 'language',
                     'modified',
@@ -236,10 +240,10 @@ def parse_content(tree):
                 ret[key] = kelem.text
 
         # things where we want attributes
-        #creator, subject, relation 
+        #creator, subject, relation
 
         # other specific cases
-        #hasVersion 
+        #hasVersion
 
         break # for now assume that the most recent update (RDF/Description block) is the first, and the most detailed
 
@@ -270,12 +274,12 @@ def parse_content(tree):
 
 ## fetch and parse waardelijsten
 
-instanties_url                = urllib.parse.urljoin(base_url, "/Waardelijst/Instanties")
-instanties_buitenlands_url    = urllib.parse.urljoin(base_url, "/Waardelijst/InstantiesBuitenlands")
-rechtsgebieden_url            = urllib.parse.urljoin(base_url, "/Waardelijst/Rechtsgebieden")
-proceduresoorten_url          = urllib.parse.urljoin(base_url, "/Waardelijst/Proceduresoorten")
-formelerelaties_url           = urllib.parse.urljoin(base_url, "/Waardelijst/FormeleRelaties")
-nietnederlandseuitspraken_url = urllib.parse.urljoin(base_url, "/Waardelijst/NietNederlandseUitspraken")
+instanties_url                = urllib.parse.urljoin(BASE_URL, "/Waardelijst/Instanties")
+instanties_buitenlands_url    = urllib.parse.urljoin(BASE_URL, "/Waardelijst/InstantiesBuitenlands")
+rechtsgebieden_url            = urllib.parse.urljoin(BASE_URL, "/Waardelijst/Rechtsgebieden")
+proceduresoorten_url          = urllib.parse.urljoin(BASE_URL, "/Waardelijst/Proceduresoorten")
+formelerelaties_url           = urllib.parse.urljoin(BASE_URL, "/Waardelijst/FormeleRelaties")
+nietnederlandseuitspraken_url = urllib.parse.urljoin(BASE_URL, "/Waardelijst/NietNederlandseUitspraken")
 
 
 def parse_instanties():
@@ -283,8 +287,8 @@ def parse_instanties():
     instanties_bytestring = wetsuite.helpers.net.download( instanties_url )
     tree  = wetsuite.helpers.etree.fromstring( instanties_bytestring )
     ret = []
-    for Instantie in tree:
-        kv = wetsuite.helpers.etree.kvelements_to_dict( Instantie ) # this happens to be a flat structure, saves us some code
+    for instantie in tree:
+        kv = wetsuite.helpers.etree.kvelements_to_dict( instantie ) # this happens to be a flat structure, saves us some code
         ret.append( kv )
     return ret
 
@@ -294,8 +298,8 @@ def parse_instanties_buitenlands():
     instanties_buitenlands_bytestring = wetsuite.helpers.net.download( instanties_buitenlands_url )
     tree  = wetsuite.helpers.etree.fromstring( instanties_buitenlands_bytestring )
     ret = []
-    for Instantie in tree:
-        kv = wetsuite.helpers.etree.kvelements_to_dict( Instantie ) # this happens to be a flat structure, saves us some code
+    for instantie in tree:
+        kv = wetsuite.helpers.etree.kvelements_to_dict( instantie ) # this happens to be a flat structure, saves us some code
         ret.append( kv )
     return ret
 
@@ -305,8 +309,8 @@ def parse_proceduresoorten():
     proceduresoorten_bytestring = wetsuite.helpers.net.download( proceduresoorten_url )
     tree  = wetsuite.helpers.etree.fromstring( proceduresoorten_bytestring )
     ret = []
-    for Proceduresoort in tree:
-        kv = wetsuite.helpers.etree.kvelements_to_dict( Proceduresoort ) # this happens to be a flat structure, saves us some code
+    for proceduresoort in tree:
+        kv = wetsuite.helpers.etree.kvelements_to_dict( proceduresoort ) # this happens to be a flat structure, saves us some code
         ret.append( kv )
     return ret
 
@@ -324,16 +328,16 @@ def parse_rechtsgebieden():
     rechtsgebieden_bytestring = wetsuite.helpers.net.download( rechtsgebieden_url )
     tree  = wetsuite.helpers.etree.fromstring( rechtsgebieden_bytestring )
     ret = {}
-    for Rechtsgebied1 in tree:
+    for rechtsgebied1 in tree:
         #group = {}
-        Identifier1 = Rechtsgebied1.find('Identifier').text
-        Naam1       = Rechtsgebied1.find('Naam').text
-        ret[Identifier1] = [Naam1]
-        for Rechtsgebied2 in Rechtsgebied1.findall('Rechtsgebied'): #.find?
+        identifier1 = rechtsgebied1.find('Identifier').text
+        naam1       = rechtsgebied1.find('Naam').text
+        ret[identifier1] = [naam1]
+        for rechtsgebied2 in rechtsgebied1.findall('Rechtsgebied'): #.find?
             #print( Rechtsgebied2)
-            Identifier2 = Rechtsgebied2.find('Identifier').text
-            Naam2       = Rechtsgebied2.find('Naam').text
-            ret[ Identifier2 ] = [Naam2, Naam1]
+            identifier2 = rechtsgebied2.find('Identifier').text
+            naam2       = rechtsgebied2.find('Naam').text
+            ret[ identifier2 ] = [naam2, naam1]
     return ret
 
 
@@ -348,32 +352,16 @@ def parse_nietnederlandseuitspraken():
     tree  = wetsuite.helpers.etree.fromstring( nietnederlandseuitspraken_bytestring )
     ret = []
     modified = tree.find('modified').text
-    for entry in tree.findall('entry'): 
+    for entry in tree.findall('entry'):
         ret.append({ # TODO: check that that's valid.
             'id':entry.find('id').text,
             'ljn':list(e.text for e in entry.findall('ljn')),
         })
     return modified, ret
-    
 
 
-
-
-
-    
-
-    
-     
-    
-
-
-
-
-
-
-
-
-def zoek(term, start=0, amt=10):
+def zoek(term, start=0, amt=10, timeout=10):
+    ' TODO: docstring '
     req_d = {
         "StartRow":start,
         "PageSize":amt,
@@ -392,12 +380,9 @@ def zoek(term, start=0, amt=10):
         #"CorrelationId":"12e85334096243079bdb9bce565330aa",
     }
     req_json = json.dumps( req_d )
-    response = requests.post('https://uitspraken.rechtspraak.nl/api/zoek', data=req_json, headers={'Content-type': 'application/json'})
-    return response.json() 
-
-
-
-#d = zoek('kansspelautoriteit')
-#Results = d['Results']
-#pprint.pprint( Results )   
-#print( len(Results))
+    response = requests.post(
+        'https://uitspraken.rechtspraak.nl/api/zoek', 
+        data=req_json,
+        headers={'Content-type': 'application/json'},
+        timeout=timeout)
+    return response.json()
