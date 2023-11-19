@@ -1,27 +1,28 @@
 #!/usr/bin/python3
-''' Quick and dirty "do we need OCR or not for these PDFs?" tool '''
+''' Given the path to one or more PDF files,
+    prints how many pages are in there, and how many have some text on it (according to the PDF itself).
 
-if __name__ == '__main__':
-    import sys
-    import wetsuite.extras.pdf
+    Meant as a quick and dirty "do we need OCR or not for these PDFs?" tool
+'''
 
-    for filename in sys.argv[1:]:
-        count_pages, count_textless = 0,0
+import sys
 
-        with open(filename, 'rb') as file:
-            page_generator = wetsuite.extras.pdf.page_text( file.read() )  # which is currently a thin wrapper around poppler
-            for page_i, page_text in enumerate( page_generator ):
-                count_pages += 1
-                #print( "Page %d:  %d characters"%(page_i+1, len(page_text)) )
-                if len( page_text ) < 100:
-                    count_textless += 1
-
-        print(" %3d pages,  %3d%% with nontrivial text    %r"%(
-            count_pages,
-            100-(100.*count_textless)/count_pages,
-            filename
-        ))
+import wetsuite.extras.pdf
 
 
+for filename in sys.argv[1:]:
+    count_pages, count_textless = 0,0
 
+    with open(filename, 'rb') as file:
+        page_generator = wetsuite.extras.pdf.page_text( file.read() )  # which is currently a thin wrapper around poppler
+        for page_i, page_text in enumerate( page_generator ):
+            count_pages += 1
+            #print( "Page %d:  %d characters"%(page_i+1, len(page_text)) )
+            if len( page_text ) < 100:
+                count_textless += 1
 
+    print(" %3d pages,  %3d%% with nontrivial text    %r"%(
+        count_pages,
+        100-(100.*count_textless)/count_pages,
+        filename
+    ))
