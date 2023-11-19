@@ -1,7 +1,10 @@
 #!/usr/bin/python3
-import sys, os #, time, json, pprint
-import wetsuite.helpers.localdata
+''' Given one or more paths to a LocalKV style database,
+    list all its keys, one per line
+'''
 
+import sys, os
+import wetsuite.helpers.localdata
 
 if __name__ == '__main__':
 
@@ -21,4 +24,3 @@ if __name__ == '__main__':
             print(key)
             count += 1
         sys.stderr.write('# Listed %d keys\n'%count)
-
