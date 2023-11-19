@@ -1,7 +1,10 @@
 #!/usr/bin/python3
-import sys, os #, time, json, pprint
-import wetsuite.helpers.localdata
+''' Given one or more paths to a LocalKV style database,
+    prints out how much space you might hope to gain from a kv-vacuum
+'''
 
+import sys, os
+import wetsuite.helpers.localdata
 
 if __name__ == '__main__':
 
