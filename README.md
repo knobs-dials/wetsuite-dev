@@ -24,16 +24,11 @@ Plans and extras
 
 This repository is split into:
 - [examples](notebooks/) - python notebooks that demonstrate the use of varied package tools,  datasets,  and related things
+  - try some introductory fragments in [some minimal examples](notebooks/intro/some_minimal_examples.ipynb)
   - ...things marked 'extras' are not core functionality, there more for showing our work and potentially useful to other programemrs (and includes some demos of cod e in  [extras/ in src](src/wetsuite/extras/))
 
 - [src](src/wetsuite/) - the part of this project that you would install and use.   
   There are more READMEs here detailing parts
-
-
-
-# A set of minimal examples
-
-[some minimal examples](notebooks/intro/some_minimal_examples.ipynb)
 
 
 # More detailed examples as notebooks
