@@ -17,8 +17,8 @@ def ns_format(ns):
         return '%s:'%shellcolor.red(etree.some_ns_prefixes[ns])
     else:
         return '{%s}'%shellcolor.red(ns)
-    
-    
+
+
 def attrib_format(d):
     ' dict to escaped string, with colors '
     ret = []
@@ -28,9 +28,9 @@ def attrib_format(d):
             ns, attr = attr[1:].split('}',1)
             ns = ns_format(ns)
         #ret.append( '%s%s="%s"'%( ns, shellcolor.brightyellow(attr), shellcolor.yellow(escape.attr(d[k])) ) )
-        ret.append( '%s%s=%s%s%s'%( 
-            ns, shellcolor.brightmagenta(attr), 
-            shellcolor.darkgray('"'),shellcolor.magenta(escape.attr(d[k])), shellcolor.darkgray('"') 
+        ret.append( '%s%s=%s%s%s'%(
+            ns, shellcolor.brightmagenta(attr),
+            shellcolor.darkgray('"'),shellcolor.magenta(escape.attr(d[k])), shellcolor.darkgray('"')
         ) )
     return ' '.join(ret)
 
@@ -52,7 +52,7 @@ def color_print(node, show_attribs=True):
         ret.append( '<%s%s'%(ns,shellcolor.cyan(tag)) )
     else:
         ret.append( '<%s%s'%(ns,shellcolor.brightcyan(tag)) )
-    
+
     if show_attribs and len(node.attrib) > 0:
         ret.append( ' ' )
         ret.append(attrib_format(node.attrib))
@@ -61,21 +61,20 @@ def color_print(node, show_attribs=True):
         ret.append('/>')
         if node.tail is not None:
             ret.append( node.tail )
-        return ''.join(ret)    
+        return ''.join(ret)
     ret.append( '>' )
 
-    
     if node.text is not None:
         ret.append(shellcolor.yellow(node.text) )
-    
+
     for child in node: # children
         ret.append( color_print( child, show_attribs=show_attribs ) )
 
-    ret.append( '</%s%s>'%( ns,shellcolor.brightcyan(tag)) ) 
-    
+    ret.append( '</%s%s>'%( ns,shellcolor.brightcyan(tag)) )
+
     if node.tail is not None:
         ret.append(shellcolor.yellow(node.tail) )
-        
+
     return ''.join(ret)
 
 
@@ -84,23 +83,19 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-A',"--no-attribs",               action="store_false",  dest="show_attribs",       default=True,     help="don't show attributes")
-    parser.add_argument('-N',"--no-namespaces",            action="store_false",  dest="show_namespaces",    default=True,     help="strip namespaces")
-    parser.add_argument('-P',"--no-pretty",                action="store_false",  dest="pretty",             default=True,     help="don't reindent")
-    parser.add_argument('files',                nargs='+')
+    parser.add_argument('-A',"--no-attribs",       action="store_false",  dest="show_attribs",     default=True,   help="don't show attributes")
+    parser.add_argument('-N',"--no-namespaces",    action="store_false",  dest="show_namespaces",  default=True,   help="strip namespaces")
+    parser.add_argument('-P',"--no-pretty",        action="store_false",  dest="pretty",           default=True,   help="don't reindent")
+    parser.add_argument('files',      nargs='+')
     args = parser.parse_args()
 
     for filename in args.files:
         tree = etree.fromstring(  open(filename,'rb').read()  )
-        
+
         if not args.show_namespaces:
             tree = etree.strip_namespace(tree)
-        
+
         if args.pretty:
             tree = etree.indent(tree)
 
         print( color_print( tree, show_attribs=args.show_attribs ) )
-
-
-
-
