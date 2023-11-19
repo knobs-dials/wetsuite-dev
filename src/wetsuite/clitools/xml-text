@@ -9,15 +9,18 @@ from wetsuite.helpers import etree
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-u',"--start-under",              action="store",  dest="under",       default=None,     help="start under a specific path")
-    parser.add_argument('-m',"--min-length",               action="store",  dest="minlen",      default='0',     help="only print node text if it is at least this many characters long  (note that for html-style text this will cut parts out of text, consider things like em, b, and such)")
+    parser.add_argument('-u',"--start-under",              action="store",  dest="under",       default=None,
+                        help="start under a specific path")
+    parser.add_argument('-m',"--min-length",               action="store",  dest="minlen",      default='0',
+                        help='Only print node text if it is at least this many characters long  '
+                             '(note that for html-style text this will cut parts out of text, consider things like em, b, and such)')
     parser.add_argument('files',                nargs='+')
     args = parser.parse_args()
 
     for filename in args.files:
         count = collections.defaultdict( int )
         tree = etree.fromstring(  open(filename,'rb').read()  )
-        
+
         tree = etree.strip_namespace(tree)
 
         under = args.under    # e.g. 'wetgeving/wet-besluit/wettekst'
