@@ -31,9 +31,9 @@ class CVDR(wetsuite.datacollect.sru.SRUBase):
         https://www.koopoverheid.nl/voor-overheden/gemeenten-provincies-en-waterschappen/cvdr/handleiding-cvdr
     '''
     def __init__(self, verbose=False):
-        wetsuite.datacollect.sru.SRUBase.__init__(self, 
+        wetsuite.datacollect.sru.SRUBase.__init__(self,
                                                   base_url='http://zoekservice.overheid.nl/sru/Search',
-                                                  x_connection='cvdr', 
+                                                  x_connection='cvdr',
                                                   verbose=verbose
                                                   #, extra_query='c.product-area==cvdr' this doesn't work, and x_connection seems to be enough in this case (?)
         )
@@ -46,12 +46,12 @@ class CVDR(wetsuite.datacollect.sru.SRUBase):
 # ...usually because we have a script that fetches data from it, but we haven't done anything with that data yet so have not dug deeper
 
 class OfficielePublicaties(wetsuite.datacollect.sru.SRUBase):
+    " SRU endpoint for the OfficielePublicaties repository "
     def __init__(self, verbose=False):
-        " SRU endpoint for the OfficielePublicaties repository "
-        wetsuite.datacollect.sru.SRUBase.__init__(self, 
+        wetsuite.datacollect.sru.SRUBase.__init__(self,
                                                   base_url='http://repository.overheid.nl/sru',
-                                                  x_connection='officielepublicaties', 
-                                                  extra_query='c.product-area==officielepublicaties', 
+                                                  x_connection='officielepublicaties',
+                                                  extra_query='c.product-area==officielepublicaties',
                                                   verbose=verbose)
 
 
@@ -60,8 +60,8 @@ class SamenwerkendeCatalogi(wetsuite.datacollect.sru.SRUBase):
     def __init__(self, verbose=False):
         wetsuite.datacollect.sru.SRUBase.__init__(self,
                                                   base_url='http://repository.overheid.nl/sru',
-                                                  x_connection='samenwerkendecatalogi', 
-                                                  extra_query='c.product-area==samenwerkendecatalogi', 
+                                                  x_connection='samenwerkendecatalogi',
+                                                  extra_query='c.product-area==samenwerkendecatalogi',
                                                   verbose=verbose)
 
 
@@ -120,7 +120,7 @@ class WetgevingsKalender(wetsuite.datacollect.sru.SRUBase):
         Note: Broken/untested
     '''
     def __init__(self, verbose=False):
-        wetsuite.datacollect.sru.SRUBase.__init__(self, 
+        wetsuite.datacollect.sru.SRUBase.__init__(self,
                                                   base_url='http://repository.overheid.nl/sru',
                                                   x_connection='wgk',
                                                   #extra_query='c.product-area any wgk',
@@ -152,8 +152,8 @@ class PUCOpenData(wetsuite.datacollect.sru.SRUBase):
         Note: Broken/untested
     '''
     def __init__(self, verbose=False):
-        wetsuite.datacollect.sru.SRUBase.__init__(self, 
-                                                  base_url='http://repository.overheid.nl/sru', 
+        wetsuite.datacollect.sru.SRUBase.__init__(self,
+                                                  base_url='http://repository.overheid.nl/sru',
                                                   x_connection='pod', #extra_query='c.product-area==pod',
                                                   verbose=verbose)
         #wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search', x_connection='pod', extra_query='c.product-area==pod', verbose=verbose)
@@ -163,8 +163,8 @@ class EuropeseRichtlijnen(wetsuite.datacollect.sru.SRUBase):
     ''' Note: Broken/untested
     '''
     def __init__(self, verbose=False):
-        wetsuite.datacollect.sru.SRUBase.__init__(self, 
+        wetsuite.datacollect.sru.SRUBase.__init__(self,
                                                   base_url='http://repository.overheid.nl/sru',
-                                                  x_connection='eur', 
+                                                  x_connection='eur',
                                                   extra_query='c.product-area any eur',
                                                   verbose=verbose)
