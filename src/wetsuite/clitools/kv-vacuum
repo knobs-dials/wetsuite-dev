@@ -1,4 +1,7 @@
 #!/usr/bin/python3
+''' Given one or more paths to a LocalKV style database,
+    does an SQLite vacuum on it.
+'''
 import sys, os #, time, json, pprint
 import wetsuite.helpers.localdata
 
