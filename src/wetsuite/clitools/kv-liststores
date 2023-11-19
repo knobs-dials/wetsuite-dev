@@ -1,4 +1,8 @@
 #!/usr/bin/python3
+''' Goes through the wetsuite directory of stores,
+    lists each, with some basic summary
+'''
+
 import wetsuite.helpers.localdata
 import wetsuite.helpers.format
 
@@ -9,12 +13,13 @@ if __name__ == '__main__':
         num_items = item.pop('num_items', None)
 
         print('  %5sB'%wetsuite.helpers.format.kmgtp(bytesize, extradigits=0), end='')
-        
+
         if num_items is not None:
+            avg = 0
             try:
                 avg = bytesize / num_items
             except ZeroDivisionError:
-                avg = 0
+                pass
 
             print('   %9s items     %5sB/item'%(
                 wetsuite.helpers.format.kmgtp(num_items, extradigits=0), 
@@ -25,7 +30,6 @@ if __name__ == '__main__':
         #if description is not None:
         #    print('description: %sB'%( '\n'.join(textwrap.wrap(description, 90, subsequent_indent='             '))))
 
-           
         print('       %s'%item.pop('path'), end='')
 
         #if len(item) > 0:
