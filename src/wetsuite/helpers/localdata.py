@@ -702,6 +702,11 @@ def list_stores( skip_table_check=True, get_num_items=False ):
                 if get_num_items:
                     itemdict['num_items'] = len( kv )
 
+                try:
+                    itemdict['valtype'] = kv._get_meta('valtype')
+                except KeyError:
+                    pass
+
                 itemdict['description'] = kv._get_meta('description', True)
                 ret.append( itemdict )
                 kv.close()
