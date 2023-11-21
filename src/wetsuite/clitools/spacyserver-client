@@ -8,105 +8,108 @@ import wetsuite.helpers.spacyserver
 import wetsuite.helpers.shellcolor as sc
 
 
-if len(sys.argv) > 1:
-    q = ' '.join( sys.argv[1:])
-else:
-    q = sys.stdin.read()
+def main():
+    ' everything this does '
+    if len(sys.argv) > 1:
+        q = ' '.join( sys.argv[1:])
+    else:
+        q = sys.stdin.read()
 
 
-start = time.time()
-resp = wetsuite.helpers.spacyserver.http_api(q)
-took  = time.time() - start
-print( "API fetch took %dms"%(1000.*took) )
+    start = time.time()
+    resp = wetsuite.helpers.spacyserver.http_api(q)
+    took  = time.time() - start
+    print( "API fetch took %dms"%(1000.*took) )
 
 
-tokens    = resp.pop('tokens')
-sentences = resp.pop('sentences')
-# pop to take out the bulk and show the rest in pprint:
-pprint.pprint( resp )
-sys.stdout.write('\n')
+    tokens    = resp.pop('tokens')
+    sentences = resp.pop('sentences')
+    # pop to take out the bulk and show the rest in pprint:
+    pprint.pprint( resp )
+    sys.stdout.write('\n')
 
-COLS = '  %3s %10s %-35s  %20s %-20s %-4s %-3s %-5s %25s   %s'
-print('Tokens:  ')
-print(COLS%('#', 'POS', 'TAG', 'TEXT', 'LEMMA', 'STOP', 'OOV', 'NORM', 'DEP', 'REST', ))
+    cols = '  %3s %10s %-35s  %20s %-20s %-4s %-3s %-5s %25s   %s'
+    print('Tokens:  ')
+    print(cols%('#', 'POS', 'TAG', 'TEXT', 'LEMMA', 'STOP', 'OOV', 'NORM', 'DEP', 'REST', ))
 
-minnorm = min( float(tok.get('norm', '0'))  for tok in tokens )
-maxnorm = max( float(tok.get('norm', '0'))  for tok in tokens )
-if maxnorm==0:
-    maxnorm = 0.01
+    minnorm = min( float(tok.get('norm', '0'))  for tok in tokens )
+    maxnorm = max( float(tok.get('norm', '0'))  for tok in tokens )
+    if maxnorm==0:
+        maxnorm = 0.01
 
-def pop_if_present(d, k, default=None):
-    ' pop from dict by key if present, otherwise act like a get with a fallback value'
-    if k in d:
-        return d.pop(k)
-    return default
+    def pop_if_present(d, k, default=None):
+        ' pop from dict by key if present, otherwise act like a get with a fallback value'
+        if k in d:
+            return d.pop(k)
+        return default
 
-for tok in tokens:
-    showtok = dict(tok)
-    #print( showtok )
-    i          = pop_if_present(showtok, 'i')
-    lemma      = pop_if_present(showtok, 'lemma')
-    text       = pop_if_present(showtok, 'text')
-    pos        = pop_if_present(showtok, 'pos')
-    tag        = pop_if_present(showtok, 'tag')
-    is_stop    = pop_if_present(showtok, 'is_stop')
-    is_oov     = pop_if_present(showtok, 'is_oov')
-    norm       = pop_if_present(showtok, 'norm')
-    dep_type   = pop_if_present(showtok, 'dep_type')
-    dep_from_i = pop_if_present(showtok, 'dep_from_i')
-    dep = '%s from %s'%(dep_type, dep_from_i)
-    stop = ''
-    if is_stop:
-        stop='Y'
-    oov = ''
-    if is_oov:
-        oov='Y'
-    
-    if pos in ('PUNCT',) or is_stop:
-        text  = sc.darkgray( text  )
-        lemma = sc.darkgray( lemma )
-    
-    if norm is not None:
-        norm = float(norm)
-        #norm = sc.redgreen( '%.0f'%(float(norm)), 1-(float(norm)/ maxnorm ))
-        #print([ minnorm, maxnorm])
-        norm = sc.blend( '%.0f'%(float(norm)), (1.-(float(norm)/ maxnorm ))**1.7, (0.3,0.3,0.3), (0,1,0)  )
+    for tok in tokens:
+        showtok = dict(tok)
+        #print( showtok )
+        i          = pop_if_present(showtok, 'i')
+        lemma      = pop_if_present(showtok, 'lemma')
+        text       = pop_if_present(showtok, 'text')
+        pos        = pop_if_present(showtok, 'pos')
+        tag        = pop_if_present(showtok, 'tag')
+        is_stop    = pop_if_present(showtok, 'is_stop')
+        is_oov     = pop_if_present(showtok, 'is_oov')
+        norm       = pop_if_present(showtok, 'norm')
+        dep_type   = pop_if_present(showtok, 'dep_type')
+        dep_from_i = pop_if_present(showtok, 'dep_from_i')
+        dep = '%s from %s'%(dep_type, dep_from_i)
+        stop = ''
+        if is_stop:
+            stop='Y'
+        oov = ''
+        if is_oov:
+            oov='Y'
 
-    print( sc.cformat(COLS, (
-        i, 
-        sc.hash_color(pos,rgb=True, on='dark'), 
-        sc.hash_color(tag,rgb=True, on='dark'), 
-        text, 
-        lemma,
-        stop,
-        oov,
-        norm,
-        sc.hash_color(dep,rgb=True, hash_instead=dep_type, on='dark'),
-        showtok
-    )) )
+        if pos in ('PUNCT',) or is_stop:
+            text  = sc.darkgray( text  )
+            lemma = sc.darkgray( lemma )
 
+        if norm is not None:
+            norm = float(norm)
+            #norm = sc.redgreen( '%.0f'%(float(norm)), 1-(float(norm)/ maxnorm ))
+            #print([ minnorm, maxnorm])
+            norm = sc.blend( '%.0f'%(float(norm)), (1.-(float(norm)/ maxnorm ))**1.7, (0.3,0.3,0.3), (0,1,0)  )
 
-
-sys.stdout.write('\n')
+        print( sc.cformat(cols, (
+            i,
+            sc.hash_color(pos,rgb=True, on='dark'),
+            sc.hash_color(tag,rgb=True, on='dark'),
+            text,
+            lemma,
+            stop,
+            oov,
+            norm,
+            sc.hash_color(dep,rgb=True, hash_instead=dep_type, on='dark'),
+            showtok
+        )) )
 
 
-for sentence in sentences:
-    st, en = sentence['range']
 
-    for toki in range(st, en):
-        tok = tokens[toki]
-        text = tok['text']
-        pos  = tok['pos']
-        if pos in ('SPACE',):
-            continue
-        sys.stdout.write( 
-            '%s/%s'%( 
-                sc.white( text ), 
-                sc.hash_color(pos, rgb=True) 
+    sys.stdout.write('\n')
+
+
+    for sentence in sentences:
+        st, en = sentence['range']
+
+        for toki in range(st, en):
+            tok = tokens[toki]
+            text = tok['text']
+            pos  = tok['pos']
+            if pos in ('SPACE',):
+                continue
+            sys.stdout.write(
+                '%s/%s'%( 
+                    sc.white( text ),
+                    sc.hash_color(pos, rgb=True)
+                )
             )
-        )
-        sys.stdout.write('  ')
+            sys.stdout.write('  ')
 
-    sys.stdout.write('\n\n')
+        sys.stdout.write('\n\n')
 
-
+if __name__ == '__main__':
+    main()

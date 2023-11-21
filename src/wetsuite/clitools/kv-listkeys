@@ -6,8 +6,8 @@
 import sys, os
 import wetsuite.helpers.localdata
 
-if __name__ == '__main__':
-
+def main():
+    ' see module docstring '
     for path in sys.argv[1:]:
         if not os.path.exists( path ):
             print( 'Specified path not found: %r'%path )
@@ -24,3 +24,6 @@ if __name__ == '__main__':
             print(key)
             count += 1
         sys.stderr.write('# Listed %d keys\n'%count)
+
+if __name__ == '__main__':
+    main()

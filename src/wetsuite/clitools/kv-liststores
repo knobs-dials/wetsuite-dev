@@ -7,7 +7,8 @@ import wetsuite.helpers.localdata
 import wetsuite.helpers.format
 
 
-if __name__ == '__main__':
+def main():
+    ' see module docstring '
     for item in wetsuite.helpers.localdata.list_stores( True ):
         bytesize = item.pop('bytesize')
         num_items = item.pop('num_items', None)
@@ -22,7 +23,7 @@ if __name__ == '__main__':
                 pass
 
             print('   %9s items     %5sB/item'%(
-                wetsuite.helpers.format.kmgtp(num_items, extradigits=0), 
+                wetsuite.helpers.format.kmgtp(num_items, extradigits=0),
                 wetsuite.helpers.format.kmgtp(avg, extradigits=0)
                 ), end='')
 
@@ -36,3 +37,6 @@ if __name__ == '__main__':
         #    print(item, end='')
 
         print()
+
+if __name__ == '__main__':
+    main()
