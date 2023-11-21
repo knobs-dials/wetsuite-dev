@@ -1,9 +1,13 @@
 #!/usr/bin/python3
-import sys, os #, time, json, pprint
+''' Given a path to a LocalKV or MsgPackKV style database, and a key in it, prints out the value.
+
+    Note that this is only for debug, e.g. in that it may transform the output value to do so.
+'''
+import sys, os, pprint
 import wetsuite.helpers.localdata
 
-
-if __name__ == '__main__':
+def main():
+    ' see module docstring '
     if len(sys.argv) != 3:
         sys.stderr.write( "This script takes a path and a single key\n")
         sys.exit(-1)
@@ -18,14 +22,25 @@ if __name__ == '__main__':
             print( 'Specified path does not seem to be an SQLite file create by us: %r'%path )
             sys.exit(-3)
 
-        store = wetsuite.helpers.localdata.LocalKV(path, str, str) # the types are not actually used because we don't use put()
-        count = 0
+        store = wetsuite.helpers.localdata.LocalKV(path, None, None, read_only=True) # the types are not actually used because we don't use put()
+
+        # CONSIDER: deal with msgpack more cleanly
+        if store._get_meta('valtype', missing_as_none=True) == 'msgpack':
+            store.close()
+            store = wetsuite.helpers.localdata.MsgpackKV(path, str)
+
         val = store.get( key )
         store.close()
-        if type(val) is bytes:
+        if isinstance(val, bytes):
             sys.stdout.buffer.write( val )
-        elif type(val) is str:
+        elif isinstance(val, str):
             sys.stdout.write( val )
+        elif isinstance(val, dict): # assumes msgpackkv used as such
+            sys.stdout.write( pprint.pformat(val) )
         else:
             sys.stdout.write( str(val) )
+        sys.stdout.write( '\n' )
 
+
+if __name__ == '__main__':
+    main()
