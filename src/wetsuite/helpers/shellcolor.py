@@ -1,36 +1,35 @@
-""" Eases production of colors in the terminal, for a few CLI tools.
+'''
+Eases production of colors in the terminal, for a few CLI tools.
 
-    Tries to only produce color escapes when the terminal supports it: 
-    whether we detect we aree in a tty, and TERM suggests we are color-capable.
-    You can override that in manual checks with the arguments on guess_color_support(),
-    You can override that in the automatic checks (necessary for the convenience function)
-    by setting the globals default_forceifnoterm and/or default_forceifnotty)
-
-   
-    Currently provides some convenience functions for a single foreground color, meant to be used like:
-
-      import helpers_shellcolor as sc
-      print sc.red('shown as red')
-      Without the check and for more control:
-      print sc.BRIGHT+sc.BLUE+sc.UNDERLINE+'shown bright blue'+sc.RESET
-
-    Tries to only add the control codes when the context seems capable of it.
-    (TODO: this needs some tuning)
-    check whether we are in a tty, and whether the TERM suggests we are color-capable.
-    You can override that in manual checks with the arguments on guess_color_support(),
-    You can override that in the automatic checks (necessary for the convenience function)
-        by setting the globals default_forceifnoterm and/or default_forceifnotty
+Tries to only produce color escapes when the terminal supports it: 
+whether we detect we aree in a tty, and TERM suggests we are color-capable.
+You can override that in manual checks with the arguments on guess_color_support(),
+You can override that in the automatic checks (necessary for the convenience function)
+by setting the globals default_forceifnoterm and/or default_forceifnotty)
 
 
-    TODO:
-    consider writing a percent formatter that is aware of the zero width of these escapes,
-    so that you can put strings in things like %20s without magic weirdness.
+Currently provides some convenience functions for a single foreground color, meant to be used like: ::
+    import helpers_shellcolor as sc
+    print sc.red('shown as red')
+    Without the check and for more control:
+    print sc.BRIGHT+sc.BLUE+sc.UNDERLINE+'shown bright blue'+sc.RESET
 
-    rename to, perhaps, helpers_terminal.py ?
+Tries to only add the control codes when the context seems capable of it.
+(TODO: this needs some tuning)
+check whether we are in a tty, and whether the TERM suggests we are color-capable.
+You can override that in manual checks with the arguments on guess_color_support(),
+You can override that in the automatic checks (necessary for the convenience function)
+by setting the globals default_forceifnoterm and/or default_forceifnotty
 
-    see whether tput colors is useful (e.g. detecting more colors)
 
-"""
+TODO:
+consider writing a percent formatter that is aware of the zero width of these escapes,
+so that you can put strings in things like %20s without magic weirdness.
+
+rename to, perhaps, helpers_terminal.py ?
+
+see whether tput colors is useful (e.g. detecting more colors)
+'''
 #def format(s, *args):
 
 import os
@@ -278,7 +277,7 @@ BGYELLOW       = '\x1b[43m'
 BGORANGE       = BGYELLOW
 BGMAGENTA      = '\x1b[45m'
 BGCYAN         = '\x1b[46m'
-BGWHITE        = '\x1b[47m'
+#BGWHITE        = '\x1b[47m'
 BGBRIGHTGRAY   = '\x1b[1;47m'
 BGWHITE        = BGBRIGHTGRAY
 
@@ -422,19 +421,15 @@ def real_len(s):
 
 
 def closest_from_rgb255(r,g,b, mid=170,full=255, nobright=False):
-    '''
-       Given a r,g,b color (0..255 scale),
-       pick the closest shell color (returns the function)
+    ''' Given a r,g,b color (0..255 scale), pick the closest shell color (returns the function)
 
-       The brightness that color is rendered as depends on the terminal,
-       see e.g. https://en.wikipedia.org/wiki/ANSI_escape_code#3.2F4_bit
+        The brightness that color is rendered as depends on the terminal,
+        see e.g. https://en.wikipedia.org/wiki/ANSI_escape_code#3.2F4_bit
 
-       To get some semblance of control, you can control the brightness
-       the non-bright color is assumed to have. 
-       (hint: you can cheat your way to less of the garish bright colors by upping mid,
-              or more by lowering it)
+        To get some semblance of control, you can control the brightness the non-bright color is assumed to have. 
+        (hint: you can cheat your way to less of the garish bright colors by upping mid, or more by lowering it)
 
-       You can completely avoid the bright colors by specifying nobright=True
+        You can completely avoid the bright colors by specifying nobright=True
     '''
     colors=(
         ('red',         mid,0,0,    red),
@@ -542,10 +537,10 @@ def _percent_parse(s, add=[]):
 def truncate_real_len(s,len, append=RESET):
     ''' Truncate a string after so-many real characters.
         Written for "truncate colored text according to the terminal width" functionality.
-        
-        By default, it appends a reset to default colors,
-          so that it doesn't leave things as the last-used color
-          To avoid that, say append=''
+
+        @param append: By default, it appends a reset to default colors,
+        so that it doesn't leave things as the last-used color.
+        To avoid that, say append=''
     '''
     ret = 0
     en=True
@@ -577,7 +572,7 @@ def cformat(fs, seq, fsinstead=False):
         cformat(arg1,arg2) acts like arg1%arg2
 
         e.g. cformat('%20s', (WHITE+'fork'+RESET,) ) == '                \x1b[1;37mfork\x1b[0m\x1b[39m'
-                                            instead of  '\x1b[1;37mfork\x1b[0m\x1b[39m'
+        instead of  '\x1b[1;37mfork\x1b[0m\x1b[39m'
 
         Assumption is that escapes have zero width, which is true for colors but not for weirder things.
     """

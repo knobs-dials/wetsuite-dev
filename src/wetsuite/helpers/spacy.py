@@ -1,10 +1,11 @@
-''' helper functions related to spacy natural language parsing.
+'''
+helper functions related to spacy natural language parsing.
 
-    TODO: decide whether we want to import spacy globally - if a user hadn't yet it would be a heavy import
-          and there may be things you want to control before that, like tensorflow warning suppression.
-          ...though chances are you'll import this helper after that, so it might be fine.
+TODO: decide whether we want to import spacy globally - if a user hadn't yet it would be a heavy import
+and there may be things you want to control before that, like tensorflow warning suppression.
+...though chances are you'll import this helper after that, so it might be fine.
 
-    TODO: cleanup
+TODO: cleanup
 '''
 
 #import time, json, collections
@@ -61,9 +62,9 @@ def interesting_words(span, ignore_stop=True, ignore_pos_=('PUNCT','SPACE','X', 
 
         Since spacy makes a point to always keep representing the original input,
         we have to choose to 
-        - return the indices - more flexible but more work
-        - return only the text - 
-        - return a new... something.
+          - return the indices - more flexible but more work
+          - return only the text - 
+          - return a new... something.
         e.g. spangroups   (use weakrefs so when the document gets collected, the returned spangroup breaks)
     '''
     #import spacy
@@ -100,7 +101,7 @@ def interesting_words(span, ignore_stop=True, ignore_pos_=('PUNCT','SPACE','X', 
 def subjects_in_doc(doc):
     ''' If sentences are annotated, returns the nominal or clausal subjects for each sentence individually,
         as a list of lists (of Tokens), e.g.
-          I am a fish. You are a moose  ->   [ [I ], [You] ]
+          - I am a fish. You are a moose  ->   [ [I ], [You] ]
 
         If no sentences are annotated, it will return
     '''
@@ -117,13 +118,13 @@ def subjects_in_span(span):
         yet if you wanted them per sentence, see subjects_in_doc.
 
         Returns a mapping from each subject to related information, e.g.
-          Token(she):    { verb:Token(went) }
-          Token(Taking): { verb:Token(relax), object:Token(nap), clause:[Token(Taking), Token(a), Token(nap)] }
+           - Token(she):    { verb:Token(went) }
+           - Token(Taking): { verb:Token(relax), object:Token(nap), clause:[Token(Taking), Token(a), Token(nap)] }
         You may only be interested in its keys. What's in the values is undecided and may change. 
 
         Relevant here are
-        * nsubj - nominal subject, a non-clausal constituent in the subject position  of an active verb. 
-                  A nonclausal consituent with the SBJ function tag is considered a nsubj.
+          - nsubj - nominal subject, a non-clausal constituent in the subject position  of an active verb. 
+            A nonclausal consituent with the SBJ function tag is considered a nsubj.
 
         TODO: actually implement
     '''
@@ -190,8 +191,8 @@ def detect_language(text: str):
     ''' Note that this depends on the spacy_fastlang library, which depends on the fasttext library.
         
         Returns (lang, score)
-        - lang string as used by spacy          (xx if don't know)
-        - score is an approximated certainty
+          - lang string as used by spacy          (xx if don't know)
+          - score is an approximated certainty
 
         Depends on spacy_fastlang and loads it on first call of this function.  Which will fail if not installed.
 

@@ -58,9 +58,10 @@ def contains_all_of( haystack:str, needles:List[str], case_sensitive=True, regex
 
 def ordered_unique( strlist, case_sensitive=True, remove_none=True ):
     ''' Makes strings in a list of strings unique,
-          and keep the first of each / take out later duplicates
+        and keep the first of each / take out later duplicates
+       
         So unlike a plain set(strlist), 
-          it keeps the order of what we keep.
+        it keeps the order of what we keep.
 
         Can be made case insensitive. It then keeps the first casing it saw.
         Can be made faster.
@@ -88,10 +89,10 @@ def findall_with_context(pattern:str, s:str, context_amt:int):
         and for each match also gives some of the text context (on a character basis). 
 
         Is a generator that yields tuples of (
-        - string before, 
-        - matched string 
-        - match object   (may seem redundant, but you often want a distinction between what is matched and captured)
-        - string after 
+            - string before, 
+            - matched string 
+            - match object   (may seem redundant, but you often want a distinction between what is matched and captured)
+            - string after 
 
         For example
     '''
@@ -124,8 +125,7 @@ def is_numeric(string: str):
 
 
 def simplify_whitespace(string: str): #, strip=True, newline_to_space=True, squeeze_space=True)
-    ''' remove newlines, squeeze spaces, strip the whole
-        (largely imitates   tr -s '\n' ' '  )
+    ''' Remove newlines, squeeze spaces, strip the whole - largely imitates   C{tr -s '\n' ' '}  
     '''
     return re.sub(r'[\s\n]+', ' ', string.strip()).strip()
 

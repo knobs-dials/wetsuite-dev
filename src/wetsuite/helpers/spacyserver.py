@@ -11,18 +11,18 @@ def http_api(q, ip='127.0.0.1', port=8282, want_svg=False, as_text=False, timeou
         Return the data it gives us as a dict
 
         Notes:
-        - We return our own data-only conception of the information tacked onto the spacy Document.
-          There was previously an experiment to serialize/pickle/docbin the spacy object
-          so that we might transparently one or more other hosts to do work for us,
-          the overheads of deserializing are high - that serialization seems only useful when storing significant work.
+          - We return our own data-only conception of the information tacked onto the spacy Document.
+            There was previously an experiment to serialize/pickle/docbin the spacy object
+            so that we might transparently one or more other hosts to do work for us,
+            the overheads of deserializing are high - that serialization seems only useful when storing significant work.
 
-        - Is little more than a HTTP POST (because requests larger than ~4K aren't allowed),
-          and some JSON wrapping. 
+          - Is little more than a HTTP POST (because requests larger than ~4K aren't allowed),
+            and some JSON wrapping. 
 
-        - want_svg requests spacy_server to sump dependencies SVG in a value (yes, that's cheating encoding-wise).
-          Defaults to False because it's large, and there are various uses where you don't want it.
-        
-        - timeout mostly to avoid the possibility of hanging forever if you don't specify one
+          - want_svg requests spacy_server to sump dependencies SVG in a value (yes, that's cheating encoding-wise).
+            Defaults to False because it's large, and there are various uses where you don't want it.
+            
+          - timeout mostly to avoid the possibility of hanging forever if you don't specify one
     """
     if want_svg:
         want_svg = 'y'
@@ -41,18 +41,19 @@ def http_api(q, ip='127.0.0.1', port=8282, want_svg=False, as_text=False, timeou
 
 
 def parse(nlp, query_string, nlp_lock=None, want_svg=True, want_sims=False):
-    ''' Takes a specy nlp object, and python string,
-        runs that model on that string
-        extracts some useful stuff
+    ''' 
+    Takes a spacy nlp object, and python string.
         
-        Returns a dict, with just python(JSON-serializable) objects 
-        ...so that we can send it over a HTTP API 
+    Runs that model on that string extracts some useful stuff
+        
+    Returns a dict, with just python(JSON-serializable) objects, so that we can send it over a HTTP API 
     
-        Should probably be split up.
+    Should probably be split up into more parts
 
-        CONSIDER: allow parameter to split on \n\n and nlp.pipe() it.
-        CONSIDER: add doc.to_bytes and doc.from_bytes
+    CONSIDER: allow parameter to split on series of newlines, and nlp.pipe() it.
+    CONSIDER: add doc.to_bytes and doc.from_bytes 
     '''
+
     import spacy
     from spacy import displacy
     start_time = time.time()

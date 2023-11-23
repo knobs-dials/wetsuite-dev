@@ -1,23 +1,23 @@
-''' Functions that I find myself reusing, largely in notebooks, 
-    mostly to the end of inspecting data
-
+''' General utility functions, like "give me a path to where wetsuite can store data" and debug tools to the end of inspecting data. 
 '''
-import os, difflib, hashlib
+import os
+import difflib
+import hashlib
 
 
 def wetsuite_dir():
     ''' Figure out where we can store data.
     
         Returns a dict with keys mentioning directories:
-          wetsuite_dir: a directory in the user profile we can store things
-          datasets_dir: a directory inside wetsuite_dir first that datasets.load() will put dataset files in 
-          stores_dir:   a directory inside wetsuite_dir that localdata will put sqlite files in   
+          - wetsuite_dir: a directory in the user profile we can store things
+          - datasets_dir: a directory inside wetsuite_dir first that datasets.load() will put dataset files in 
+          - stores_dir:   a directory inside wetsuite_dir that localdata will put sqlite files in   
 
         Keep in mind:
-        - When windows users have their user profile on the network, we try to pick a directory more likely to be shared by your other logins
-        - ...BUT keep in mind network mounts tend not to implement proper locking, 
-           so around certain things (e.g. our localdata.LocalKV) you invite corruption when multiple workstations write at the same time, 
-           ...so don't do that. If you need distributed work, use an actually networked store, or be okay with read-only access.
+          - When windows users have their user profile on the network, we try to pick a directory more likely to be shared by your other logins
+          - ...BUT keep in mind network mounts tend not to implement proper locking, 
+             so around certain things (e.g. our localdata.LocalKV) you invite corruption when multiple workstations write at the same time, 
+             ...so don't do that. If you need distributed work, use an actually networked store, or be okay with read-only access.
     '''
     # CONSIDER: listen to an environment variable to override that base directory,
     #         to allow people to direct where to store this (might be useful e.g. on clustered filesystems)
@@ -93,9 +93,8 @@ def hash_color(string, on=None):
     ''' Give a CSS color for a string - consistently the same each time based on a hash
         Usable e.g. to make tables with categorical values more skimmable.
 
-        To that end, this 
-          takes a string, and
-          returns (css_str,r,g,b), where r,g,b are 255-scale r,g,b values for a string
+        To that end, this takes a string, and
+        returns (css_str,r,g,b), where r,g,b are 255-scale r,g,b values for a string
     '''
     dig = hash_hex( string.encode('utf8') )
     r, g, b = dig[0:3]
