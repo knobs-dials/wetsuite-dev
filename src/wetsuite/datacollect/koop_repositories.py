@@ -1,11 +1,14 @@
 #!/usr/bin/python3
-''' An interface to the SRU API to the repositories managed by KOOP:
-    - classes that instantiate a usable SRU interface on specific repositories and/or subsets of them
-    - helper functions for dealing with specific repository content
+'''
+An interface to the repositories managed by KOOP (specifically via its SRU API)
 
-    Right now, only BWB and CVDR have been used seriously, the rest still needs testing.
+Mostly
+  - classes that instantiate a usable SRU interface on specific repositories and/or subsets of them
+  - helper functions for dealing with specific repository content
 
-    See also sru.py
+Right now, only BWB and CVDR have been used seriously, the rest still needs testing.
+
+See also sru.py
 '''
 
 import wetsuite.datacollect.sru

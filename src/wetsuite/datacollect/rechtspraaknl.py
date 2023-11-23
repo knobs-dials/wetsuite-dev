@@ -1,18 +1,19 @@
 #!/usr/bin/python3
-''' code to fetch data from rechtspraak.nl's interface
+'''
+Code to fetch data from rechtspraak.nl's interface
 
-    Note that the data.rechtspraak.nl/uitspraken/zoeken API is primarily for ranges - 
-    they do _not_ seem to allow text searches like the web interface does.
+Note that the data.rechtspraak.nl/uitspraken/zoeken API is primarily for ranges - 
+they do _not_ seem to allow text searches like the web interface does.
 
-    https://www.rechtspraak.nl/Uitspraken/paginas/open-data.aspx
-
-
-    If you want to save time, and server load for them, you would probably start with fetching OpenDataUitspraken.zip via
-    https://www.rechtspraak.nl/Uitspraken/paginas/open-data.aspx and inserting those so you can avoid 3+ million fetches.
+https://www.rechtspraak.nl/Uitspraken/paginas/open-data.aspx
 
 
-    There is an API at https://uitspraken.rechtspraak.nl/api/zoek that backs the website search
-    I'm not sure whether we're supposed to use it like this, but it's one of the better APIs I've seen in this context :)
+If you want to save time, and server load for them, you would probably start with fetching OpenDataUitspraken.zip via
+https://www.rechtspraak.nl/Uitspraken/paginas/open-data.aspx and inserting those so you can avoid 3+ million fetches.
+
+
+There is an API at https://uitspraken.rechtspraak.nl/api/zoek that backs the website search
+I'm not sure whether we're supposed to use it like this, but it's one of the better APIs I've seen in this context :)
 '''
 
 import json
@@ -31,33 +32,35 @@ BASE_URL = "https://data.rechtspraak.nl/"
 
 
 def search(params):
-    ''' Post a search to data.rechtspraak.nl based on a dict of parameters
+    ''' 
+    Post a search to data.rechtspraak.nl based on a dict of parameters
 
-        Returns etree object for the search, or raises an exception 
-          Note that when when you give it nonsensical parameters, like date=2022-02-30, 
-          the service won't return valid XML and the XML parse raises an exception.
-        CONSIDER: returning only the urls
+    Note that when when you give it nonsensical parameters, like date=2022-02-30, 
+    the service won't return valid XML and the XML parse raises an exception.
 
-        Params is handed to urlencode so could be either a dict or list of tuples, 
-        but because you are likely to repeat variables to specify ranges, should probably be the latter, e.g.
-            [ ("modified", "2023-01-01), ("modified", "2023-01-05) ]
+    @param params: handed to urlencode so could be either a dict or list of tuples, 
+    but because you are likely to repeat variables to specify ranges, should probably be the latter, e.g.::
+        [ ("modified", "2023-01-01), ("modified", "2023-01-05) ]
+
+    @return:  etree object for the search (or raises an exception)
+    CONSIDER: returning only the urls
          
-        Parameters include:
-            max       (default is 1000)
-            from      zero-based, defaults is 0
-            sort      by modification date, ASC (default, oldest first) or DESC
+    Parameters include:
+      -  max       (default is 1000)
+      -  from      zero-based, defaults is 0
+      -  sort      by modification date, ASC (default, oldest first) or DESC
 
-            type      'Uitspraak' or 'Conclusie'
-            date      yyyy-mm-dd              (once for 'on this date',        twice for a range)
-            modified  yyyy-mm-ddThh:mm:ss     (once for a 'since then to now', twice for a range)
-            return    DOC for things where there are documents; if omitted it also fetches things for which there is only metadata
+      -  type      'Uitspraak' or 'Conclusie'
+      -  date      yyyy-mm-dd              (once for 'on this date',        twice for a range)
+      -  modified  yyyy-mm-ddThh:mm:ss     (once for a 'since then to now', twice for a range)
+      -  return    DOC for things where there are documents; if omitted it also fetches things for which there is only metadata
 
-            replaces  fetch ECLI for an LJN
+      -  replaces  fetch ECLI for an LJN
 
-            subject   URI of a rechtsgebied
-            creator   
+      -  subject   URI of a rechtsgebied
+      -  creator   
 
-        See also:
+    See also:
         - https://www.rechtspraak.nl/SiteCollectionDocuments/Technische-documentatie-Open-Data-van-de-Rechtspraak.pdf
     '''
     # constructs something like 'http://data.rechtspraak.nl/uitspraken/zoeken?type=conclusie&date=2011-05-01&date=2011-05-30'
@@ -70,16 +73,17 @@ def search(params):
 
 
 def parse_search_results(tree):
-    ''' parses search result XML, and returns a list of dicts like:
-        {      'ecli': 'ECLI:NL:GHARL:2022:7129',
-              'title': 'ECLI:NL:GHARL:2022:7129, Gerechtshof Arnhem-Leeuwarden, 16-08-2022, 200.272.381/01',
-            'summary': 'some text made shorter for this docstring example',
-            'updated': '2023-01-01T13:29:23Z',
-               'link': 'https://uitspraken.rechtspraak.nl/InzienDocument?id=ECLI:NL:GHARL:2022:7129',
-                'xml': 'https://data.rechtspraak.nl/uitspraken/content?id=ECLI:NL:GHARL:2022:7129'     }
+    ''' parses search result XML, and returns a list of dicts like: ::
+            {      'ecli': 'ECLI:NL:GHARL:2022:7129',
+                'title': 'ECLI:NL:GHARL:2022:7129, Gerechtshof Arnhem-Leeuwarden, 16-08-2022, 200.272.381/01',
+                'summary': 'some text made shorter for this docstring example',
+                'updated': '2023-01-01T13:29:23Z',
+                'link': 'https://uitspraken.rechtspraak.nl/InzienDocument?id=ECLI:NL:GHARL:2022:7129',
+                    'xml': 'https://data.rechtspraak.nl/uitspraken/content?id=ECLI:NL:GHARL:2022:7129',
+            }
         Notes: 
-        - 'xml' is augmented based on the ecli and does not come from the search results
-        - keys may be missing (in practice probably just summary?)
+          - 'xml' is augmented based on the ecli and does not come from the search results
+          - keys may be missing (in practice probably just summary?)
     '''
     tree = wetsuite.helpers.etree.strip_namespace(tree)
     # tree.find('subtitle') # its .text will be something like 'Aantal gevonden ECLI's: 3178259'
@@ -211,13 +215,14 @@ def _para_text(treenode):
 
 
 def parse_content(tree):
-    ''' Parse the type of XML you get when you stick an ECLI onto  https://data.rechtspraak.nl/uitspraken/content?id=
-        and tries to give you metadata and text. 
-        CONSIDER: separating those
+    '''
+    Parse the type of XML you get when you stick an ECLI onto  https://data.rechtspraak.nl/uitspraken/content?id=
+    and tries to give you metadata and text. 
+    CONSIDER: separating those
 
-        Returns a dict with 
+    @return: a dict with TODO
         
-        TODO: actually read the schema - see https://www.rechtspraak.nl/Uitspraken/paginas/open-data.aspx
+    TODO: actually read the schema - see https://www.rechtspraak.nl/Uitspraken/paginas/open-data.aspx
     '''
     ret = {}
     tree = wetsuite.helpers.etree.strip_namespace( tree )
@@ -316,13 +321,15 @@ def parse_proceduresoorten():
 
 
 def parse_rechtsgebieden():
-    ''' Parse that fairly fixed list - which seems to be a depth-2 tree.
+    '''
+    Parse that fairly fixed list - which seems to be a depth-2 tree.
      
-        Returns a dict from identifiers to a list of names, which will e.g. contain 
-            'http://psi.rechtspraak.nl/rechtsgebied#bestuursrecht':                   ['Bestuursrecht']
-            'http://psi.rechtspraak.nl/rechtsgebied#bestuursrecht_mededingingsrecht': ['Mededingingsrecht', 'Bestuursrecht']
-          Where Bestuursrecht is a grouping of this and more, 
-            and Mededingingsrecht one of several specific parts of it 
+    Returns a dict from identifiers to a list of names, which will e.g. contain 
+      -  'http://psi.rechtspraak.nl/rechtsgebied#bestuursrecht':                   ['Bestuursrecht']
+      -  'http://psi.rechtspraak.nl/rechtsgebied#bestuursrecht_mededingingsrecht': ['Mededingingsrecht', 'Bestuursrecht']
+    Where 
+      - Bestuursrecht is a grouping of this and more, 
+      - Mededingingsrecht one of several specific parts of it 
     '''
     # TODO: figure out what the data means and how we want to return it
     rechtsgebieden_bytestring = wetsuite.helpers.net.download( rechtsgebieden_url )

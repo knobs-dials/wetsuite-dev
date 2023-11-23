@@ -1,36 +1,37 @@
 #!/usr/bin/python3
-''' 
-    In contract with 
-    - the datasets module,    
-        which deals with data in the sense of pre-generated collections you can download as a file and load in RAM
-        ...but can be incomplete or out of date, and may not fit in RAM
+'''
+An experiment whether it is useful to provide a "fetch me things from downloaded datasets
+and/or online data and/or some local files". In idea stage.
 
-    - the datacollect module, which queries the govermnent databases
-        ...but can be slow and not always search the thing you want
 
-    ...the datasearch module is an API to an indexed copy of that we host,
-    which lets experiment more with what kind of searches we allow.
+See also:
+  - the datasets module,    
+    which deals with data in the sense of pre-generated collections you can download as a file and load in RAM
+    ...but can be incomplete or out of date, and may not fit in RAM
 
-    The same API supports this code as well as a website view.
+  - the datacollect module, which queries the govermnent databases
+    ...but can be slow and not always search the thing you want
 
-    CONSIDER:
-    
-    - describe how to host your own.
 
-    - We may want to effectively create a 2-stage search, 
-    - the first a predetermined set of fields from a remote server that determines what we fetch
-        - cannot change much in that even if it's not an API change, it's a change in e.g. fields that the code has to assume are there (unless maybe we reinvent SRU)
-    - the second a more flexible way of sifting through what you have downloaded
+The same API supports this code as well as a website view.
 
-    - Same API to search in a downloaded dataset
-    - should prove faster, and may be longer-lived due to only needing file hosting, not service hosting
-        though there are more RAM concerns
+CONSIDER:
+  - describe how to host your own.
 
-    - Very similar API for live search
-        the argument against this that it's a leaky abstraction when a unified API works differently for fairly hidden reasons
-        BUT in case we ever still want to, with loud footnotes, it's a good idea to think about that unified API
+  - We may want to effectively create a 2-stage search, 
+  - the first a predetermined set of fields from a remote server that determines what we fetch
+    - cannot change much in that even if it's not an API change, it's a change in e.g. fields that the code has to assume are there (unless maybe we reinvent SRU)
+  - the second a more flexible way of sifting through what you have downloaded
 
-    - split out code into one source per file, something patterny like registering factories ?
+  - Same API to search in a downloaded dataset
+  - should prove faster, and may be longer-lived due to only needing file hosting, not service hosting
+    though there are more RAM concerns
+
+  - Very similar API for live search
+    the argument against this that it's a leaky abstraction when a unified API works differently for fairly hidden reasons
+    BUT in case we ever still want to, with loud footnotes, it's a good idea to think about that unified API
+
+  - split out code into one source per file, something patterny like registering factories ?
 '''
 
 import warnings
@@ -91,10 +92,10 @@ class _SearchBase:
             this should tell you URL(s) you can find that at.
 
             Note that 
-            - you do not need to do this if you _came_ from a search, 
-              its hits already contains these URLs -- if we know it.
-            - this can be less reliable than search, in that 
-              if you didn't normalize it quite like we did it may not return a result.
+              - you do not need to do this if you _came_ from a search, 
+                its hits already contains these URLs -- if we know it.
+              - this can be less reliable than search, in that 
+                if you didn't normalize it quite like we did it may not return a result.
         '''
         #if ident.startswith('BWB'):
         #if ident.startswith('CVDR'):
@@ -157,9 +158,9 @@ class HostedSearch(_SearchBase):
 
 
     def num_hits(self):
-        ''' Returns the ElasticSearch hits.total section as a python dict, which contains something like
+        ''' Returns the ElasticSearch hits.total section as a python dict, which contains something like::
                {'relation': 'eq', 'value': 21}
-            or 
+            or::
                {'relation': 'gte', 'value': 10000}
             the latter meaning there were more.
         '''

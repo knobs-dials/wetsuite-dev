@@ -1,11 +1,12 @@
 #!/usr/bin/python3
-'''  Very minimal SRU implementation - just enough to access KOOP's repositories. 
+'''
+Very minimal SRU implementation - just enough to access KOOP's repositories, and used mainly in or alongside the `koop_repositories` module. 
 
-     Used by the koop_repositories module.
+Used by the koop_repositories module.
 
-     Not meant to be a generic implementation - it was written because existing python SRU libraries we tried 
-     didn't seem to like the apparently-custom URL component (x-connection) that the KOOP rpositories use, 
-     so until we figure out a cleaner solution, here's a just-enough-to-work implementation for our specific use cases.
+Not meant to be a generic implementation - it was written because existing python SRU libraries we tried 
+didn't seem to like the apparently-custom URL component (x-connection) that the KOOP rpositories use, 
+so until we figure out a cleaner solution, here's a just-enough-to-work implementation for our specific use cases.
 '''
 # https://www.loc.gov/standards/sru/sru-1-1.html
 
@@ -24,13 +25,14 @@ import wetsuite.helpers.etree
 class SRUBase(object):
     ' Very minimal SRU implementation - just enough to access the KOOP repositories. '
     def __init__(self, base_url:str, x_connection:str=None, extra_query:str=None, verbose=False):
-        ''' base_url should be everything up to the ?
+        '''
+        base_url should be everything up to the ?
             
-            Notes:
-            - x_connection is used to specify the collection within a server, and seems to be non-standard and required
+        Notes:
+          - x_connection is used to specify the collection within a server, and seems to be non-standard and required
 
-            - extra_query is used to let us AND something into the query, and is intended to restrict to a subset of documents
-              in these cases, x_connection seems to include in extra sets, and the combination is sometimes too much (?)
+          - extra_query is used to let us AND something into the query, and is intended to restrict to a subset of documents
+            in these cases, x_connection seems to include in extra sets, and the combination is sometimes too much (?)
         '''
         self.base_url          = base_url
         self.x_connection      = x_connection
@@ -41,8 +43,9 @@ class SRUBase(object):
 
 
     def _url(self):
-        """ combines the basic URL parts given to the constructor, and ensures there's a ?  (so you know you can add &k=v)
-            This can probably go into the constructor, when I know how much is constant across SRU URLs
+        """
+        Combines the basic URL parts given to the constructor, and ensures there's a ?  (so you know you can add &k=v)
+        This can probably go into the constructor, when I know how much is constant across SRU URLs
         """
         ret = self.base_url
         if '?' not in ret:
@@ -56,13 +59,14 @@ class SRUBase(object):
 
 
     def explain(self, readable=True, strip_namespaces=True, timeout=10):
-        ''' Does an explain operation,
-            Returns the XML
-            - if readable==False, it returns it as-is
-            - if readable==True (default), it will ease human readability:
-                - strips namespaces
-                - reindent 
-            The XML is a unicode string (for consistency with other parts of this codebase)
+        '''
+        Does an explain operation,
+        Returns the XML
+          - if readable==False, it returns it as-is
+          - if readable==True (default), it will ease human readability:
+              - strips namespaces
+              - reindent 
+        The XML is a unicode string (for consistency with other parts of this codebase)
         '''
         url = self._url()
         url += '&operation=explain'
@@ -171,22 +175,22 @@ class SRUBase(object):
             You mat want to fish out the number of results (TODO: make that easier)
             
             Notes:
-            - strips namespaces from the results - makes writing code more convenient
+              - strips namespaces from the results - makes writing code more convenient
             
-            - query is LoC's CQL
-              - which indices you can use (e.g. e.g. 'dcterms.modified>=2000-01-01') varies with each repo
-              take a look at explain_parsed() (a parsed summary) or explain() (the actual explain XML)
+              - query is LoC's CQL
+                - which indices you can use (e.g. e.g. 'dcterms.modified>=2000-01-01') varies with each repo
+                take a look at explain_parsed() (a parsed summary) or explain() (the actual explain XML)
 
-            - start_record and maximum_records describe the range to fetch
-              - start_record uses one-based counting
+              - start_record and maximum_records describe the range to fetch
+                - start_record uses one-based counting
 
-            - if callback is not None, this function calls it for each such record node.
+              - if callback is not None, this function calls it for each such record node.
 
-            - Repos may have a (lowish) limit on maximum_records,
-              so if you care about _all_ results, you probably want to use search_retrieve_many() instead.
+              - Repos may have a (lowish) limit on maximum_records,
+                so if you care about _all_ results, you probably want to use search_retrieve_many() instead.
 
             CONSIDER:
-            - option to returning URL instead of searching
+              - option to returning URL instead of searching
         '''
 
         if self.extra_query is not None:
@@ -249,23 +253,23 @@ class SRUBase(object):
         ''' This function builds on search_retrieve() to "fetch _many_ results results in chunks", by calling search_retrieve() repeatedly.
             (search_retrieve() will have a limit on how many to search at once, though is still useful to see e.g. if there are results at all)
 
-            Like search_retrieve, it (eventually) returns each result record as an elementTree objects,
+             - Like search_retrieve, it (eventually) returns each result record as an elementTree objects,
                (this can be more convenient if you an to handle the results as a whole)
-            and if callback is not None, this will be called on each result _during_ the fetching process.
+             - and if callback is not None, this will be called on each result _during_ the fetching process.
                (this can be more convenient way of dealing with many results while they come in)
 
             Notes:
-            - up_to  is the absolute offset, e.g. start_offset=200,up_to=250 gives you records 200..250,  not 200..450
+              - up_to  is the absolute offset, e.g. start_offset=200,up_to=250 gives you records 200..250,  not 200..450
 
-            - wait_between_sec  is a backoff sleeps between each search chunk, to avoid hammering a server too much. 
-              you can lower this where you know this is overly cautious
-              note that we skip this sleep if one fetch was enough
+              - wait_between_sec  is a backoff sleeps between each search chunk, to avoid hammering a server too much. 
+                you can lower this where you know this is overly cautious
+                note that we skip this sleep if one fetch was enough
 
-            - since we fetch in chunks, we may overshoot in the last fetch, by up to at_a_time amount of entries
-              The code should avoid returning those.
+              - since we fetch in chunks, we may overshoot in the last fetch, by up to at_a_time amount of entries
+                The code should avoid returning those.
 
             CONSIDER: 
-            - maybe yield something including numberOfRecords before yielding results?
+              - maybe yield something including numberOfRecords before yielding results?
         '''
         ret = []
         offset = start_record
