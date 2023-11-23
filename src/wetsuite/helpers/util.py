@@ -89,14 +89,14 @@ def unified_diff( before:str, after:str, strip_header=True, context_n=999 ) -> s
     return '\n'.join( lines )
 
 
-def hash_color(string, on=None):
+def hash_color(string:str, on=None):
     ''' Give a CSS color for a string - consistently the same each time based on a hash
         Usable e.g. to make tables with categorical values more skimmable.
 
         To that end, this takes a string, and
         returns (css_str,r,g,b), where r,g,b are 255-scale r,g,b values for a string
     '''
-    dig = hash_hex( string.encode('utf8') )
+    dig = hash_hex( string.encode('utf8'), as_bytes=True )
     r, g, b = dig[0:3]
     if on=='dark':
         r = min(255,max(0, r/2+128 ))
@@ -111,8 +111,9 @@ def hash_color(string, on=None):
     return css,(r,g,b)
 
 
-def hash_hex(data: bytes):
-    ''' Given some byte data, calculate SHA1 hash.  Returns that hash as a hex string. 
+def hash_hex(data:bytes, as_bytes:bool=False):
+    ''' Given some byte data, calculate SHA1 hash.
+        Returns that hash as a hex string, unless you specify as_bytes=True
     
         Deals with unicode by UTF8-encoding it, which isn't _always_ what you want.
     '''
@@ -124,4 +125,7 @@ def hash_hex(data: bytes):
         raise TypeError('hash_hex() only accepts byte/str data')
     s1h = hashlib.sha1()
     s1h.update( data )
-    return s1h.hexdigest()
+    if as_bytes:
+        return s1h.digest()
+    else:
+        return s1h.hexdigest()
