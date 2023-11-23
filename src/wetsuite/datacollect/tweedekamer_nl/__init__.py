@@ -1,6 +1,6 @@
 #!/usr/biny/python3
-''' As described at https://opendata.tweedekamer.nl/documentatie/odata-api
-    though so far we implement only the Atom/SyncFeed API, not the OData one.
+''' An interface to the APIs described https://opendata.tweedekamer.nl/documentatie/odata-api
+    though so far we implement and use mostly the Atom/SyncFeed API, not the OData one.
 
     The full information model is fairly complex, see https://opendata.tweedekamer.nl/documentatie/informatiemodel
 
