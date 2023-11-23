@@ -1,3 +1,4 @@
+import pytest
 from wetsuite.helpers.etree import fromstring, tostring, strip_namespace, _strip_namespace_inplace, all_text_fragments, indent, path_count, kvelements_to_dict, path_between
 
 
@@ -95,7 +96,7 @@ def test_kvelements_to_dict():
 
 def test_nonlxml(): 
     # see also https://lxml.de/compatibility.html
-    import pytest, xml.etree.ElementTree
+    import xml.etree.ElementTree
 
     # the test is whether it warns, but doesn't crash
     with pytest.warns(UserWarning, match=r'.*lxml.*'):
@@ -103,7 +104,6 @@ def test_nonlxml():
 
 
 def test_path_between():
-    import pytest
 
     xml = '<a><b><c><d/><d/></c><d/></b></a>'
     a = fromstring(xml) 
