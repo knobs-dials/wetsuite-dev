@@ -1,12 +1,13 @@
 #!/usr/bin/python3
 '''
-Very minimal SRU implementation - just enough to access KOOP's repositories, and used mainly in or alongside the `koop_repositories` module. 
+Talks to SRU repositories, mainly underlies koop_repositories.py
 
-Used by the koop_repositories module.
+Very minimal SRU implementationm and not meant to be a generic implementation. 
 
-Not meant to be a generic implementation - it was written because existing python SRU libraries we tried 
-didn't seem to like the apparently-custom URL component (x-connection) that the KOOP rpositories use, 
-so until we figure out a cleaner solution, here's a just-enough-to-work implementation for our specific use cases.
+It was written because existing python SRU libraries we tried didn't seem to like
+the apparently-custom URL component (x-connection) that the KOOP rpositories use, 
+so until we figure out a clean solution, 
+here's a just-enough-to-work implementation for our specific use cases.
 '''
 # https://www.loc.gov/standards/sru/sru-1-1.html
 
@@ -22,7 +23,7 @@ import wetsuite.helpers.etree
 
 
 
-class SRUBase(object):
+class SRUBase:
     ' Very minimal SRU implementation - just enough to access the KOOP repositories. '
     def __init__(self, base_url:str, x_connection:str=None, extra_query:str=None, verbose=False):
         '''
@@ -90,9 +91,7 @@ class SRUBase(object):
         url = self._url()
         url += '&operation=explain'
 
-        ret = {
-            'explain_url':url
-        }
+        ret = { 'explain_url':url }
 
         if self.verbose:
             print( url )
@@ -165,7 +164,11 @@ class SRUBase(object):
         return self.number_of_records
 
 
-    def search_retrieve(self, query:str, start_record=None, maximum_records=None, callback=None, verbose=False):
+    def search_retrieve(self,
+                        query:str, 
+                        start_record=None, maximum_records=None,
+                        callback=None,
+                        verbose=False):
         ''' Fetches a range of results for a particular query. 
             Returns each result record as a separate ElementTree object.
 
@@ -177,20 +180,22 @@ class SRUBase(object):
             Notes:
               - strips namespaces from the results - makes writing code more convenient
             
-              - query is LoC's CQL
-                - which indices you can use (e.g. e.g. 'dcterms.modified>=2000-01-01') varies with each repo
-                take a look at explain_parsed() (a parsed summary) or explain() (the actual explain XML)
-
-              - start_record and maximum_records describe the range to fetch
-                - start_record uses one-based counting
-
-              - if callback is not None, this function calls it for each such record node.
-
-              - Repos may have a (lowish) limit on maximum_records,
-                so if you care about _all_ results, you probably want to use search_retrieve_many() instead.
 
             CONSIDER:
               - option to returning URL instead of searching
+
+            @param query: the query string, in CQL form (see the Library of Congress spec)
+            the list of indices you can search in (e.g. e.g. 'dcterms.modified>=2000-01-01')
+            varies with each repo take a look at explain_parsed() (a parsed summary)
+            or explain() (the actual explain XML)
+            @param start_record: what record offset to start fetching at. Note: one-based counting
+            @param maximum_records: how many records to fetch (from start_offset). 
+            Note that repositories may not like high values here.
+            ...so if you care about _all_ results of a possible-large set, 
+            then you probably want to use search_retrieve_many() instead.
+            @param callback: if not None, this function calls it for each such record node. 
+            You can instead wait for the entire range of fetches to conclude 
+            and hand you the complete list of result records.
         '''
 
         if self.extra_query is not None:
@@ -247,9 +252,11 @@ class SRUBase(object):
         return ret # maybe return list, like _many does?
 
 
-    def search_retrieve_many(self, query:str, at_a_time:int=10, start_record:int=1, up_to:int=250,
+    def search_retrieve_many(self, query:str, 
+                             at_a_time:int=10, start_record:int=1, up_to:int=250,
                              callback=None,
-                             wait_between_sec:float=0.5, verbose:bool=False):
+                             wait_between_sec:float=0.5, 
+                             verbose:bool=False):
         ''' This function builds on search_retrieve() to "fetch _many_ results results in chunks", by calling search_retrieve() repeatedly.
             (search_retrieve() will have a limit on how many to search at once, though is still useful to see e.g. if there are results at all)
 
@@ -258,15 +265,17 @@ class SRUBase(object):
              - and if callback is not None, this will be called on each result _during_ the fetching process.
                (this can be more convenient way of dealing with many results while they come in)
 
-            Notes:
-              - up_to  is the absolute offset, e.g. start_offset=200,up_to=250 gives you records 200..250,  not 200..450
+            @param query:            like in search_retrieve()
+            @param start_record:     like in search_retrieve()
+            @param callback:         like in search_retrieve()
+            @param up_to:            is the absolute offset, e.g. start_offset=200,up_to=250 gives you records 200..250,  not 200..450
+            @param at_a_time:        how many records to fetch in a single request
+            @param wait_between_sec: a backoff sleep between each search request, to avoid hammering a server too much.
+            you can lower this where you know this is overly cautious
+            note that we skip this sleep if one fetch was enough
 
-              - wait_between_sec  is a backoff sleeps between each search chunk, to avoid hammering a server too much. 
-                you can lower this where you know this is overly cautious
-                note that we skip this sleep if one fetch was enough
-
-              - since we fetch in chunks, we may overshoot in the last fetch, by up to at_a_time amount of entries
-                The code should avoid returning those.
+            since we fetch in chunks, we may overshoot in the last fetch, by up to at_a_time amount of entries
+            The code should avoid returning those.
 
             CONSIDER: 
               - maybe yield something including numberOfRecords before yielding results?
