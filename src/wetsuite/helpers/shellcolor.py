@@ -1,18 +1,20 @@
 '''
-Eases production of colors in the terminal, for a few CLI tools.
+Eases production of colors in the terminal, 
+mostly for a few command line debug tools.
 
 Tries to only produce color escapes when the terminal supports it: 
-whether we detect we aree in a tty, and TERM suggests we are color-capable.
+(whether we detect we are in a tty, and TERM suggests we are color-capable).
 You can override that in manual checks with the arguments on guess_color_support(),
 You can override that in the automatic checks (necessary for the convenience function)
 by setting the globals default_forceifnoterm and/or default_forceifnotty)
 
 
-Currently provides some convenience functions for a single foreground color, meant to be used like: ::
+Currently provides some convenience functions for a single foreground color, 
+meant to be used like: ::
     import helpers_shellcolor as sc
-    print sc.red('shown as red')
-    Without the check and for more control:
-    print sc.BRIGHT+sc.BLUE+sc.UNDERLINE+'shown bright blue'+sc.RESET
+    print( sc.red('shown as red') )
+Or without checking it is suported: ::
+    print( sc.BRIGHT+sc.BLUE+sc.UNDERLINE+'shown bright blue'+sc.RESET )
 
 Tries to only add the control codes when the context seems capable of it.
 (TODO: this needs some tuning)
@@ -20,27 +22,14 @@ check whether we are in a tty, and whether the TERM suggests we are color-capabl
 You can override that in manual checks with the arguments on guess_color_support(),
 You can override that in the automatic checks (necessary for the convenience function)
 by setting the globals default_forceifnoterm and/or default_forceifnotty
-
-
-TODO:
-consider writing a percent formatter that is aware of the zero width of these escapes,
-so that you can put strings in things like %20s without magic weirdness.
-
-rename to, perhaps, helpers_terminal.py ?
-
-see whether tput colors is useful (e.g. detecting more colors)
 '''
-#def format(s, *args):
-
 import os
 import sys
 import re
 import math
 
-
-
-default_forceifnoterm = None
-default_forceifnotty  = None
+DEFAULT_FORCE_IF_NO_TERM = None
+DEFAULT_FORCE_IF_NO_TTY  = None
 
 
 def guess_color_support(forceifnottty=False, forceifnoterm=False, fallback=True): # pragma: no cover     because it's necessarily context-dependent
@@ -57,13 +46,13 @@ def guess_color_support(forceifnottty=False, forceifnoterm=False, fallback=True)
     '''
     global _guess
     
-    if not default_forceifnoterm  and  not forceifnoterm:
+    if not DEFAULT_FORCE_IF_NO_TERM  and  not forceifnoterm:
         if 'TERM' not in os.environ:
             #print( "probably not a shell" )
             _guess = False
             return _guess
 
-    if not default_forceifnotty   and  not forceifnottty:
+    if not DEFAULT_FORCE_IF_NO_TTY   and  not forceifnottty:
         if not sys.stdout.isatty():
             #print( "Not a TTY, probably a pipe" )
             
@@ -93,8 +82,7 @@ def guess_color_support(forceifnottty=False, forceifnoterm=False, fallback=True)
                 _guess = False
                 return _guess
         except:
-            raise
-        
+            # raise  was for debug; TODO: double check more is not necessary
             TERM = os.environ['TERM']
             if TERM.endswith('-m') or '-m-' in TERM or 'nocolor' in TERM:
                 _guess = False
@@ -126,7 +114,7 @@ _guess = supported()
 
     
 # Try to get column width (*nix-mostly)
-def tty_size(debug=False):                   # pragma: no cover     because it's necessarily context-dependent
+def tty_size(debug=False):    # pragma: no cover   because it's necessarily context-dependent
     """ fetches current terminal size
 
         Has a few methods under *nix, probably largely redundant.
@@ -139,9 +127,8 @@ def tty_size(debug=False):                   # pragma: no cover     because it's
 
     if not sys.stdin.isatty(): # if we don't have a terminal (e.g. running in a service), don't try to run things that will only fail ioctls
         # There may be better ways to detect this.
-        return ret    
+        return ret
 
-    
     try: # ioctl (*nix only)
         import fcntl, termios, struct
         fd=1
@@ -153,8 +140,7 @@ def tty_size(debug=False):                   # pragma: no cover     because it's
             raise
     if ret['rows'] not in (0,None) and ret['cols'] not in (0,None):
         return ret
-    
-                                                        
+
     try: # stty (*nix only)        
         import subprocess
         p = subprocess.Popen('stty size', stdout=subprocess.PIPE, shell=True)
@@ -169,7 +155,7 @@ def tty_size(debug=False):                   # pragma: no cover     because it's
     if ret['rows'] not in (0,None) and ret['cols'] not in (0,None):
         return ret
 
-    
+
     try: # tput (*nix only)
         import subprocess
         p = subprocess.Popen('tput cols', stdout=subprocess.PIPE, shell=True)
@@ -184,8 +170,8 @@ def tty_size(debug=False):                   # pragma: no cover     because it's
     if ret['rows'] not in (0,None) and ret['cols'] not in (0,None):
         return ret
 
-    
-    try: # piggyback on curses (*nix only, really...)
+
+    try: # piggyback on curses (*nix only, really)
         import curses
         stdscr = curses.initscr()
         curses.initscr()
@@ -200,7 +186,7 @@ def tty_size(debug=False):                   # pragma: no cover     because it's
             curses.nocbreak()
             stdscr.keypad(0)
             curses.echo()
-            curses.endwin()                                                                
+            curses.endwin()
     except:
         if debug:
             raise
@@ -216,7 +202,7 @@ def tty_size(debug=False):                   # pragma: no cover     because it's
         res  = windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
         if res:
             import struct
-            bufx, bufy, curx, cury, wattr, left, top, right, bottom, maxx, maxy = struct.unpack("hhhhHhhhhhh", csbi.raw)
+            _, _, _, _, _, left, top, right, bottom, _, _ = struct.unpack("hhhhHhhhhhh", csbi.raw)
             ret['cols'] = right - left + 1
             ret['rows'] = bottom - top + 1
     except:
@@ -299,77 +285,140 @@ RESET        = NOCOLOR + DEFAULT
 
 
 
-# ease-of-use globals
+# ease-of-use
 def brightblack(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BRIGHTBLACK,prepend=prepend)
+
 def darkgray(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BRIGHTBLACK,prepend=prepend)
+
 def darkgrey(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BRIGHTBLACK,prepend=prepend)
+
 def black(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BLACK,prepend=prepend)
+
 def red(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,RED,prepend=prepend)
+
 def brightred(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BRIGHTRED,prepend=prepend)
+
 def green(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,GREEN,prepend=prepend)
+
 def brightgreen(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BRIGHTGREEN,prepend=prepend)
+
 def orange(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,ORANGE,prepend=prepend)
+
 def yellow(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,YELLOW,prepend=prepend)
+
 def brightyellow(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BRIGHTYELLOW,prepend=prepend)
+
 def blue(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BLUE,prepend=prepend)
+
 def brightblue(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BRIGHTBLUE,prepend=prepend)
+
 def magenta(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,MAGENTA,prepend=prepend)
+
 def brightmagenta(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BRIGHTMAGENTA,prepend=prepend)
+
 def cyan(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,CYAN,prepend=prepend)
+
 def brightcyan(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BRIGHTCYAN,prepend=prepend)
+
 def gray(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,GREY,prepend=prepend)
+
 def grey(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,GREY,prepend=prepend)
+
 def brightgrey(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BRIGHTGREY,prepend=prepend)
+
 def brightgray(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BRIGHTGRAY,prepend=prepend)
+
 def white(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,WHITE,prepend=prepend)
 
 def bgblack(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BGBLACK,prepend=prepend)
+
 def bgred(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BGRED,prepend=prepend)
+
 def bggreen(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BGGREEN,prepend=prepend)
+
 def bgblue(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BGBLUE,prepend=prepend)
+
 def bgyellow(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BGYELLOW,prepend=prepend)
+
 def bgorange(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BGORANGE,prepend=prepend)
+
 def bgmagenta(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BGMAGENTA,prepend=prepend)
+
 def bgcyan(s, prepend=''):
+    ' add color on string if supported '
     return _add_color_if_supported(s,BGCYAN,prepend=prepend)
 
+
 def default(s, prepend=''):
+    ' add "default colors" code before string if supported '
     return _add_color_if_supported(s,DEFAULT,prepend=prepend)
+
 def reset():                       
+    ' add color reset code before string if supported '
     return _add_color_if_supported('',RESET)
+
 def clearscreen():
+    ' output clear-screen code, if supported '
     if _guess:
         return CLEARSCREEN
-
 
 
 
@@ -464,8 +513,10 @@ def closest_from_rgb255(r,g,b, mid=170,full=255, nobright=False):
 
 
 def _format_segment(s):
-    """ Helper for cformat()  (NOW REDUNDANT?)
-        e.g. '  \x1b[33mfork\x1b[0m\x1b[39m'   ->   ['  ', '\x1b[33m', 'fork', '\x1b[0m', '\x1b[39m']
+    """ Helper for cformat()  (NOW REDUNDANT?)  e.g. ::
+           '  \x1b[33mfork\x1b[0m\x1b[39m'  
+        becomes ::
+            ['  ', '\x1b[33m', 'fork', '\x1b[0m', '\x1b[39m']
         The numbers are the bytestring length and the print length
     """
     bslen, esclen = len(s), 0
@@ -630,28 +681,36 @@ def redgreen(s, frac):
     return _add_color_if_supported(s,RGBCOL)
 
 
-def blend(s, frac, rgb1, rgb2):
-    r = int(  min(255,max(0,  255*( (1-frac)*rgb1[0] + frac*rgb2[0] ) ))  )
-    g = int(  min(255,max(0,  255*( (1-frac)*rgb1[1] + frac*rgb2[1] ) ))  )
-    b = int(  min(255,max(0,  255*( (1-frac)*rgb1[2] + frac*rgb2[2] ) ))  )
+def blend(s, frac:float, rgb1, rgb2):
+    ''' add an RGB color around a string that is some fraction between two colors
+        Note this only really makes sense on true-color terminals.
+    '''
+    frac = max( min(frac, 1.0), 0.0)
+    r = int(  min(255,max(0,  255*( (1.-frac)*rgb1[0] + frac*rgb2[0] ) ))  )
+    g = int(  min(255,max(0,  255*( (1.-frac)*rgb1[1] + frac*rgb2[1] ) ))  )
+    b = int(  min(255,max(0,  255*( (1.-frac)*rgb1[2] + frac*rgb2[2] ) ))  )
     #print(r,g,b)
     RGBCOL = '\x1b[38;2;%s;%s;%sm'%(r,g,b)
     return _add_color_if_supported(s,RGBCOL)
 
 
 def hash_color(s, rgb=False, append=RESET, prepend='', hash_instead=None, on=None):
-    ''' return string wrapped in a (non-black basic shell) color (and RESET after) based on the string
+    ''' return string wrapped in a (non-black basic shell) 
+        color (and RESET after) based on (a hash of) the string
 
-        If you want to color an entire string based on just a part of it, hand the part into hash_instead
-     
-        If rgb==False, uses the basic set of ~8 colors and brightness.
-        If rgb==True,  uses true color  (recommended if you can)
-
-        if on == 'dark' suggests we're drawing on dark background, so stays away from very dark rgb values
-        if on == 'light', we stay away from very light rgb values
-        by default we don't care, which might be good for area fills
+        If you want to color an entire string based on just a part of it,
+        hand the part into hash_instead
 
         TODO: variant that gives just the escapes, so we can avoid calling this a lot
+     
+        @param rgb:
+          - if False, uses the basic set of ~8 colors and brightness.
+          - if True,  uses true color  (recommended if you can)
+        @param on:
+          - if 'dark' suggests we're drawing on dark background,
+            so we stay away from very dark rgb values
+          - if on == 'light', we stay away from very light rgb values
+        by default we don't care, which might be good for area fills
     '''
     import hashlib
     m = hashlib.sha256()
@@ -660,10 +719,10 @@ def hash_color(s, rgb=False, append=RESET, prepend='', hash_instead=None, on=Non
     else:
         m.update(s.encode('utf8'))
     dig = m.digest()
-    
+
     if type(dig[0]) is not int: # quick and dirty way of dealing with py2/3 difference
         dig = list( ord(ch)  for ch in dig)
-    
+
     if rgb:
         if on=='dark':
             r = min(255, max(0, 40+0.8*dig[0]))
@@ -677,7 +736,7 @@ def hash_color(s, rgb=False, append=RESET, prepend='', hash_instead=None, on=Non
             r = dig[0]
             g = dig[1]
             b = dig[2]
-            
+
         return prepend+true_colf(s, r,g,b)
     else:
         choosefrom = [ BRIGHTBLACK,RED, BRIGHTRED, GREEN, BRIGHTGREEN,

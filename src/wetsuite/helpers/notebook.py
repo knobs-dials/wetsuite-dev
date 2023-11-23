@@ -141,7 +141,7 @@ def progress_bar(maxval, description='', display=True): # , **kwargs
 
 
 
-class etree_visualize_selection(object):
+class etree_visualize_selection:
     ''' Produces a colorized representation of selection within an XML document.
         (works only within IPython/jupyter style notebooks,  via a HTML representation.) 
     '''

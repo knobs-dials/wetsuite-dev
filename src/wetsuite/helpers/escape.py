@@ -15,61 +15,62 @@ import urllib.parse
 __all__ = ['nodetext','attr', 'uri','uri_component','uri_dict']
 
 
-def nodetext(s, if_none=None):
+def nodetext(text, if_none=None):
     ''' Escapes for HTML/XML text nodes:
         Replaces <, >, and & with entities
         
-        Passes unicode through, and always returns a str, even if given a bytes.
-
         (is actually equivalent to html.escape, previously known as cgi.escape)
+
+        @param text: text to escape (as str or bytes)
+        @return: always returns a str, even if given a bytes (Passes unicode through)
     '''
-    if s is None:
+    if text is None:
         return if_none
 
-    if isinstance(s, bytes):
-        ret = s.replace(  b"&",  b"&amp;")
+    if isinstance(text, bytes):
+        ret = text.replace(  b"&",  b"&amp;")
         ret = ret.replace(b"<",  b"&lt;")
         ret = ret.replace(b">",  b"&gt;")
     else:
-        ret = s.replace(   "&",  "&amp;")
+        ret = text.replace(   "&",  "&amp;")
         ret = ret.replace( "<",  "&lt;")
         ret = ret.replace( ">",  "&gt;")
     return ret
 
 
-def attr(s):
+def attr(text):
     ''' Escapes for use in HTML(/XML) node attributes:
         Replaces <, >, &, ', " with entities
 
-        @param s: text to escape (as str or bytes)
-        @return: as bytes if it was given bytes, as str if given str
-
         Much like html.escape, but...
-          - ' and " to numeric entitities (&#x27;, &#x22;)         
-            (...and not &quot; for "  because that's not quite universal)
+          - C{'} and C{"} are encoded as numeric entitities (C{&#x27;}, C{&#x22;} resp.)         
+            and not as C{&quot;} for C{"}  because that's not quite universal.
           
-          - Escapes ' (which html.escape doesn't) which you often don't need,
-            but do if you wrap attributes in ' which is valid in XML, various HTML. 
-            Doesn't use apos becase it's not defined in HTML4
+          - Escapes C{'} (which html.escape doesn't) which you often don't need,
+            but do if you wrap attributes in C{'}, which is valid in XML, and various HTML. 
+            Doesn't use C{&apos;} becase it's not defined in HTML4.
 
-        Note that to put URIs with unicode in attributes, what you want is often something roughly like
-        '<a href="?q=%s">'%attr( uri_component(q)  )
-        because uri handles the utf8 percent escaping of the unicode, attr() the attribute escaping
-        (technically you can get away without attr because uri_component escapes a _lot_ )
+        Note that to put URIs with unicode in attributes, what you want is often something roughly like ::
+            '<a href="?q=%s">'%attr( uri_component(q)  )
+        ...because C{uri()} handles the utf8 percent escaping of the unicode, 
+        C{attr()} the attribute escaping
+        (technically you can get away without attr because uri_component escapes a _lot_)
+
+        Passes non-ascii through. It is expected that you want to apply that to the document as a whole, or to document writing/appending.
 
         TODO: review how I want to deal with bytes / unicode in py3 now
 
-
-        Passes non-ascii through. It is expected that you want to apply that to the document as a whole, or to document writing/appending.
+        @param text: text to escape (as str or bytes)
+        @return: as bytes if it was given bytes, as str if given str
     '''
-    if isinstance(s, bytes):
-        ret = s.replace(  b"&",  b"&amp;")
+    if isinstance(text, bytes):
+        ret = text.replace(  b"&",  b"&amp;")
         ret = ret.replace(b"<",  b"&lt;")
         ret = ret.replace(b">",  b"&gt;")
         ret = ret.replace(b'"',  b'&#x22;')
         ret = ret.replace(b'\'', b"&#x27;")
     else:
-        ret = s.replace(   "&",  "&amp;")
+        ret = text.replace(   "&",  "&amp;")
         ret = ret.replace( "<",  "&lt;")
         ret = ret.replace( ">",  "&gt;")
         ret = ret.replace( '"',  '&#x22;')
@@ -77,39 +78,42 @@ def attr(s):
     return ret
 
 
-def uri(urival, same_type=True):
-    ''' Escapes for URI use
-        %-escapes everything except ':', '/', ';', and '?' so that the result is still formatted/usable as a URL
+def uri(text, same_type=True):
+    ''' Escapes for URI use:
 
-        @param urival: URI, as string or bytes object
-        @returns: bytes if it was given bytes, str if given str
-        
-        Handles Unicode by by converting it into url-encoded UTF8 bytes (quote() defaults to encoding to UTF8)
+        %-escapes everything except C{'}, C{/}, C{;}, and C{?} 
+        so that the result is still formatted/usable as a URL
+
+        Handles Unicode by by converting it into url-encoded UTF8 bytes 
+        (quote() defaults to encoding to UTF8)
+
+        @param text: URI, as string or bytes object
+        @returns: bytes if it was given bytes, str if given str        
     '''
-    given_bytes = isinstance(urival, bytes)
-    if isinstance(urival, str):
-        urival = urival.encode('utf8')
-    ret = urllib.parse.quote(urival,b':/;?')
+    given_bytes = isinstance(text, bytes)
+    if isinstance(text, str):
+        text = text.encode('utf8')
+    ret = urllib.parse.quote(text, b':/;?')
     if same_type and given_bytes:
         return bytes(ret,encoding='utf8')
     return ret
 
 
-def uri_component(urival, same_type=True):
-    ''' Escapes for URI use
-        %-escapes everything (including '/') so that you can shove anything, including URIs, into URL query parameters
+def uri_component(text, same_type=True):
+    ''' Escapes for URI use:
+        %-escapes everything (including C{/}) so that you can shove anything, 
+        including URIs, into URI query parameters.
 
-        @param urival: URI, as string or bytes object
-        @returns: bytes if it was given bytes, str if given str
-
-        If given unicode, converting it into url-encoded UTF8 bytes first (quote() defaults to encoding to UTF8)
+        @param text: URI, as string or bytes object
+        (unicode in an input str is converted into url-encoded UTF8 bytes first (quote() defaults to encoding to UTF8))
+        @returns: bytes if it was given bytes, str if given str. If same_type==false it gives it as a str always.
     '''
-    given_bytes = isinstance(urival, bytes)
+    given_bytes:bool = isinstance(text, bytes)
 
-    if isinstance(urival, str):
-        urival = urival.encode('utf8')
+    if isinstance(text, str):
+        text = text.encode('utf8')
 
-    ret = urllib.parse.quote(urival,b'')
+    ret = urllib.parse.quote(text,b'')
     if same_type and given_bytes:
         return bytes(ret,encoding='utf8')
     return ret
@@ -129,7 +133,7 @@ def uri_dict(d, join='&', astype=str):
         (you could also abuse it to avoid an attr()/nodetext() by handing it &amp; but that gets confusing)
     '''
     if isinstance(join, bytes):
-        join = join.decode('u8')   # this function itself works in str, and
+        join = join.decode('utf8')   # this function itself works in str, and
     parts=[]
     for var in sorted( d.keys() ): # sorting is purely a debug thing
         val=d[var]

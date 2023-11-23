@@ -1,7 +1,8 @@
 '''
 Helpers to deal with XML data, largely a wrapper around lxml and its ElementTree interface.
 
-TODO: minimize the amount of "will break because we use the lxml flavour of ElementTree", and add tests for that.
+TODO: minimize the amount of "will break because we use the lxml flavour of ElementTree",
+and add tests for that.
     
 Some general helpers.    
 ...including some helper functions shared by some debug scripts.
@@ -11,20 +12,19 @@ CONSIDER:
   - have a fromstring() as a thin wrapper but with strip_namespace in there? (saves a lines but might be a confusing API change)
 '''
 
-#try:
+import copy
+import warnings
+
 import lxml.etree
-from lxml.etree import ElementTree,  fromstring, tostring,   register_namespace, Element, _Comment, _ProcessingInstruction
-#except  ImportError:
-#from xml.etree import ElementTree
-#from xml.etree.ElementTree import fromstring, tostring,   register_namespace, Element, _Comment, _ProcessingInstruction
-
-
+from lxml.etree import ElementTree, fromstring, tostring, register_namespace, Element, _Comment, _ProcessingInstruction #there is, and not actually (respectively), so  pylint: disable=E0611,W0611
 
 some_ns_prefixes = { # CONSIDER: renaming to something like _some_ns_prefixes_presetation_only
     # Web and data
     'http://www.w3.org/2000/xmlns/':'xmlns',
     'http://www.w3.org/2001/XMLSchema':'xsd',
-    #'http://www.w3.org/2001/XMLSchema#':'xsd', # ?   Also, maybe avoid duplicate names? Except we are only doing this _only_ for pretty printing.
+
+    # ?   Also, maybe avoid duplicate names? Except we are only doing this _only_ for pretty printing.
+    #'http://www.w3.org/2001/XMLSchema#':'xsd',
 
     'http://www.w3.org/XML/1998/namespace':'xml',
 
@@ -121,21 +121,23 @@ some_ns_prefixes = { # CONSIDER: renaming to something like _some_ns_prefixes_pr
     #'www.kadaster.nl/schemas/lvbag/gem-wpl-rel/gwr-deelbestand-lvc/v20200601':'bag-o',
     #'http://www.kadaster.nl/schemas/lvbag/extract-selecties/v20200601':'bag-s',
 }
-'some readable XML prefixes for friendlier display.  Purely for consistent pretty-printing in debug, will NOT be correct according to the document definition. '
+''' some readable XML prefixes for friendlier display.  
+    This is ONLY for consistent pretty-printing in debug,
+    and will NOT be correct according to the document definition. '''
 # It might be useful to find namespaces from many XML files, with something like:
 #   locate .xml | tr '\n' '\0' | xargs -0 grep -oh 'xmlns:[^ >]*'
 # with an eventual
 #   | sort | uniq -c | sort -rn
 
 
-def kvelements_to_dict(under, strip_text=True, ignore_tagnames=()):
+def kvelements_to_dict(under_node, strip_text=True, ignore_tagnames=()) -> dict:
     ''' Where people use elements for single text values, it's convenient to get them as a dict.
         
         Given an etree element containing a series of such values,
         Returns a dict that is mostly just  { el.tag:el.text }  so ignores .tail
         Skips keys with empty values.
         
-        Would for example turn an etree tree like ::
+        Would for example turn an etree fragment like ::
             <foo>
                 <identifier>BWBR0001840</identifier>
                 <title>Grondwet</title>
@@ -144,11 +146,14 @@ def kvelements_to_dict(under, strip_text=True, ignore_tagnames=()):
         into python dict: ::
             {'identifier':'BWBR0001840', 'title':'Grondwet'}
 
-        CONSIDER an empty_as_none parameter
+        @param under_node: etree node/element to work under (use the children of)
+        @param strip_text: whether to use strip() on text values (defaults to True)
+        @param ignore_tagnames: sequence of strings, naming tags/variables to not put into the dict
+        @return: a python dict (see e.g. example above)
     '''
     ret = {}
-    for ch in under:
-        if isinstance(ch, _Comment) or isinstance(ch, _ProcessingInstruction):
+    for ch in under_node:
+        if isinstance(ch, (_Comment, _ProcessingInstruction)):
             continue
         if ch.tag in ignore_tagnames:
             continue
@@ -160,7 +165,7 @@ def kvelements_to_dict(under, strip_text=True, ignore_tagnames=()):
     return ret
 
 
-def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_tags=(), join:str=None, stop_at=None): # , add_spaces=['extref',]
+def all_text_fragments(under_node, strip:str=None, ignore_empty:bool=False, ignore_tags=(), join:str=None, stop_at=None): # , add_spaces=['extref',]
     ''' Returns all fragments of text contained in a subtree, as a list of strings.
 
         For example,  all_text_fragments( fromstring('<a>foo<b>bar</b></a>') ) == ['foo', 'bar']
@@ -191,7 +196,7 @@ def all_text_fragments(under, strip:str=None, ignore_empty:bool=False, ignore_ta
         TODO: figure out a decent default from the various schemas
     '''
     ret = []
-    for elem in under.iter(): # walks the subtree
+    for elem in under_node.iter(): # walks the subtree
         if isinstance(elem, _Comment) or isinstance(elem, _ProcessingInstruction):
             continue
         #print("tag %r in ignore_tags (%r): %s"%(elem.tag, ignore_tags, elem.tag in ignore_tags))
@@ -220,21 +225,25 @@ def strip_namespace(tree, remove_from_attr=True):
     ''' Returns a copy of a tree that has its namespaces stripped.
 
         More specifically it removes
-        * namespace from element names
-        * namespaces from attribute names (default, but optional)
-        * default namespaces (TODO: test that properly)
+          - namespace from element names
+          - namespaces from attribute names (default, but optional)
+          - default namespaces (TODO: test that properly)
 
-        Note that for attributes with the same name that are unique only because of a different namespace,
+        
+        @param tree:             The node under which to remove things 
+        (you would probably hand in the root)
+        @param remove_from_attr: Whether to remove namespaces from attributes as well.
+        For attributes with the same name that are unique only because of a different namespace,
         this may cause attributes to be overwritten, For example:  ::
             <e p:at="bar" at="quu"/>   
         might become: ::
             <e at="bar"/>
-        I've not yet seen any XML where this matters - but it might.
-        
-        Returns the URLs for the stripped namespaces, in case you want to report them.
+        I've not yet seen any XML where this matters - but it might.        
+        @return: The URLs for the stripped namespaces. 
+        We don't expect you to have a use for this most of the time, 
+        but in some debugging you want to know, and report them.                     
     '''
     if not isinstance(tree, lxml.etree._Element): #pylint: disable=W0212,I1101
-        import warnings
         warnings.warn("That tree does not seem to parsed by lxml, and having non-lxml objects can cause issues."  
                       "Please consider using lxml, e.g. via wetsuite.helpers.etree.fromstring().  Trying to work around this, which may be slow.")
         try:
@@ -243,10 +252,9 @@ def strip_namespace(tree, remove_from_attr=True):
                 tree = lxml.etree.fromstring( xml.etree.ElementTree.tostring( tree ) )  # copy it the dumb way - could possibly be done faster?
             # implied else: hope for the best
         except ImportError:
-            pass # no fix for you, then.
+            pass # no xml.etree? no fix for you, then.
         _strip_namespace_inplace(tree, remove_from_attr=remove_from_attr)
     else:
-        import copy
         tree = copy.deepcopy( tree ) # assuming this is enough.  Should verify with lxml and etree implementation
         _strip_namespace_inplace(tree, remove_from_attr=remove_from_attr)
     return tree
@@ -285,16 +293,17 @@ def _strip_namespace_inplace(tree, remove_from_attr=True):
 
 
 def indent(tree, whitespacestrip=True):
-    ''' Returns a copy of a tree, with text so that it would print indented by depth. 
+    ''' Returns a 'reindented' copy of a tree:
+        with spaces and newlines added to text nodes, so that it would print indented by depth.
 
-        Keep in mind that this may change the meaning of the document - the output should _only_ be used for presentation.
+        Keep in mind that this may change the meaning of the document,
+        so this output should _only_ be used for presentation of the debugging sort.
 
         whitespacestrip can make contents that contain a lot of newlines look cleaner, 
         but changes the stored data even more.
 
         See also _indent_inplace()
     '''
-    import copy
     newtree = copy.deepcopy( tree )
     _indent_inplace(newtree, level=0, whitespacestrip=whitespacestrip)
     return newtree
@@ -326,7 +335,7 @@ def _indent_inplace(elem, level=0, whitespacestrip=True):
 
 
 
-def path_between(under, element):
+def path_between(under_node, element):
     ''' Given an ancestor and a descentent element from the same tree
         (In many applications you want under to be the the root element)
 
@@ -337,26 +346,28 @@ def path_between(under, element):
 
         This function has very little code, and if you do this for much of a document, you may want to steal the code
     '''
-    letree = lxml.etree.ElementTree( under )
+    letree = lxml.etree.ElementTree( under_node ) # it does, actually, so pylint: disable=I1101
     return letree.getpath( element )
 
 
-
-
-def node_walk(under, max_depth=None):  # Based on https://stackoverflow.com/questions/60863411/find-path-to-the-node-using-elementtree
-    ''' Walks all elements under the given element,  remembering both path string and element reference as we go.
+def node_walk(under_node, max_depth=None):
+    ''' Walks all elements under the given element,
+        remembering both path string and element reference as we go.
+        
         (note that this is not an xpath style with specific indices, just the names of the elements)
 
-        If given None, it emits nothing (we assume it's from a find() that hit nothing, and that it's easier to ignore here than in your code)
+        If given None, it emits nothing (we assume it's from a find() that hit nothing,
+        and that it's easier to ignore here than in your code)
 
         Is a generator yielding (path, element),   and is mainly a helper used by path_count()
 
         TODO: re-test now that I've added max_depth, because I'm not 100% on the details
     '''
-    if under is None:
+    # Based on https://stackoverflow.com/questions/60863411/find-path-to-the-node-using-elementtree
+    if under_node is None:
         return
     path_to_element = []
-    element_stack = [under]
+    element_stack = [under_node]
     while len(element_stack) > 0:
         element = element_stack[-1]
         if len(path_to_element) > 0  and  element is path_to_element[-1]:
@@ -370,7 +381,7 @@ def node_walk(under, max_depth=None):  # Based on https://stackoverflow.com/ques
                     element_stack.append( child )
 
 
-def path_count(under, max_depth=None):
+def path_count(under_node, max_depth=None):
     ''' Walk nodes under an etree element,
         count how often each path happens (counting the complete path string).
         written to summarize the rough structure of a document.
@@ -381,7 +392,7 @@ def path_count(under, max_depth=None):
         Returns a dict from each path strings to how often it occurs
     '''
     count = {}
-    for node_path, n in node_walk( under, max_depth=max_depth ):
+    for node_path, n in node_walk( under_node, max_depth=max_depth ):
         if isinstance(n, _Comment) or isinstance(n, _ProcessingInstruction):
             continue # ignore things that won't have a .tag
         path = "/".join([n.tag  for n in node_path] + [n.tag] )  # includes `under`` element, which is a little redundant, but more consistent
@@ -403,7 +414,8 @@ def debug_pretty(tree, reindent=True, strip_namespaces=True, encoding='unicode')
           - reindents
           - returns as unicode (not bytes) so we can print() it
 
-        It's also mostly just short for   etree.tostring(  etree.indent( etree.strip_namespace( tree ) ), encoding='unicode' )
+        It's also mostly just short for::
+               etree.tostring(  etree.indent( etree.strip_namespace( tree ) ), encoding='unicode' )
     '''
     if type(tree) is bytes:
         tree = lxml.etree.fromstring( tree )
