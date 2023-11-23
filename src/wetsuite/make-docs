@@ -3,7 +3,7 @@ pydoctor --project-name=wetsuite \
  --project-base-dir="." \
  --make-html \
  --theme=readthedocs \
- --docformat=plaintext \
+ --docformat=epytext \
  --html-output=docs/api \
  --add-package=`pwd` \
  .
