@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 '''
-Thin wrapper module - create wordcloud images, using an existing wordcloud module.
+Create wordcloud images; mostly a thin wrapper module around an existing wordcloud module.
 
 The wordcloud module we use likes to wrap all logic and parameters in one big class,
 so this (thin) wrapper module exists largely to separate out the counting,
@@ -16,9 +16,9 @@ from typing import List
 import matplotlib
 matplotlib.use('Agg')
 
-import wordcloud  #  if not installed, do  pip3 install wordcloud
+import wordcloud  #  if not installed, do  pip3 install wordcloud       also this is intentionally after the previous, so:   pylint: disable=C0413
                   # note that it draws in matplotlib, numpy, and PIL
-                  # and unlike the linter suggests, it should _NOT_ be above the matplotlib import 
+                  # and unlike the linter suggests, it should _NOT_ be above the matplotlib import
 
 
 # the wordcloud module loads some english stopwords by default.
