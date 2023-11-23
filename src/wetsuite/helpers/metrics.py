@@ -1,16 +1,18 @@
-'''
-
+''' NLP-related summarizing metrics of unparsed and parsed text.
 '''
 
 
 def sentence_complexity_spacy( span ):
     ''' Takes an already-parsed spacy sentence 
 
-        Mainly uses the distance of the dependencies involved, which is fairly decent for how simple it is. Consider e.g.
-        - long sentences aren't necessarily complex at all (they can just be separate things joined by a comma),
-            they mainly become harder to parse if they introduce long-distance references.
-        - parenthetical sentences will lengthen references across them
-        - lists and flat compounds will drag the complexity down
+        Mainly uses the distance of the dependencies involved,
+        ...which is fairly decent for how simple it is.
+        
+        Consider e.g.
+            - long sentences aren't necessarily complex at all (they can just be separate things joined by a comma),
+                they mainly become harder to parse if they introduce long-distance references.
+            - parenthetical sentences will lengthen references across them
+            - lists and flat compounds will drag the complexity down
 
         Also, this doesn't really need normalization
 

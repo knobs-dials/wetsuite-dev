@@ -1,14 +1,16 @@
 #!/usr/bin/python3
-'''
-    Some helpers for ipython-style notebooks - and one function to help detect you are _not_ in one.
+''' Some helpers for jupyter/ipython-style notebooks, and help detecting you are, or are  _not_, in one.
 '''
 import sys
 
 def detect_env():
     ''' Returns a dict with keys that map to booleans:
-        - 'ipython'      - whether IPython is available    (which can happen when the module just happens to be installed)
-        - 'interactive'  - whether it's interactive        (e.g. notebook, qtconsole, or regular or ipython REPL)
-        - 'notebook'     - whether it's a notebook         (including colab, and we count qtconsole)
+        - 'interactive'  - whether it's interactive        
+                (e.g. regular python REPL, ipython REPL, notebook, or qtconsole)
+        - 'notebook'     - whether it's a notebook         
+                (also including colab, qtconsole)
+        - 'ipython'      - whether IPython is available    
+                (note this will also return True if the module just happens to be installed and available)
 
         (when we see pytest, we fake all False, because that's probably closer -- probably better than noticing the IPython that pytest seems to mock)
     '''
@@ -21,17 +23,20 @@ def detect_env():
         return ret
 
     try: # probably slightly less nasty than by-classname below
-        import google.colab
+        # pylint ignore because it not being available or not is the thing under test and the point
+        import google.colab  # pylint:disable=E0401,E0611,C0415,W0611
         ret['ipython']     = True
         ret['interactive'] = True
         ret['notebook']    = True
         ret['colab']       = True
         return ret
-    except: # certainly ImportError, but maybe also more?  Nothing else that can error out here so keep like this for now?
+    except Exception: # pylint:disable=W0718
+        # certainly ImportError, but maybe also more?
+        # CONSIDER: Nothing else that can error out here so keep like this for now?
         pass
 
     try:
-        import IPython
+        import IPython # pylint:disable=C0415
         ret['ipython']     = True
         ipyshell = IPython.get_ipython().__class__.__name__
         if ipyshell == 'ZMQInteractiveShell':          # jupyter notebook or qtconsole
@@ -82,48 +87,51 @@ def progress_bar(maxval, description='', display=True): # , **kwargs
     ''' Wrapper that prefers tqdm, falls back to ipywidgets's IntProgress progress bar.
         
         You can set (and get) .value and .description and they should be shown,
-        so e.g. usable like 
-          prog = progress_bar( 10, 'overall' )
-          for i in range(10):
-              prog.value += 1
-              time.sleep(1)
+        so e.g. usable like::
+            prog = progress_bar( 10, 'overall' )
+            for i in range(10):
+                prog.value += 1
+                time.sleep(1)
 
         Arguments
-        - maximum value (required)
-        - optional description
-        - if display==True (default), it calls display on the IPython widget, so you don't have to
-
+          - maximum value (required)
+          - optional description
+          - if display==True (default), it calls display on the IPython widget, so you don't have to
         You should only call this after you know you are in an ipython environment - e.g. with is_ipython() / is_notebook()
     '''
     try:
-        import tqdm.autonotebook
+        import tqdm.autonotebook  # pylint: disable=C0415
         class TqdmWrap:
             ' make it act enough like the ipywidget, in terms of our description '
-            def __init__(self, max, description):
-                self.tq = tqdm.autonotebook.tqdm( total=max, desc=description)
+            def __init__(self, maxval, description):
+                self.tq = tqdm.autonotebook.tqdm( total=maxval, desc=description)
                 self._value = 0
                 self._description = description
 
             def set_value(self, val):
+                ' setter wrapper (will be part of property decorator) '
                 self._value = val
                 self.tq.update( 1 ) # self._value
 
             def get_value(self):
+                ' getter wrapper (will be part of property decorator) '
                 return self._value
 
             value = property(get_value, set_value)
 
             def set_description(self, val):
+                ' setter wrapper (will be part of property decorator) '
                 self._description = val
                 self.tq.desc = self._description
 
             def get_description(self):
+                ' getter wrapper (will be part of property decorator) '
                 return self._description
 
             description = property(get_description, set_description)
 
         return TqdmWrap(maxval, description)
-    
+
     except ImportError:
         import IPython.display, ipywidgets 
         prog = ipywidgets.IntProgress(max=maxval, description=description)
@@ -142,20 +150,20 @@ class etree_visualize_selection(object):
             (works only within IPython/jupyter style notebooks. works via a HTML representation.) 
 
             Given 
-                - a parsed tree    (or a bytes object, will be parsed, but you probably shouldn't do that)
-                - either 
-                  - a sequence of elements from a tree  (that you probably selected yourself)
-                  - or a string, interpreted as xpath
-               and optionally:
-                - reindent     display reindented copy of the tree (defaults True, this is debug function)
-                - mark_text:    mark initial text content of each matched element)
-                - mark_tail:    mark tail-text after each matched element)
-                - mark_subtree: mark entire tree under each matched element. Useful 
+              - a parsed tree    (or a bytes object, will be parsed, but you probably shouldn't do that)
+              - either 
+                - a sequence of elements from a tree  (that you probably selected yourself)
+                - or a string, interpreted as xpath
+            ...and optionally:
+              - reindent     display reindented copy of the tree (defaults True, this is debug function)
+              - mark_text:    mark initial text content of each matched element)
+              - mark_tail:    mark tail-text after each matched element)
+              - mark_subtree: mark entire tree under each matched element. Useful 
 
-                Mostly used in the tutorials
+            Mostly used in the tutorials
         '''
         import wetsuite.helpers.etree
-        if type(tree) is bytes:
+        if isinstance(tree, bytes):
             tree = wetsuite.helpers.etree.fromstring( tree )
 
         if reindent:
@@ -169,7 +177,7 @@ class etree_visualize_selection(object):
 
     def _repr_html_(self):
         from wetsuite.helpers.escape import attr#, nodetext
-        from lxml.etree import _Comment, _ProcessingInstruction 
+        from lxml.etree import _Comment, _ProcessingInstruction # pylint:disable=E0611
         ret = ['<pre>']
 
         if isinstance( self.xpath_or_elements, str):
@@ -183,7 +191,7 @@ class etree_visualize_selection(object):
             return '%s'%(element.tag)
 
         def serialize(element):
-            if isinstance(element, _Comment) or isinstance(element, _ProcessingInstruction): 
+            if isinstance(element, _Comment) or isinstance(element, _ProcessingInstruction):
                 return
 
             ret.append('&lt;%s'%(conditional_highlight(element),))
@@ -194,7 +202,6 @@ class etree_visualize_selection(object):
             if element.text:
                 #if self.mark_text and element in selection:
                 if (self.mark_text and len(element.text.strip())>0) and element in selection:
-                    
                     ret.append('<span style="background-color:#faa; color:black">%s</span>'%element.text)
                 else:
                     ret.append(element.text)
@@ -230,6 +237,3 @@ if is_notebook():
         setproctitle.setproctitle( 'wetsuite-notebook' )
     except ImportError:
         pass
-
-
-
