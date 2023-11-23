@@ -30,29 +30,27 @@ def parse_jci(text: str):
           in that versions made small semantic changes to the meanings of some parts.
     """
     ret = {}
-    m = _jcifind_re.match( text )
-    if m is None:
+    text = text.replace('&amp;','&') # hack for observed bad escaping (hacky in that is assumes things about values)
+    match_object = _jcifind_re.match( text )
+    if match_object is None:
         raise ValueError('%r does not look like a valid jci'%text)
     else:
-        version, typ, bwb, rest = m.groups()
+        version, typ, bwb, rest = match_object.groups()
         ret['version'] = version
         ret['type']    = typ
         ret['bwb']     = bwb
-        # The jci standard doesn't seem to make it clear whether it's supposed to be a conformant URL or URN, so it's unsure whether there is specific parameter encoding.
-        #   The below is somewhat manual, but might prove more robust then just   d['params']  = urllib.parse.parse_qs(rest)
+        # The jci standard doesn't seem to make it clear whether it's supposed to be a conformant URL or URN,
+        # so it's unsure whether there is specific parameter encoding.
+        # The below is somewhat manual, but might prove more robust then just   d['params']  = urllib.parse.parse_qs(rest)
         params = collections.OrderedDict()
         for param in rest.split('&'):
             param_dict = urllib.parse.parse_qs(param)
             for key, value in param_dict.items():
-                out_key = key # we rewrite some keys
-                if key.startswith('amp;'):    # this variation seems to be a fairly common mistake in general, so try to be robust to it
-                    out_key = key[4:]         #   ...though it may well be better to handle this earlier in the function
                 if key not in params:
-                    params[out_key] = value
+                    params[key] = value
                 else:
-                    params[out_key].extend( value )
+                    params[key].extend( value )
         ret['params'] = params
-
     return ret
 
 
