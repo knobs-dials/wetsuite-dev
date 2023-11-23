@@ -1,8 +1,7 @@
-''' wrapper for OCR package, currently just EasyOCR.  
+''' Helpers to extract text from images, mainy aimed at PDFs that contains pictures of documents.
 
-    CONSIDER: add tesseract.  
+    Largely a wrapper for OCR package, currently just EasyOCR; we are considering also adding tesseract.  
     CONSIDER: ...and then unify the data format we hand around (particularly because of the helper functions)
-    TODO: add those helper functions
 '''
 import sys, re
 
@@ -16,7 +15,7 @@ _eocr_reader = None  # keep in memory to save time when you call it repeatedly
 def easyocr(image, pythontypes=True, use_gpu=True, languages=('nl','en')):
     ''' Takes a single PIL image.
        
-        Returns EasyOCR's results, which is a list of:
+        Returns EasyOCR's results, which is a list of: ::
           [[topleft, topright, botright, botleft], text, confidence] 
 
         Depends on easyocr being installed
@@ -24,7 +23,7 @@ def easyocr(image, pythontypes=True, use_gpu=True, languages=('nl','en')):
         if pythontypes==False, easyocr gives you numpy.int64 in bbox and numpy.float64 for cert,
         if pythontypes==True (default), we make that python int and float
 
-        langauges defaults to 'nl' and 'en'. You might occasionally add 'fr'.
+        languages defaults to 'nl','en'. You might occasionally wish to add 'fr'.
 
         Will load easyocr's model on the first call, so try to do many calls from a single process 
         to reduce that overhead to just once.
@@ -67,8 +66,8 @@ def easyocr_text(results):
         smushes just the text together as-is, without much care about placement.
         We plan to be smarter than this, given time.
 
-        (there is some smarter code in kansspelautoriteit fetching script
-         CONSIDER centralizing that and/or 'natural reading order' code)
+        There is some smarter code in kansspelautoriteit fetching script
+        CONSIDER centralizing that and/or 'natural reading order' code
     '''
     ret = []
     for (topleft, topright, botright, botleft), text, confidence in results:
@@ -79,7 +78,7 @@ def easyocr_text(results):
 
 def easyocr_draw_eval(image, ocr_results):
     ''' Given a PIL image, and the results from ocr(), 
-          draws the bounding boxes, with color indicating the confidence, on top of that image and 
+        draws the bounding boxes, with color indicating the confidence, on top of that image and 
 
         Returns the given PIL image with that drawn on it.
 
@@ -204,10 +203,10 @@ def page_fragment_filter( page_ocr_fragments,  textre=None,  q_min_x=None, q_min
         ...in particularly the main one it was written for, trying to find the size of the header and footer to be able to ignore them.
 
         minx, miny, maxx, maxy restrict where on the page we search. This can be 
-        - floats (relative to height and width of text 
-          ...present within the page, by default 
-          ...or the document, if you hand in the document extent via extent (can make more sense to deal with first and last pages being half filled)
-        - otherwise assumed to be ints, absolute units (which are likely to be pixels and depend on the DPI),
+          - floats (relative to height and width of text 
+            ...present within the page, by default 
+            ...or the document, if you hand in the document extent via extent (can make more sense to deal with first and last pages being half filled)
+          - otherwise assumed to be ints, absolute units (which are likely to be pixels and depend on the DPI),
 
         pages is a list of (zero-based) page numbers to include.  None includes all.
     '''

@@ -1,8 +1,9 @@
 #!/usr/bin/python3
-''' Thin wrapper module - create wordcloud images, using an existing wordcloud module.
+'''
+Thin wrapper module - create wordcloud images, using an existing wordcloud module.
 
-    The wordcloud module we use likes to wrap all logic and parameters in one big class,
-    so this (thin) wrapper module exists largely to separate out the counting,
+The wordcloud module we use likes to wrap all logic and parameters in one big class,
+so this (thin) wrapper module exists largely to separate out the counting,
     - to introduce some flexibility in how we count in a wordcloud.
     - and to make those counting functions usable for other things
 '''
@@ -21,7 +22,8 @@ import wordcloud  #  if not installed, do  pip3 install wordcloud
 
 
 # the wordcloud module loads some english stopwords by default.
-# The functions added below requires you to be more explicit, in which case some prepared lists are handy:
+# The functions added below requires you to be more explicit, 
+#   in which case some prepared lists are handy:
 stopwords_en = [ # wordcloud.STOPWORDS loads:
     "a", "about", "above", "after", "again", "against", "all", "also", "am", "an", "and", "any", 
     "are", "aren't", "as", "at", "be", "because", "been", "before", "being", "below", "between", 
@@ -49,54 +51,64 @@ stopwords_nl = (
 )
 
 
-def wordcloud_from_freqs(freqs: dict, width:int=1200, height:int=300, background_color='white', min_font_size=10, **kwargs):
+def wordcloud_from_freqs(freqs: dict, 
+                         width:int=1200, height:int=300, background_color='white', min_font_size=10, **kwargs):
     ''' Takes a {string: count} dict, returns a PIL image object.
 
-        That image will look a bunch cleaner when you have cleaned up the string:count, so take a look at using one of the count_ helper functions.
+        That image will look a bunch cleaner when you have cleaned up the string:count,
+        so take a look at using one of the count_ helper functions.
     '''
-    wco = wordcloud.WordCloud( width=width,  height=height,  background_color=background_color,  min_font_size=min_font_size, **kwargs )
+    wco = wordcloud.WordCloud( width=width,  height=height,
+                               background_color=background_color,  min_font_size=min_font_size,
+                               **kwargs )
     im = wco.generate_from_frequencies( freqs )
     return im.to_image()
 
 
 
 def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  normalize_func=None, stopwords=(), stopwords_i=() )  ->  dict:
-    ''' Takes a list of strings, returns a { string: count } dict.
+    ''' Takes a list of strings, returns a string:count dict, with some extra processing
 
-        ...with some extra processing.
+        Parameters beyond normalize_func are mostly about removing things you would probably call, 
+        so you do not have to do that separately.
 
-        normalize_func: half the point of this function. Should be a str->str function. 
-        - We group things by what is equal after this function is applied, but we report the most common case before it is. 
-          For example, to _count_ blind to case, but report just one (the most common case)
-            count_normalized( 'a A A a A A a B b b B b'.split(),  normalize_func=lambda s:s.lower() ) 
-          would give
-            {'A':7, 'b':5}
-        - Could be used for other things.  For example, 
-          if you make normalize_func map a word to its lemma, then you unify all inflections, and get reported the most common one.
+        Note that if you are using spacy or other POS tagging anyway, 
+        filtering e.g. just nouns and such before handing it into this 
+        is a lot cleaner and easier (if a little slower).
+
+        CONSIDER: imitating wordcloud collocations= behaviour
+        CONSIDER: imitating wordcloud normalize_plurals=True
+        CONSIDER: imitating wordcloud include_numbers=False
+        CONSIDER: separating out different parts of these behaviours
+
+        @param normalize_func: half the point of this function. Should be a str->str function. 
+          - We group things by what is equal after this function is applied, but we report the most common case before it is. 
+            For example, to _count_ blind to case, but report just one (the most common case) ::
+              count_normalized( "a A A a A A a B b b B b".split(),  normalize_func=lambda s:s.lower() ) 
+            would give ::
+              {"A":7, "b":5}
+          - Could be used for other things.  For example, 
+            if you make normalize_func map a word to its lemma, then you unify all inflections, and get reported the most common one.
        
-        The further parameters are mostly about removing things you would probably call, so you don't have to do that separately
+        @param  min_word_length:
+          - strings shorter than this are removed.
+            This is tested after normalization, so you can remove things in normalization too.
 
-        - min_word_length:
-           strings shorter than this are removed.
-           This is tested after normalization, so you can remove things in normalization too.
+        @param min_count:
+          - if integer, or float >1:         
+            we remove if final count is < that count,  
+          - if float  in 0 to 1.0 range:     
+            we remove if the final count is < this fraction times the maximum count we see
 
-        - min_count:
-             if integer, or float >1:         we remove if final count is < that count,  
-             if float  in 0 to 1.0 range:     we remove if the final count is < this fraction times the maximum count we see
-
-        - stopwords and stopwords_i: 
+        @param stopwords:
            - defaults to not removing anything
            - handing in a list uses yours instead. 
-             There's a stopwords_nl and stopwords_en in this module to get you started but you may want to refine your own
-           - stopwords is case sensitive, stopwords_i is case insensitive
+             There is a stopwords_nl and stopwords_en in this module 
+             to get you started but you may want to refine your own
+        @param stopwords_i: 
+           - defaults to not removing anything
 
-            Note that if you're using spacy or other POS tagging anyway, 
-            filtering e.g. just nouns and such before handing it into this is a lot cleaner and easier (if a little slower).
-
-        CONSIDER: imitating wordcloud's collocations= behaviour
-        CONSIDER: imitating wordcloud's normalize_plurals=True
-        CONSIDER: imitating wordcloud's include_numbers=False
-        CONSIDER: separating out different parts of these behaviours
+        @return: a { string: count } dict
     '''
     stop = set()
     if stopwords is None:
@@ -149,7 +161,7 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
 
 def count_case_insensitive(strings: List[str],  min_count=1,  min_word_length=0,  stopwords=())  ->  dict:
     ''' Calls count_normalized()  with  normalize_func=lambda s:s.lower() 
-          which means it is case insensitive in counting strings, but it reports the most common capitalisation.
+        which means it is case insensitive in counting strings, but it reports the most common capitalisation.
 
         Explicitly writing a function for such singular use is almost pointless, yet this seems like a common case and saves some typing.
     '''
@@ -163,15 +175,15 @@ def count_from_spacy_document(doc_or_sequence_of_docs, remove_stop=True, restric
     ''' Takes a spacy document, returns a string->count dict 
         
         Does a lot of fairly specific things (a bit too specific to smush into one function, really)
-          to be smart about removing low-content words, and focusing on terms.
+        to be smart about removing low-content words, and focusing on terms.
         
-        - restrict_to_tags  removes if not in this POS list - which defaults to nouns, adjectives, adverbs, and verbs (and removes a lot of fillter words)
-        - remove_stop removes according to Token.is_stop
+        @param restrict_to_tags:  removes if not in this POS list - which defaults to nouns, adjectives, adverbs, and verbs (and removes a lot of fillter words)
+        @param remove_stop:       removes according to Token.is_stop
 
-        - add_ents   - whether to add phrases from Doc.ents
-        - add_ncs    - whether to add phrases from Doc.noun_chunks
-
-        - weigh_deps - exists to weigh words/ent/ncs stronger when they are/involve the sentence's subject or object
+        @param add_ents:          whether to add phrases from Doc.ents
+        @param add_ncs:           whether to add phrases from Doc.noun_chunks
+ 
+        @param weigh_deps:        exists to weigh words/ent/ncs stronger when they are/involve the sentence's subject or object
 
         CONSIDER: make this a filter instead, so we can feed the result to count_normalized()
         CONSIDER: whether half of that can be part of some topic-modeling filtering.  And how filters might work around spacy.

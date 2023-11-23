@@ -1,17 +1,14 @@
-''' Reads text objects from PDF files 
+''' Asks PDFs about the text that they contain (which is not always clean, structured, correct, or present at all)
 
     If you want clean structured output, 
     then you likely want to put it more work,
     but for a bag-of-words method this may be enough.
 
-    See also pdf_image and ocr
+    See also ocr.py, and note that we also have "render PDF pages to image"
+    so we can hand that to that OCR module.
 
-    TODO: consider pymupdf, because it thinks about more details - consider e.g.
+    TODO: read about natural reading order details at:
     https://pymupdf.readthedocs.io/en/latest/recipes-text.html#how-to-extract-text-in-natural-reading-order
-
-
-    Render PDF pages as a PIL image.
-    Used to feed PDFs that contain scanned images to OCR.
 '''
 
 # def text_is_mainly_number(s:str):
@@ -57,12 +54,14 @@ def doc_text( filedata:bytes, strip=True ):
 
 
 def count_pages_with_text( filedata_or_list, char_threshold=200 ):
-    """ Counts  the number of pages that have a reasonabl amount of text on them.
-        Takes   either PDF file data (as bytes) 
-                    or the output of pages_text()
-        Returns (chars_per_page, num_pages_with_text, num_pages)
+    """ Counts the number of pages that have a reasonabl amount of text on them.
+        @param filedata_or_list: either: 
+          - PDF file data (as bytes) 
+          - the output of pages_text()
+        @return: (chars_per_page, num_pages_with_text, num_pages)
 
-        (The characters per page counts spaces between words, but strips edges; TODO: think about this more)
+        The characters per page counts spaces between words, but strips edges; 
+        TODO: think about this more
 
         Mainly intended to detect PDFs that are partly or fully images-of-text.
     """
@@ -88,14 +87,14 @@ def pdf_text_ocr(bytedata: bytes):
     ''' Takes a PDF and return pageless plain text, entirely with OCR.
 
         This is currently
-        - wetsuite.datacollect.pdf.pages_as_images()
-        - wetsuite.extras.ocr.easyocr()
+          - wetsuite.datacollect.pdf.pages_as_images()
+          - wetsuite.extras.ocr.easyocr()
         and is also:
-        - slow (might take a minute or two per document) - consider cacheing the result
-        - not clever in any way
+          - slow (might take a minute or two per document) - consider cacheing the result
+          - not clever in any way
         so probably ONLY use this if  
-        - extracting text objects (e.g. wetsuite.datacollect.pdf.page_text) gave you nothing
-        - you only care about what words exist, not about document structure
+          - extracting text objects (e.g. wetsuite.datacollect.pdf.page_text) gave you nothing
+          - you only care about what words exist, not about document structure
     '''
     ret = []
 

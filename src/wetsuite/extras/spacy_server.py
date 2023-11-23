@@ -1,15 +1,16 @@
 #!/usr/bin/python3
-''' A small WSGI-style app (served via the basic HTTP server - TODO: disentangle out app from that)
-    that serves spacy's parsing from a permanent backend, to avoid startup time each time.
+'''
+A small WSGI-style app (served via the basic HTTP server - TODO: disentangle out app from that)
+that serves spacy's parsing from a permanent backend, to avoid startup time each time.
 
-    Not considered part of regular use, because 
+Not considered part of regular use, because 
     - it's extra dependencies,
     - it returns the parse in a non-standard way  (cherry-picking things to put in JSON)
     - it's not necessary in batch use and e.g. most notebooks (it's fine to incur it once)
-    ...it's nice to have for web interfaces, though, because it can give answers within ~20ms.
+...it's nice to have for web interfaces, though, because it can give answers within ~20ms.
 
-    CONSIDER: rewrite to starlette / uvicorn to host most things on a standalone async thing
-              and perhaps try parsing in smaller chunks, sending over websockets
+CONSIDER: rewrite to starlette / uvicorn to host most things on a standalone async thing
+and perhaps try parsing in smaller chunks, sending over websockets
 '''
 
 def load_models(models_to_load):
@@ -46,7 +47,7 @@ def pick_model(loaded_models, lang=None, name=None, fallback=True):
         and returns the model that is loaded that best fits that.
 
         The code below mostly just wants one of the right language (in my tests 'nl' or 'en'),
-           via language detection 
+        via language detection 
         
         CONSIDER: implement preference if we have multiple for a language?
     '''
