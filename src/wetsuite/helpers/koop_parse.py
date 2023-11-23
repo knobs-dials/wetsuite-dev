@@ -1,10 +1,12 @@
-''' Data and metadata parsing that is probably specific to KOOP's SRU repositories.
-
-    For more general things, see 
-    meta.py
-    patterns.py
 '''
-import re, sys
+Data and metadata parsing that is probably specific to KOOP's SRU repositories.
+
+For more general things, see 
+  - meta.py
+  - patterns.py
+'''
+import re
+import sys
 import urllib.parse
 
 import wetsuite.datacollect.koop_repositories
@@ -12,49 +14,51 @@ import wetsuite.helpers.meta
 
 import wetsuite.helpers.etree
 
-#from lxml.etree import _Comment, _ProcessingInstruction, tostring   # CONSIDER: import these via wetsuite.helpers.etree ?
-from wetsuite.helpers.etree import _Comment, _ProcessingInstruction, tostring   # CONSIDER: import these via wetsuite.helpers.etree ?
+from wetsuite.helpers.etree import _Comment, _ProcessingInstruction, tostring
 
 
 
 def cvdr_meta(tree, flatten=False):
-    ''' Takes an etree object that is either 
-        - a search result's individual record  (in which case we're looking for ./recordData/gzd/originalData/meta
-        - CVDR content xml's root              (in which case it's              ./meta)
-        ...because both contain almost the same metadata almost the same way (the difference is enrichedData in the search results).
-
-        Returns owmskern, owmsmantel, and cvdripm's elements merged into a single dict. 
-        If it's a search result, it will also mention its enrichedData.
+    ''' Extracts metadata from a CVDR
 
         Because various elements can repeat - and various things frequently do (e.g. 'source'), each value is a list.
 
-        
-        Because in some cases there are tag-specific attributes, for this reason:
-          If flatten==False (default),    returns a dict like   
-                { 'creator': [{'attr': {'scheme': 'overheid:Gemeente'}, 'text': 'Zuidplas'}], ... }
-        
-        For quick and dirty presentation (only) you may wish to smush those into one string:
-          If flatten==True,               you get a _creatively_ flattened thing like              
-                { 'creator': 'Zuidplas (overheid:Gemeente)', ... }
-          Please avoid this when you care to deal with data in a structured way  (even if you can sometimes get away with it due to empty attributs).
 
-
+        @param tree: an etree object that is either 
+          - a search result's individual record  
+            (in which case we're looking for ./recordData/gzd/originalData/meta
+          - CVDR content xml's root      
+            (in which case it's              ./meta)
+        ...because both contain almost the same metadata almost the same way (the difference is enrichedData in the search results).
+        @param flatten:
+        
         In a lot of cases we care mainly for tagname and text, and there are no attributes, e.g.
-          owmskern's    <identifier>CVDR641872_2</identifier>
-          owmskern's    <title>Nadere regels jeugdhulp gemeente Pijnacker-Nootdorp 2020</title>
-          owmskern's    <language>nl</language>
-          owmskern's    <modified>2022-02-17</modified>
-          owmsmantel's  <alternative>Nadere regels jeugdhulp gemeente Pijnacker-Nootdorp 2020</alternative>
-          owmsmantel's  <subject>maatschappelijke zorg en welzijn</subject>
-          owmsmantel's  <issued>2022-02-08</issued>
-          owmsmantel's  <rights>De tekst in dit document is vrij van auteursrecht en databankrecht</rights>
+          - owmskern's    <identifier>CVDR641872_2</identifier>
+          - owmskern's    <title>Nadere regels jeugdhulp gemeente Pijnacker-Nootdorp 2020</title>
+          - owmskern's    <language>nl</language>
+          - owmskern's    <modified>2022-02-17</modified>
+          - owmsmantel's  <alternative>Nadere regels jeugdhulp gemeente Pijnacker-Nootdorp 2020</alternative>
+          - owmsmantel's  <subject>maatschappelijke zorg en welzijn</subject>
+          - owmsmantel's  <issued>2022-02-08</issued>
+          - owmsmantel's  <rights>De tekst in dit document is vrij van auteursrecht en databankrecht</rights>
 
         In others you may also care about an attribute or two, e.g.:
-          owmskern's    <type scheme="overheid:Informatietype">regeling</type>  (except there's no variation in that value anyway)
-          owmskern's    <creator scheme="overheid:Gemeente">Pijnacker-Nootdorp</creator>
-          owmsmantel's  <isRatifiedBy scheme="overheid:BestuursorgaanGemeente">college van burgemeester en wethouders</isRatifiedBy>
-          owmsmantel's  <isFormatOf resourceIdentifier="https://zoek.officielebekendmakingen.nl/gmb-2022-66747">gmb-2022-66747</isFormatOf>
-          owmsmantel's  <source resourceIdentifier="https://lokaleregelgeving.overheid.nl/CVDR641839">Verordening jeugdhulp gemeente Pijnacker-Nootdorp 2020</source>
+          - owmskern's    <type scheme="overheid:Informatietype">regeling</type>  (except there's no variation in that value anyway)
+          - owmskern's    <creator scheme="overheid:Gemeente">Pijnacker-Nootdorp</creator>
+          - owmsmantel's  <isRatifiedBy scheme="overheid:BestuursorgaanGemeente">college van burgemeester en wethouders</isRatifiedBy>
+          - owmsmantel's  <isFormatOf resourceIdentifier="https://zoek.officielebekendmakingen.nl/gmb-2022-66747">gmb-2022-66747</isFormatOf>
+          - owmsmantel's  <source resourceIdentifier="https://lokaleregelgeving.overheid.nl/CVDR641839">Verordening jeugdhulp gemeente Pijnacker-Nootdorp 2020</source>
+    
+        When those attributes matter, you want C{flatten=False} (the default) and you will get a dict like: ::
+                { 'creator': [{'attr': {'scheme': 'overheid:Gemeente'}, 'text': 'Zuidplas'}], ... }
+        
+        For quick and dirty presentation (only) you may wish to ask to creatively smush those into one string by asking for C{flatten==True}
+        in which case you get something like: ::
+                { 'creator': 'Zuidplas (overheid:Gemeente)', ... }
+        Please avoid this when you care to deal with data in a structured way  (even if you can sometimes get away with it due to empty attributs).
+
+        @return: a dict containing owmskern, owmsmantel, and cvdripm's elements merged into a single dict.
+        If it's a search result, it will also mention its enrichedData.
     '''
     ret = {}
 
@@ -124,13 +128,11 @@ def cvdr_meta(tree, flatten=False):
 def cvdr_parse_identifier(text:str, prepend_cvdr=False):
     ''' Given a CVDR style identifier string (sometimes called JCDR), 
         
-        returns a 2-tuple:
-        - work ID
-        - expression ID  (will be None if it was given a work ID)
+        returns @return: a tuple of strings: (work ID, expression ID), the latter of which will be None if input was a work ID
         
         Both without 'CVDR', unless you set prepend_cvdr=True
 
-        Examples:
+        Examples: ::
             101404_1      -->  ('101404', '101404_1')
             CVDR101405_1  -->  ('101405', '101405_1')
             CVDR101406    -->  ('101406',  None     )
@@ -156,11 +158,10 @@ def cvdr_param_parse(rest:str):
     params = {}
     for param in rest.split('&'):
         pd = urllib.parse.parse_qs(param)
-        for key in pd:
+        for key, val in pd.items():
             out_key = key
             if key.startswith('amp;'):    # this variation seems to be a fairly common mistake in general, so try to be robust to it
                 out_key = key[4:]         #   ...though it may well be better to handle this earlier in the function
-            val = pd[key]
             if key=='artikel':
                 val = val.lstrip('artikel.')
             if key not in params:
@@ -175,7 +176,7 @@ def cvdr_text(tree):
         skipping any introductions and such.
 
         Returns a single string.
-          this ic currently a best-effort formatting, where you should e.g. find that paragraphs are split with double newlines.
+        This is currently a best-effort formatting, where you should e.g. find that paragraphs are split with double newlines.
 
         This is currently mostly copy-pasted from the bwb code TODO: unify, after I figure out all the varying structure
 
@@ -207,6 +208,7 @@ def cvdr_text(tree):
 
             text = [] # collected per lid, effectively
 
+            # TODO: decide and clean up.
             if 1:
                 # this is a somewhat awkward way to do it, but may be more robust to unusual nesting                
                 for node in apart.iter(): 
@@ -303,50 +305,49 @@ def cvdr_text(tree):
 
 def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False): 
     ''' Given the CVDR XML content document as an etree object, 
-          looks for the <source> tags, which are references to laws and other regulations (VERIFY)
+        looks for the <source> tags, which are references to laws and other regulations (VERIFY)
 
         This function 
-        - extracts (only) the source tags that specify
-          ...and ignores 
+          - extracts (only) the source tags that specify
+            ...and ignores 
         
         in part to normalize what is in there a bit. 
         Be aware this is more creative than a helper function probably should be.
     
-        Returns a list of 
+        Returns a list of ::
           (type, orig, specref, parts, source_text)
         where 
-        - type is currently one of 'BWB' or 'CVDR'
-        - URL-like reference
-        - just the identifier
-        - dict of parts parsed from URL, or None
-        - link text (name and often part to a reference)
+          - type is currently one of 'BWB' or 'CVDR'
+          - URL-like reference
+          - just the identifier
+          - dict of parts parsed from URL, or None
+          - link text (name and often part to a reference)
             seem to be more convention-based than standardized.
 
-        For example (mostly to point out there is _plenty_ of variation in most parts)
+        For example (mostly to point out there is _plenty_ of variation in most parts) ::
          ('BWB', 
           '1.0:c:BWBR0015703&artikel=6&g=2014-11-13',
           'BWBR0015703', 
           {'artikel': ['6'], 'g': ['2014-11-13']}, 
           'Participatiewet, art. 6')
-        or
+        or ::
          ('BWB', 
           'http://wetten.overheid.nl/BWBR0015703/geldigheidsdatum_15-05-2011#Hoofdstuk1_12', 
           'BWBR0015703', 
           {}, 
           'Wet werk en bijstand, art. 8, lid 1')
-        or
+        or ::
          ('CVDR', 
           'CVDR://103202_1',
           '103202_1',
           None,
           'Inspraakverordening Spijkenisse, art. 2')
-        or
+        or ::
          ('CVDR', 
           '1.1:CVDR229520-1',
           '229520',
           None, 
           'Verordening voorzieningen maatschappelijke participatie 2012-A, artikel 4')
-
     '''
     ret = []
     tree = wetsuite.helpers.etree.strip_namespace(tree)
@@ -386,7 +387,7 @@ def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False):
             # BWB://1.0:v:BWBR0015703&artikel=art. 30              which is messy
             m = re.match('(?:jci)?([0-9.]+):([a-z]):(BWB[RV][0-9]+)(.*)', resourceIdentifier)
             if m is not None:
-                version, typ, bwb, rest = m.groups()
+                version, typ, bwb, rest = m.groups() # pylint: disable=W0612
                 params = cvdr_param_parse(rest)
                 ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
                 if debug:
@@ -472,34 +473,36 @@ def bwb_title_looks_boring(text):
 
 
 
-def bwb_searchresult_meta(record): # TODO: rename bwb_meta to this in files
-    ' takes individual SRU result record as an etree subtrees, and picks out BWB-specific metadata (merging the separate metadata sections) '
-    record = wetsuite.helpers.etree.strip_namespace( record )
+def bwb_searchresult_meta( record_node ): # TODO: rename bwb_meta to this in files
+    ''' Takes individual SRU result record as an etree subtrees, 
+        picks out BWB-specific metadata (merging the separate metadata sections).
+        Returns a dict
+    '''
+    record_node = wetsuite.helpers.etree.strip_namespace( record_node )
 
     #recordSchema   = record.find('recordSchema')      # e.g. <recordSchema>http://standaarden.overheid.nl/sru/</recordSchema>
     #recordPacking  = record.find('recordPacking')     # probably <recordPacking>xml</recordPacking>
-    recordData     = record.find('recordData')        # the actual record 
+    record_data     = record_node.find('recordData')        # the actual record 
     #recordPosition = record.find('recordPosition')    # e.g. <recordPosition>12</recordPosition>
-    payload = recordData[0]
+    payload = record_data[0]
     #print( etree.ElementTree.tostring( payload, encoding='unicode' ) )
 
-    originalData = payload.find('originalData')
-    owmskern     = wetsuite.helpers.etree.kvelements_to_dict( originalData.find('meta/owmskern')   )
-    owmsmantel   = wetsuite.helpers.etree.kvelements_to_dict( originalData.find('meta/owmsmantel') ) 
-    bwbipm       = wetsuite.helpers.etree.kvelements_to_dict( originalData.find('meta/bwbipm')     ) 
-    enrichedData = wetsuite.helpers.etree.kvelements_to_dict( payload.find('enrichedData') )
+    original_data = payload.find('originalData')
+    owmskern     = wetsuite.helpers.etree.kvelements_to_dict( original_data.find('meta/owmskern')   )
+    owmsmantel   = wetsuite.helpers.etree.kvelements_to_dict( original_data.find('meta/owmsmantel') ) 
+    bwbipm       = wetsuite.helpers.etree.kvelements_to_dict( original_data.find('meta/bwbipm')     ) 
+    enriched_data = wetsuite.helpers.etree.kvelements_to_dict( payload.find('enrichedData') )
 
     merged = {}
     merged.update(owmskern)
     merged.update(owmsmantel)
     merged.update(bwbipm)
-    merged.update(enrichedData)
-
+    merged.update(enriched_data)
     return merged
 
 
-def bwb_toestand_usefuls(tree):
-    ''' Fetch interesting metadata from parsed toestand XML.    TODO: finish '''
+def bwb_toestand_usefuls( tree ):
+    ''' Fetch the most interesting metadata from parsed toestand XML.    TODO: finish '''
     ret = {}
 
     ret['bwb-id']                   = tree.get('bwb-id')
@@ -515,11 +518,11 @@ def bwb_toestand_usefuls(tree):
     return ret
 
 
-def bwb_wti_usefuls(tree):
+def bwb_wti_usefuls( tree ):
     ''' Fetch interesting  metadata from parsed WTI XML.    
         TODO: finish, and actually do it properly -- e.g. look to the schema as to what may be omitted, may repeat, etc.
     '''
-    ret = {} 
+    ret = {}
     tree = wetsuite.helpers.etree.strip_namespace(tree)
 
     # root level has these four
@@ -527,7 +530,6 @@ def bwb_wti_usefuls(tree):
     gerelateerde_regelgeving = tree.find('gerelateerde-regelgeving')
     wijzigingen              = tree.find('wijzigingen')
     owms_meta                = tree.find('meta')
-
 
     ### algemene_informatie ###########################################################################################
     ret['algemene_informatie'] = {}
@@ -883,30 +885,30 @@ def alineas_with_selective_path(tree, start_at_path=None, alinea_elemname='al'):
 
         Returns a list of dicts, one for each <al>.
         
-        Each such dict should look like:
-        {
-            'parts': [   {'what': 'hoofdstuk',  'hoofdstuklabel': 'Hoofdstuk', 'hoofdstuknr': '1', 'hoofdstuktitel': 'Algemene bepalingen',},
-                         {'what': 'artikel',    'artikellabel': 'Artikel',     'artikelnr': '1:1', 'artikeltitel': 'Begripsomschrijvingen',}  ],
-            'merged':    {'hoofdstuklabel': 'Hoofdstuk',
-                          'hoofdstuknr': '1',
-                          'hoofdstuktitel': 'Algemene bepalingen'
-                          'artikellabel': 'Artikel',
-                          'artikelnr': '1:1',
-                          'artikeltitel': 'Begripsomschrijvingen',
-                         },            
-            'path':      '/cvdr/body/regeling/regeling-tekst/hoofdstuk[1]/artikel[1]/al',
-            'text-flat': 'In deze verordening wordt verstaan dan wel mede verstaan onder:'
-        }
+        Each such dict should look like: ::
+            {
+                'parts': [   {'what': 'hoofdstuk',  'hoofdstuklabel': 'Hoofdstuk', 'hoofdstuknr': '1', 'hoofdstuktitel': 'Algemene bepalingen',},
+                            {'what': 'artikel',    'artikellabel': 'Artikel',     'artikelnr': '1:1', 'artikeltitel': 'Begripsomschrijvingen',}  ],
+                'merged':    {'hoofdstuklabel': 'Hoofdstuk',
+                            'hoofdstuknr': '1',
+                            'hoofdstuktitel': 'Algemene bepalingen'
+                            'artikellabel': 'Artikel',
+                            'artikelnr': '1:1',
+                            'artikeltitel': 'Begripsomschrijvingen',
+                            },            
+                'path':      '/cvdr/body/regeling/regeling-tekst/hoofdstuk[1]/artikel[1]/al',
+                'text-flat': 'In deze verordening wordt verstaan dan wel mede verstaan onder:'
+            }
         Where:
-        - 'parts' details each structural element (boek, hoofdstuk, afdeling paragraaf, artikel, lid)
+          - 'parts' details each structural element (boek, hoofdstuk, afdeling paragraaf, artikel, lid)
              that encompasses this fragment
              the ...label keys are largely entirely redundant, but there are documents that abuse these, which you may want to know.
-        - 'merged' is the part dicts, without the 'what' key, update()d into one dict.
+          - 'merged' is the part dicts, without the 'what' key, update()d into one dict.
              In simpler documents, e.g. where you just haev artikel and lid, this makes for an easier way to filter out the part you want.
              In complex documents, this may (for a smallish amount of cases) be incorrect because when you e.g. have an afdeling nested in an afdeling, values from one overwrite the other.
-        - 'path' is the xpath of the item we're describing, in case you want to find this element in XML / etree form
-        - 'text-flat' is plain text, with any markup elements flattened out 
-        - WARNING: currently NONE of these keys in parts/merged are settled on yet, things may change.
+          - 'path' is the xpath of the item we're describing, in case you want to find this element in XML / etree form
+          - 'text-flat' is plain text, with any markup elements flattened out 
+          - WARNING: currently NONE of these keys in parts/merged are settled on yet, things may change.
     '''
     import warnings
     warnings.warn('The behaviour of alineas_with_selective_path() is not fully decided, and may still change')
@@ -1020,13 +1022,12 @@ def merge_alinea_data( alinea_dicts, if_same={
         puts text fragments together when their specified ['parts'] values are the same.
 
         In other words, this lets you control just how flat to make the text, e.g. 
-        - flatten all text within a lid (e.g. flattening lists), 
-        - smush all lid text within an article together, etc.
-        - mostly flatten out the text, but still group it by hoofdstuk if those are present
+          - flatten all text within a lid (e.g. flattening lists), 
+          - smush all lid text within an article together, etc.
+          - mostly flatten out the text, but still group it by hoofdstuk if those are present
         ...etc.
 
-        CONSIDER:
-        - return a meta dict for each such grouped text (instead of the raw key)
+        CONSIDER: returning a meta dict for each such grouped text (instead of the raw key)
     '''
     from collections import OrderedDict
 
@@ -1073,9 +1074,9 @@ def iter_chunks_xml(xml):
     """ The combination of  alineas_with_selective_path()  and  merge_alinea_data()  
 
         Notes:
-        - Sloppy initial implementation
-        - attempts to handle tables
-        - Currently geared specifically to CVDR xml
+          - Sloppy initial implementation
+          - attempts to handle tables
+          - Currently geared specifically to CVDR xml
     """
     tree = wetsuite.helpers.etree.fromstring(xml)
     tree_stripped = wetsuite.helpers.etree.strip_namespace(tree)

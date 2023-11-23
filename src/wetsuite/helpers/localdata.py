@@ -1,41 +1,40 @@
-''' This is intended to store store collections of data on disk,'
-      relatively unobtrusive to use    (better than e.g. lots of files),
-      and with quick random access     (better than e.g. JSONL).
+'''
+This is intended to store store collections of data on disk,
+relatively unobtrusive to use    (better than e.g. lots of files),
+and with quick random access     (better than e.g. JSONL).
 
-    It currently centers on a key-value store.
-    See the docstring on the LocalKV class for more details.
+It currently centers on a key-value store.
+See the docstring on the LocalKV class for more details.
 
-    This is used e.g. by various data collection, and by distributed datasets.
-    
+This is used e.g. by various data collection, and by distributed datasets.
 
-    BASIC USE:
-      mystore = LocalKV( 'docstore.db' )
 
-    Notes:
+BASIC USE: ::
+    mystore = LocalKV( 'docstore.db' )
+
+Notes:
     - on the path/name argument:
         - just a name ( without os.sep, that is, / or \\ ) will be resolved to a path where wetsuite keeps various stores
-        - an absolute path will be passed through             
-        ...but this isn't very portable until you do things like   os.path.join( myproject_data_dir, 'docstore.db')
+      - an absolute path will be passed through             
+          ...but this isn't very portable until you do things like   os.path.join( myproject_data_dir, 'docstore.db')
         - a relative path with os.sep will be passed through  
-        ...which is only as portable as the cwd is predictable)
+          ...which is only as portable as the cwd is predictable)
         - ':memory:' is in-memory only                        
-        See also resolve_path() for more details
+          See also resolve_path() for more details
 
     - by default, each write is committed individually, (because SQlite3's driver defaults to autocommit)
-        If you want more performant bulk writes, 
-            use put() with commit=False, and
-            do an explicit commit() afterwards
-        ...BUT if a script borks in the middle of something uncommited, you will need to do manual cleanup.
+      If you want more performant bulk writes, 
+      use put() with commit=False, and
+      do an explicit commit() afterwards
+      ...BUT if a script borks in the middle of something uncommited, you will need to do manual cleanup.
     
     - you _could_ access these SQLite databses yourself, particularly when just reading.
       Our code is mainly there for convenience and checks.     
-      Consider:
-        sqlite3 store.db 'select key,value from kv limit 10 ' | less
+      Consider: `sqlite3 store.db 'select key,value from kv limit 10 ' | less`
       It only starts getting special once you using MsgpackKV, or the extra parsing and wrapping that wetsuite.datasets adds.
 
-    
-    CONSIDER: writing a ExpiringLocalKV that cleans up old entries
-    CONSIDER: writing variants that do convert specific data, letting you e.g. set/fetch dicts, or anything else you could pickle
+CONSIDER: writing a ExpiringLocalKV that cleans up old entries
+CONSIDER: writing variants that do convert specific data, letting you e.g. set/fetch dicts, or anything else you could pickle
 '''
 import os, random
 from typing import Tuple
@@ -48,49 +47,50 @@ import wetsuite.helpers.format
 
 
 class LocalKV:
-    ''' A key-value store backed by a local filesystem.
-        This is currently a fairly thin wrapper around SQLite - this may change.
+    '''
+    A key-value store backed by a local filesystem.
+    This is currently a fairly thin wrapper around SQLite - this may change.
 
-        SQLite will still just store the type it gets, and this won't do conversions for you,
-        it only enforces the values that go in are of the type you said you would put in.
-        This will makes things more consistent, but is not a strict guarantee.
-        
-        You could change both key and value types - e.g. the cached_fetch function expects a str:bytes store
+    SQLite will still just store the type it gets, and this won't do conversions for you,
+    it only enforces the values that go in are of the type you said you would put in.
+    This will makes things more consistent, but is not a strict guarantee.
+    
+    You could change both key and value types - e.g. the cached_fetch function expects a str:bytes store
 
-        Given
-            db = LocalKv('path/to/dbfile')
-        Basic use is:
-            db.put('foo', 'bar')
-            db.get('foo')
+    Given: ::
+        db = LocalKv('path/to/dbfile')
+    Basic use is: ::
+        db.put('foo', 'bar')
+        db.get('foo')
 
-        
-        Notes:
-        - It is a good idea to open the store with the same typing each  or you will still confuse yourself.
-            CONSIDER: storing typing in the file in the meta table
-        - doing it via functions is a little more typing yet also exposes some sqlite things 
-            (using transactions, vacuum) for when you know how to use them.
-            and is arguably clearer than 'this particular dict-like happens to get stored magically'
-        - On concurrency: As per basic sqlite behaviour, multiple processes can read the same database,
-          but only one can write, and when you leave a writer with uncommited data for nontrivial amounts of time,
-          readers are likely to bork out on the fact it's locked (CONSIDER: have it retry / longer).
-          This is why by default we leave it on autocommit, even though that can be slower.
+    
+    Notes:
+      - It is a good idea to open the store with the same typing each  or you will still confuse yourself.
+        CONSIDER: storing typing in the file in the meta table
+      - doing it via functions is a little more typing yet also exposes some sqlite things 
+        (using transactions, vacuum) for when you know how to use them.
+        and is arguably clearer than 'this particular dict-like happens to get stored magically'
+      - On concurrency: As per basic sqlite behaviour, multiple processes can read the same database,
+        but only one can write, and when you leave a writer with uncommited data for nontrivial amounts of time,
+        readers are likely to bork out on the fact it's locked (CONSIDER: have it retry / longer).
+        This is why by default we leave it on autocommit, even though that can be slower.
 
-        - It wouldn't be hard to also make it act largely like a dict,   implementing __getitem__, __setitem__, and __delitem__
-          but this muddies the waters as to its semantics, in particularly when things you set are actually saved. 
+      - It wouldn't be hard to also make it act largely like a dict,   implementing __getitem__, __setitem__, and __delitem__
+        but this muddies the waters as to its semantics, in particularly when things you set are actually saved. 
 
-          So we try to avoid a leaky abstraction, by making you write out all the altering operatiopns, 
-            and actually all of them, e.g.  get(), put(),  keys(), values(), and items(),
-            because those can at least have docstrings to warn you, rather than breaking your reasonable expectations. 
+        So we try to avoid a leaky abstraction, by making you write out all the altering operatiopns, 
+        and actually all of them, e.g.  get(), put(),  keys(), values(), and items(),
+        because those can at least have docstrings to warn you, rather than breaking your reasonable expectations. 
 
-          ...exceptions are
-            __len__        for amount of items                   CONSIDER: making that len()
-            __contains__   backing 'is this key in the store'),  CONSIDER: making that e.g. has_key() instead
-          and also:
-            __iter__       which is actually iterkeys()         CONSIDER: removing it
-            __getitem__    supports the views-with-a-len  
-          The last were tentative until keys(), values(), and items() started giving views.  
+        ...exceptions are
+        __len__        for amount of items                   CONSIDER: making that len()
+        __contains__   backing 'is this key in the store'),  CONSIDER: making that e.g. has_key() instead
+        and also:
+        __iter__       which is actually iterkeys()         CONSIDER: removing it
+        __getitem__    supports the views-with-a-len  
+        The last were tentative until keys(), values(), and items() started giving views.  
 
-          TODO: make a final decision where to sit between clean abstractions and convenience.
+        TODO: make a final decision where to sit between clean abstractions and convenience.
     '''
     def __init__(self, path, key_type, value_type, read_only=False):
         ''' Specify the path to the database file to open. 
@@ -215,7 +215,7 @@ class LocalKV:
     def _get_meta(self, key:str, missing_as_none=False):
         ''' For internal use, preferably don't use.
             This is an extra str:str table in there that is intended to be separate, with some keys special to these classes.
-              ...you could abuse this for your own needs if you wish, but try not to.
+            ...you could abuse this for your own needs if you wish, but try not to.
         '''
         curs = self.conn.cursor()
         curs.execute("SELECT value FROM meta WHERE key=?", (key,) )
@@ -423,8 +423,8 @@ class LocalKV:
         ''' Returns a single (key, value) item from the store, selected randomly.
         
             Convenience function, because doing this properly yourself takes two or three lines 
-              (you can't random.choice/random.sample a view,  
-               so to do it properly you basically have to materialize all keys - and not accidentally all values)
+            (you can't random.choice/random.sample a view,  
+            so to do it properly you basically have to materialize all keys - and not accidentally all values)
             BUT assume this is slower than working on the keys yourself.
         '''
         all_keys = list( self.keys() )
@@ -436,8 +436,8 @@ class LocalKV:
         ''' Returns an amount of [(key, value), ...] list from the store, selected randomly.
         
             Convenience function, because doing this properly yourself takes two or three lines 
-              (you can't random.choice/random.sample a view,  
-               so to do it properly you basically have to materialize all keys - and not accidentally all values)
+            (you can't random.choice/random.sample a view,  
+            so to do it properly you basically have to materialize all keys - and not accidentally all values)
             BUT assume this is slower than working on the keys yourself.
         '''
         all_keys = list( self.keys() )
@@ -558,17 +558,17 @@ def cached_fetch(store, url:str, force_refetch:bool=False) -> Tuple[bytes, bool]
     ''' Helper to use a str-to-bytes LocalKV to cache URL fetch results.
 
         Takes a store to get/put data from, and a url to fetch,
-        returns (data, came_from_cache)
+        @return: (data, came_from_cache)
 
         May raise 
-        - whatever requests.get may range
-        - ValueError when !response.ok, or if the HTTP code is >=400
-          (which is behaviour from wetsuite.helpers.net.download())
-          ...to force us to deal with issues and not store error pages.
+          - whatever requests.get may range
+          - ValueError when !response.ok, or if the HTTP code is >=400
+            (which is behaviour from wetsuite.helpers.net.download())
+            ...to force us to deal with issues and not store error pages.
 
         Is little more than 
-        - if URL is a key in the store, return its value
-        - if URL not in store,          do wetsuite.helpers.net.download(url), store in store, and return its value
+          - if URL is a key in the store, return its value
+          - if URL not in store,          do wetsuite.helpers.net.download(url), store in store, and return its value
     '''
     if store.key_type not in (str,None)  or  store.value_type not in (bytes, None):
         raise TypeError('cached_fetch() expects a str:bytes store (or for you to disable checks with None,None),  not a %r:%r'%(
@@ -596,12 +596,12 @@ def cached_fetch(store, url:str, force_refetch:bool=False) -> Tuple[bytes, bool]
 
 def resolve_path( name:str ):
     ''' Note: the KV classes call this internally. 
-            This is less for you to use directly, more explain why.
+        This is here less for you to use directly, more explain why.
 
         For context, handing a pathless base name to underlying sqlite would just put it in the current directory
-            which isn't always where you think, so is likely to sprinkle databases all over the place.
-            This is common point of confusion/mistake around sqlite (and files in general),
-            so we make it harder to do accidentally, so that this doesn't become your problem.
+        which isn't always where you think, so is likely to sprinkle databases all over the place.
+        This is common point of confusion/mistake around sqlite (and files in general),
+        so we make it harder to do accidentally, so that this doesn't become your problem.
 
         Using this function makes it a little more controlled where things go:     
             - Given a **bare name**, e.g. 'extracted.db', this returns an absolute path 
@@ -618,23 +618,23 @@ def resolve_path( name:str ):
             - given a relative path, it will pass that through -- which will open it relative to the current directory
 
         Notes:
-        - should be idempotent, so shouldn't hurt to call this more than once on the same path 
-            (in that it _should_ always produce a path with os.sep (...or :memory: ...), 
-            which it would pass through the second time)
+            - should be idempotent, so shouldn't hurt to call this more than once on the same path 
+                (in that it _should_ always produce a path with os.sep (...or :memory: ...), 
+                which it would pass through the second time)
 
-        - When you rely on the 'base name means it goes to a wetsuite directory', 
-            it is suggested that you use descriptive names (e.g. 'rechtspraaknl_extracted.db', not 'extracted.db') 
-            so that you don't open existing stores without meaning to.
+            - When you rely on the 'base name means it goes to a wetsuite directory', 
+                it is suggested that you use descriptive names (e.g. 'rechtspraaknl_extracted.db', not 'extracted.db') 
+                so that you don't open existing stores without meaning to.
 
-        - us figuring out a place in your use profile for you
-          This _is_ double-edged, though, in that we will get fair questions like
-            "I can't tell why my user profile is full" and 
-            "I can't find my files"   (sorry, they're not so useful to access directly)
+            - us figuring out a place in your use profile for you
+            This _is_ double-edged, though, in that we will get fair questions like
+              - "I can't tell why my user profile is full" and 
+              - "I can't find my files"   (sorry, they're not so useful to access directly)
 
         CONSIDER: 
-        - listening to a WETSUITE_BASE_DIR to override our "put in user's homedir" behaviour,
-          this might make more sense e.g. to point it at distributed storage without 
-          e.g. you having to do symlink juggling
+            - listening to a WETSUITE_BASE_DIR to override our "put in user's homedir" behaviour,
+            this might make more sense e.g. to point it at distributed storage without 
+            e.g. you having to do symlink juggling
     '''
     # deal with pathlib arguments by flattening it to a string
     import pathlib
@@ -676,13 +676,14 @@ def resolve_path( name:str ):
 
 def list_stores( skip_table_check=True, get_num_items=False ):
     ''' Look in the directory that (everything that uses) resolve_path() puts things in,
-          check which ones seem to be stores (does IO to do so).
-        Returns a dict with details for each
+        check which ones seem to be stores (does IO to do so).
 
-        skip_table_check - if true, only tests whether it's a sqlite file, not whether it contains the table we expect.
-                           because when it's in the stores directory, chances are we put it there, and we can avoid IO and locking.
+        @return: a dict with details for each store
+
+        @param skip_table_check: if true, only tests whether it's a sqlite file, not whether it contains the table we expect.
+        because when it's in the stores directory, chances are we put it there, and we can avoid IO and locking.
         
-        get_num_items    - does not by default get the number of items, because that can need a bunch of IO, and locking.
+        @param get_num_items: does not by default get the number of items, because that can need a bunch of IO, and locking.
     '''
     dirs = wetsuite.helpers.util.wetsuite_dir()
     stores_dir = dirs['stores_dir']

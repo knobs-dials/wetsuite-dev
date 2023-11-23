@@ -1,13 +1,14 @@
-''' While bulk fetching, we frequently need code like "search for a range of days"
+'''
+Try to deal with varied forms of dates and times, and ease things like "I would like to specify a range of days in a particular format" (e.g. for bulk fetching), and such.
 
-    Note that this module is focused only on days, not on precise times. 
-      And, as a result (timezones), it may be a day off.
+Note that this module is focused only on days, not on precise times. 
+And, as a result (timezones), it may be a day off.
 
-    CONSIDER: making everything generators, for large ranges 
+CONSIDER: making everything generators, for large ranges 
 '''
 
-import datetime, re
-
+import datetime
+import re
 import dateutil.parser
 
 class DutchParserInfo(dateutil.parser.parserinfo):
@@ -37,15 +38,19 @@ class DutchParserInfo(dateutil.parser.parserinfo):
     ]
 
 
-def parse(text, prefer_none_over_exception=True):
-    ''' Mostly just calls dateutil.parser.parse(),  a library that deals with more varied date formats
-          but understands a bit of Dutch on top of English 
-          TODO: add French.
+def parse(text:str, exception_as_none=True):
+    '''
+    Try to parse a string as a date.
 
-        Takes a string that you know contains just a date,
-        Returns that date as a datetime.
-        
-        We try to be a little more robust here - and will return None before we raise an exception.
+    Mostly just calls dateutil.parser.parse(), a library that deals with more varied date formats
+    ...but we have told it a litte more about Dutch, not just English.
+    TODO: add French, there is some early legal text in French.
+
+    We try to be a little more robust here - and will return None before we raise an exception.
+
+    @param text:               Takes a string that you know contains just a date
+    @param exception_as_none:  if invalid, return None rather than raise a ValueError
+    @return: that date as a datetime, or None
     '''
     # use the first that doesn't fail
     for lang, transform in (
@@ -57,7 +62,7 @@ def parse(text, prefer_none_over_exception=True):
             return dateutil.parser.parse(transform(text), parserinfo=lang)
         except dateutil.parser._parser.ParserError:
             continue
-    if prefer_none_over_exception:
+    if exception_as_none:
         return None
     else:
         raise ValueError("Did not understand date in %r"%text)
@@ -70,19 +75,22 @@ _re_isolike_date  = re.compile(r'\b[12][0-9][0-9][0-9]-[0-9]{1,2}-[0-9]{1,2}\b')
 _re_dutch_date_1  = re.compile(r'\b[0-9]{1,2} (%s),? [0-9]{2,4}\b'%_MAAND_RES, re.I)
 _re_dutch_date_2  = re.compile(r'\b(%s) [0-9]{1,2},? [0-9]{2,4}\b'%_MAAND_RES, re.I) # this is more an english-style thing
 
-def find_dates_in_text(text:str):
-    ''' Tries to fish out date-like strings from free-form text.  
+def find_dates_in_text(text: str):
+    '''
+    Tries to fish out date-like strings from free-form text.  
 
-        Currently looks only for three specific patterns (1980-01-01, 1 jan 1980, jan 1 1980, the latter two in both Dutch and English),
-        aimed at some specific fields we know mainly/only contain dates, mostly to normalize those.
-        
-        Targeted at specific fields with relatively well formatted dates, because "try to find everthing, hope for the best" 
-        is likely to have false positives.
-        TODO: add such a freer mode in here anyway, just not as the default.
-        
-        Returns two lists:
-        - a list of strings
-        - each as a date, or None where dateutil didn't manage (it usually does, particularly if we pre-filter like this, but it's not a guarantee)
+    Currently looks only for three specific patterns (1980-01-01, 1 jan 1980, jan 1 1980, the latter two in both Dutch and English),
+    aimed at some specific fields we know mainly/only contain dates, mostly to normalize those.
+    
+    Targeted at specific fields with relatively well formatted dates, because "try to find everthing, hope for the best" 
+    is likely to have false positives.
+    TODO: add such a freer mode in here anyway, just not as the default.
+
+    @param text:  the str to find dates in
+    
+    @return: two lists:
+     - list of each found date as strings
+     - according list where each is a date object -- or None where dateutil didn't manage (it usually does, particularly if we pre-filter like this, but it's not a guarantee)
     '''
     text_with_pos = []
     for testre in (_re_isolike_date, _re_dutch_date_1, _re_dutch_date_2):
@@ -104,27 +112,33 @@ def find_dates_in_text(text:str):
 
 
 def date_range( frm, to ):
-    ''' Given two objects that are
-        - date objects
-        - datetime objects - will become their day
-        - string we manage to parse  (using dateutil library)
-          - ...please do not use formats like 02/02/11 and also expect the output to do what you want.
+    '''
+    Given two objects that are each one of
+      - date objects
+      - datetime objects - will become their day
+      - string we manage to parse  (using dateutil library)
+        - ...please do not use formats like 02/02/11 and also expect the output to do what you want.
 
-        Returns each day in the range between the two given dates (including the last), as a datetime.date object
+    Returns each day in the range between the two given dates (including the last), as a datetime.date object
 
-        
-        For example:
-            date_range( datetime.date(2022, 1, 29),   datetime.date(2022, 2, 2)  )
-        and
-            date_range( '29 jan 2022',  '2 feb 2022')
-        should both give
-            [ datetime.date(2022, 1, 29), 
-              datetime.date(2022, 1, 30), 
-              datetime.date(2022, 1, 31),
-              datetime.date(2022, 2, 1),
-              datetime.date(2022, 2, 2)  ]
+    
+    For example: ::
+        date_range( datetime.date(2022, 1, 29),   datetime.date(2022, 2, 2)  )
+    and ::
+        date_range( '29 jan 2022',  '2 feb 2022')
+    should both give: ::
+        [ datetime.date(2022, 1, 29), 
+            datetime.date(2022, 1, 30), 
+            datetime.date(2022, 1, 31),
+            datetime.date(2022, 2, 1),
+            datetime.date(2022, 2, 2)  ]
 
-        Note that if you want something like this for pandas, it has its own date_range.
+    Note that if you want something like this for pandas, it has its own date_range.
+    
+    @param frm: date object, datetime object, or string to parse
+    @param to:  date object, datetime object, or string to parse
+
+    @return: a list of datetime.date objects
     '''
     if   isinstance( frm, datetime.datetime): # must come first, it's itself a subclass of date
         frm = frm.date()
@@ -164,9 +178,9 @@ def format_date_range(rng, strftime_format='%Y-%m-%d'):
 
         ...by calling format_date() on each.
 
-        For example:
+        For example: ::
             format_date_range(  date_range( datetime.date(2022, 1, 29),   datetime.date(2022, 2, 2) )  )
-        would return:
+        would return: ::
             ['2022-01-29', '2022-01-30', '2022-01-31', '2022-02-01', '2022-02-02']
     '''
     return list( format_date(d,strftime_format)   for d in rng  )

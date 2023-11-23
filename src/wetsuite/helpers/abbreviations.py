@@ -12,50 +12,50 @@ def find_abbrevs(text: str):
     ''' Works on plain a string - TODO: accept spacy objects as well
 
         Looks for patterns like
-            "Word Combination (WC)"
-            "Wet Oven Overheid (Woo)"
-            "With Periods (W.P.)"
-            "(EA) Explained After"    (probably rare) 
+          -  "Word Combination (WC)"
+          -  "Wet Oven Overheid (Woo)"
+          -  "With Periods (W.P.)"
+          -  "(EA) Explained After"    (probably rare) 
 
-            "BT (Bracketed terms)"
-            "(Bracketed terms) BT"    (probably rare) 
+          -  "BT (Bracketed terms)"
+          -  "(Bracketed terms) BT"    (probably rare) 
 
         CONSIDER: 
-        - how permissive to be with capitalization. Maybe make that a parameter?
-        - allow and ignore words like 'of', 'the'
-        - rewrite to deal with cases like
-            Autoriteit Consument en Markt (ACM)
-            De Regeling werving, reclame en verslavingspreventie kansspelen (hierna: Rwrvk)
-            Nationale Postcode Loterij N.V. (hierna: NPL)
-            Edelmetaal Waarborg Nederland B.V. (EWN)
-            College voor Toetsen en Examens (CvTE)
-           maybe:
-            Pensioen- en Uitkeringsraad (PUR)
-            Nederlandse Loodsencorporatie (NLC)
-            Nederlandse Emissieautoriteit (NEa)
-            Kamer voor de Binnenvisserij (Kabivi)
-           maybe not:
-            College van toezicht collectieve beheersorganisaties auteurs- en naburige rechten (College van Toezicht Auteursrechten (CvTA))
-            Keurmerkinstituut jeugdzorg (KMI)
-        - listening to 'hierna: ', e.g.
-            "Wet Bevordering Integriteitbeoordelingen door het Openbaar Bestuur (hierna: Wet BIBOB)"
-            "Drank- en horecawet (hierna: DHW)"
-            "Algemene wet bestuursrecht (hierna: Awb)"
-            "het Verdrag betreffende de werking van de Europese Unie (hierna: VWEU)"
-            "de Subsidieregeling OPZuid 2021-2027 (hierna: Subsidieregeling OPZuid)"
-            "de Wet werk en bijstand (hierna: WWB)"
-            "de Wet werk en inkomen naar arbeidsvermogen (hierna: WIA)"
-            "de Wet maatschappelijke ondersteuning (hierna: Wmo)"
+          - how permissive to be with capitalization. Maybe make that a parameter?
+          - allow and ignore words like 'of', 'the'
+          - rewrite to deal with cases like
+            - Autoriteit Consument en Markt (ACM)
+            - De Regeling werving, reclame en verslavingspreventie kansspelen (hierna: Rwrvk)
+            - Nationale Postcode Loterij N.V. (hierna: NPL)
+            - Edelmetaal Waarborg Nederland B.V. (EWN)
+            - College voor Toetsen en Examens (CvTE)
+            - (and maybe:)
+            - Pensioen- en Uitkeringsraad (PUR)
+            - Nederlandse Loodsencorporatie (NLC)
+            - Nederlandse Emissieautoriteit (NEa)
+            - Kamer voor de Binnenvisserij (Kabivi)
+            - (and maybe not:)
+            - College van toezicht collectieve beheersorganisaties auteurs- en naburige rechten (College van Toezicht Auteursrechten (CvTA))
+            - Keurmerkinstituut jeugdzorg (KMI)
+          - listening to 'hierna: ', e.g.
+            - "Wet Bevordering Integriteitbeoordelingen door het Openbaar Bestuur (hierna: Wet BIBOB)"
+            - "Drank- en horecawet (hierna: DHW)"
+            - "Algemene wet bestuursrecht (hierna: Awb)"
+            - "het Verdrag betreffende de werking van de Europese Unie (hierna: VWEU)"
+            - "de Subsidieregeling OPZuid 2021-2027 (hierna: Subsidieregeling OPZuid)"
+            - "de Wet werk en bijstand (hierna: WWB)"
+            - "de Wet werk en inkomen naar arbeidsvermogen (hierna: WIA)"
+            - "de Wet maatschappelijke ondersteuning (hierna: Wmo)"
 
             These seem to be more structured, in particular when you use (de|het) as a delimiter
             This seems overly specific, but works well to extract a bunch of these
 
           
-        Returns a list of ('ww', ['word', 'word']) tuples,
-          pretty much as-is so it (intentionally) contains duplicates
+        @return: a list of ('ww', ['word', 'word']) tuples, 
+        pretty much as-is so it (intentionally) contains duplicates
 
         Will both over- and under-accept, so if you want clean results, consider e.g. reporting only things present in multiple documents. 
-          see e.g. merge_results()
+        see e.g. merge_results()
     '''
     matches = []
 
@@ -132,12 +132,12 @@ def count_results(l, remove_dots=True):
         Takes a list of document results, 
         where each such result is what find_abbrevs() returned, i.e. a list of ('ww', ['word', 'word'])
         
-        Returns something like:
+        Returns something like: ::
           { 'ww' : {['word','word']: 3,  ['word','wordle']: 1 } }
         where that 3 would be how mant documents had this explanation.
 
         CONSIDER: 
-        - case insensitive mode where it counts lowercase, but report whatever the most common capitalisation is
+          - case insensitive mode where it counts lowercase, but report whatever the most common capitalisation is
     '''
     ret = {}
     for doc_result in l:

@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-''' Escaping text for different contexts, mostly HTML/XML.
+''' Make it easier to safely insert text into URLs, and HTML and XML data.
 
     Should make code more readable (than combinations of cgi.escape(), urllib.quote(), ''.encode() and such)
 
@@ -19,10 +19,9 @@ def nodetext(s, if_none=None):
     ''' Escapes for HTML/XML text nodes:
         Replaces <, >, and & with entities
         
-        Passes unicode through
-         and always returns a str, even if given a bytes
+        Passes unicode through, and always returns a str, even if given a bytes.
 
-        (is actually html.escape (previously known as cgi.escape)
+        (is actually equivalent to html.escape, previously known as cgi.escape)
     '''
     if s is None:
         return if_none
@@ -42,23 +41,21 @@ def attr(s):
     ''' Escapes for use in HTML(/XML) node attributes:
         Replaces <, >, &, ', " with entities
 
-        Returns
-          bytes if it was given bytes
-          str if given str
+        @param s: text to escape (as str or bytes)
+        @return: as bytes if it was given bytes, as str if given str
 
         Much like html.escape, but...
-        - ' and " to numeric entitities (&#x27;, &#x22;)         
+          - ' and " to numeric entitities (&#x27;, &#x22;)         
             (...and not &quot; for "  because that's not quite universal)
           
-        - Escapes ' (which html.escape doesn't) which you often don't need,
-          but do if you wrap attributes in ' which is valid in XML, various HTML. 
-          Doesn't use apos becase it's not defined in HTML4
+          - Escapes ' (which html.escape doesn't) which you often don't need,
+            but do if you wrap attributes in ' which is valid in XML, various HTML. 
+            Doesn't use apos becase it's not defined in HTML4
 
         Note that to put URIs with unicode in attributes, what you want is often something roughly like
         '<a href="?q=%s">'%attr( uri_component(q)  )
         because uri handles the utf8 percent escaping of the unicode, attr() the attribute escaping
         (technically you can get away without attr because uri_component escapes a _lot_ )
-
 
         TODO: review how I want to deal with bytes / unicode in py3 now
 
@@ -84,9 +81,8 @@ def uri(urival, same_type=True):
     ''' Escapes for URI use
         %-escapes everything except ':', '/', ';', and '?' so that the result is still formatted/usable as a URL
 
-        Returns
-          bytes if it was given bytes
-          str if given str
+        @param urival: URI, as string or bytes object
+        @returns: bytes if it was given bytes, str if given str
         
         Handles Unicode by by converting it into url-encoded UTF8 bytes (quote() defaults to encoding to UTF8)
     '''
@@ -103,9 +99,8 @@ def uri_component(urival, same_type=True):
     ''' Escapes for URI use
         %-escapes everything (including '/') so that you can shove anything, including URIs, into URL query parameters
 
-        Returns
-          bytes if it was given bytes
-          str if given str
+        @param urival: URI, as string or bytes object
+        @returns: bytes if it was given bytes, str if given str
 
         If given unicode, converting it into url-encoded UTF8 bytes first (quote() defaults to encoding to UTF8)
     '''
@@ -121,14 +116,14 @@ def uri_component(urival, same_type=True):
 
 
 def uri_dict(d, join='&', astype=str):
-    ''' returns a query fragment based on a dict.
+    ''' Returns a query fragment based on a dict.
 
-        Handles Unicode by by converting it into url-encoded UTF8 bytes.
+        Handles Unicode input strings by converting it into url-encoded UTF8 bytes.
 
-        return type is explicit (use str or bytes), 
-           not based on argument as type variation within the dict could make that too magical
+        return type is explicitly requested by you (use str or bytes), 
+        not based on argument, as type variation within the dict could make that too magical
 
-        join is there so that you could use ; as w3 suggests.
+        join is there so that you could use ; as w3 suggests, but it defaults to &
         Internally works in str
 
         (you could also abuse it to avoid an attr()/nodetext() by handing it &amp; but that gets confusing)

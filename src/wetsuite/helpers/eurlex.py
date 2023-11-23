@@ -1,3 +1,5 @@
+''' Code that helps interact with the EUR-Lex website and APIs.
+'''
 import re, datetime, urllib.parse
 
 import requests
@@ -11,8 +13,8 @@ def fetch_by_resource_type(typ='JUDG'):
     ''' Intends to queries the SPARQL endpoint to ask for most CELEXes of a specific type, here court judgments, 
         
         typ can e.g. be 
-        - 'JUDG'  for judgments
-        - 'REG'   for regulations (but there are a handful of related things) 
+          - 'JUDG'  for judgments
+          - 'REG'   for regulations (but there are a handful of related things) 
         and anything else 
 
         TODO: fetch values e.g. at 
@@ -21,24 +23,24 @@ def fetch_by_resource_type(typ='JUDG'):
 
 
         Asks to give its semantic results as JSON data,  which we parse and return as a python structure.
-        The structure you get back looks like:  ( see also see also https://www.w3.org/TR/2013/REC-sparql11-results-json-20130321/ )
-        {
-            'head': {
-                'link': [], 'vars': ['work', 'type', 'celex', 'date', 'force']
-            },
-            'results': {
-                'distinct': False,
-                'ordered': True,
-                'bindings': [
-                    {'work': {'type': 'uri',           'value':'http://publications.europa.eu/resource/cellar/1e3100ce-8a71-433a-8135-15f5cc0e927c'},
-                    'type': {'type': 'uri',           'value':'http://publications.europa.eu/resource/authority/resource-type/JUDG'},
-                    'celex': {'type': 'typed-literal', 'value':'61996CJ0080', 'datatype': 'http://www.w3.org/2001/XMLSchema#string'},
-                    'date': {'type': 'typed-literal', 'value':'1998-01-15',  'datatype': 'http://www.w3.org/2001/XMLSchema#date'}
-                    },
-                    # ...one of these for each result
-                ]
+        The structure you get back looks like:  ( see also see also https://www.w3.org/TR/2013/REC-sparql11-results-json-20130321/ ) ::
+            {
+                'head': {
+                    'link': [], 'vars': ['work', 'type', 'celex', 'date', 'force']
+                },
+                'results': {
+                    'distinct': False,
+                    'ordered': True,
+                    'bindings': [
+                        {'work': {'type': 'uri',           'value':'http://publications.europa.eu/resource/cellar/1e3100ce-8a71-433a-8135-15f5cc0e927c'},
+                        'type': {'type': 'uri',           'value':'http://publications.europa.eu/resource/authority/resource-type/JUDG'},
+                        'celex': {'type': 'typed-literal', 'value':'61996CJ0080', 'datatype': 'http://www.w3.org/2001/XMLSchema#string'},
+                        'date': {'type': 'typed-literal', 'value':'1998-01-15',  'datatype': 'http://www.w3.org/2001/XMLSchema#date'}
+                        },
+                        # ...one of these for each result
+                    ]
+                }
             }
-        }
     '''
     # The proper way would be to use a library like sparqlwrapper
     #   but for now we can get away with hardcodig a query like:

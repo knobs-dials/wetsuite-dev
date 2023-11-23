@@ -10,23 +10,24 @@ _eclifind_re = re.compile(r'ECLI:[A-Za-z]{2}:[A-Z-z0-9.]{1,7}:[0-9]{,4}:[A-Z-z0-
 
 
 def parse_jci(text: str):
-    """ Takes something in the form of jci{version}:{type}:{BWB-id}{key-value}*
-          e.g. jci1.31:c:BWBR0012345&g=2005-01-01&artikel=3.1
-        Returns something like
-          {'version': '1.31', 'type': 'c', 'bwb': 'BWBR0012345', 'params': {'g': ['2005-01-01'], 'artikel': ['3.1']}}
+    """ Takes something in the form of C{jci{version}:{type}:{BWB-id}{key-value}*},
+        so e.g. ::
+            jci1.31:c:BWBR0012345&g=2005-01-01&artikel=3.1
+        returns something like ::
+            {'version': '1.31', 'type': 'c', 'bwb': 'BWBR0012345', 'params': {'g': ['2005-01-01'], 'artikel': ['3.1']}}
 
         Notes:
-        - params is actually an an OrderedDict, so you can also fetch them in the order they appeared, for the cases where that matters.
-        - tries to be robust to a few non-standard things we've seen in real use
-        - for type=='c' (single consolidation), expected params include
-            g  geldigheidsdatum
-            z  zichtdatum
-        - for type=='v' (collection), expected params include
-            s  start of geldigheid
-            e  end of geldigheid
-            z  zichtdatum
-        Note that precise interpretation, and generation of these links, is a little more involved,
-        in that versions made small semantic changes to the meanings of some parts.
+          - params is actually an an OrderedDict, so you can also fetch them in the order they appeared, for the cases where that matters.
+          - tries to be robust to a few non-standard things we've seen in real use
+          - for type=='c' (single consolidation), expected params include
+            - g  geldigheidsdatum
+            - z  zichtdatum
+          - for type=='v' (collection), expected params include
+            - s  start of geldigheid
+            - e  end of geldigheid
+            - z  zichtdatum
+          Note that precise interpretation, and generation of these links, is a little more involved,
+          in that versions made small semantic changes to the meanings of some parts.
     """
     ret = {}
     m = _jcifind_re.match( text )
@@ -63,11 +64,11 @@ def findall_ecli(s:str, rstrip_dot=True):
     ''' Within plain text, this tries to find all occurences of things that look like an ECLI identifier
         Returns a list of strings.
 
-        rstrip_dot - whether to return the match stripped of any final dot(s).
-           While dots are valid in an ECLI (typically used as a separator),
-             it is more likely that a dot on the end is an ECLI into a sentence than it is to be part of the ECLI.
-           This stripping is enabled by default, but it would be more correct for you to always control this parameter,
-             and for well-controlled metadata fields it may be more correct to use False.
+        @param rstrip_dot: whether to return the match stripped of any final dot(s).
+        While dots are valid in an ECLI (typically used as a separator),
+        it is more likely that a dot on the end is an ECLI into a sentence than it is to be part of the ECLI.
+        This stripping is enabled by default, but it would be more correct for you to always control this parameter,
+        and for well-controlled metadata fields it may be more correct to use False.
     '''
     ret = []
     for match_str in _eclifind_re.findall( s ):
@@ -320,11 +321,9 @@ def equivalent_celex(celex1:str, celex2:str):
     ''' Do two CELEX identifiers refer to the same document? 
     
         Currently:
-        - ignores sector to be able to ignore sector 0
-        - tries to ingore
+          - ignores sector to be able to ignore sector 0
+          - tries to ingore
         This is currently based on estimation - we should read up on 
-
-        Also note that this will 
     '''
     d1 = parse_celex( celex1 )
     d2 = parse_celex( celex2 )
@@ -338,30 +337,30 @@ _re_celex = re.compile( r'([1234567890CE])([0-9]{4})([A-Z][A-Z]?)([0-9\(\)]+)([^
 
 
 def parse_celex(celex: str):
-    ''' Normalize a CELEX number
-            (e.g. strips a 'CELEX:' in front)
+    ''' Normalize a CELEX number (e.g. strips a 'CELEX:' in front)
+
         Describes its parts in more readable form, where possible.
         All values are returned as strings, even where they are (ostensibly) numbers.
 
         Returns a dict detailing the parts.  NOTE that the details will change when I actually read the specs properly
-        - norm is what you fed in, uppercased, and with an optional 'CELEX:' stripped
-          but otherwise untouched
-        - id is recoposed from sector_number, year, document_type, document_number
-          which means it is stripped of additions - it may strip more than you want!
+          - norm is what you fed in, uppercased, and with an optional 'CELEX:' stripped
+            but otherwise untouched
+          - id is recoposed from sector_number, year, document_type, document_number
+            which means it is stripped of additions - it may strip more than you want!
 
         Keep in mind that this will _not_ resolve things like "go to the consolidated version" like the EUR-Lex site will do
 
         TODO: read the spec, because I'm not 100% on 
-         - sector 0
-         - sector C
-         - whether additions like (01) in e.g. 32012A0424(01) are part of the identifier or not
+          - sector 0
+          - sector C
+          - whether additions like (01) in e.g. 32012A0424(01) are part of the identifier or not
             (...yes. Theyse are unique documents) 
-         - national transposition
-         - if you have multiple additions like '(01)' and '-20160504' and 'FIN_240353',
-           ...what order they should appear in
+          - national transposition
+          - if you have multiple additions like '(01)' and '-20160504' and 'FIN_240353',
+            ...what order they should appear in
         
         TODO: we might be able to assist common in those cases (e.g. a test for "is this equivalent").
-              I e.g. do not know whether id_nonattrans is useful or correct
+        I e.g. do not know whether id_nonattrans is useful or correct
     '''
     norm = celex.strip()
     norm = norm.upper() # the whole thing is case insensitive, so this is also normalisation

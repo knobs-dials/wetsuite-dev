@@ -1,4 +1,6 @@
-' Formatting values into text '
+''' Formatting varied types of values into text, 
+    (and sometimes parsing the same), mostly for readability 
+'''
 
 import os, urllib
 
@@ -7,7 +9,7 @@ import os, urllib
 def kmgtp(amount,kilo=1000, append='',thresh=15, nextup=0.9, rstrip0=True, extradigits=0, i_for_1024=True):
     ''' For more easily skimmable sizes
 
-        e.g.
+        e.g. ::
              kmgtp(3429873278462) == '3.4T'
              kmgtp(342987327)     == '343M'
              kmgtp(34298)         == '34K'
@@ -18,22 +20,21 @@ def kmgtp(amount,kilo=1000, append='',thresh=15, nextup=0.9, rstrip0=True, extra
              '%sB'%kmgtp(19342342324, kilo=1024)                == '18GiB'
              '%sB'%kmgtp(19342342324, kilo=1024, extradigits=1) == '18GiB'  (because of rstrip0)
 
-        Decimal/SI kilos by default, so useful beyond bytes.
+        @param kilo: Uses decimal/SI kilos by default, so useful beyond bytes.
         Specify kilo=1024 if you want binary kilos. By default this also adds the i.
 
-        thresh is the controls where (in terms of the number we show) we take one digit away, 
-          e.g. for 1.3GB but 16GB.
+        @param thresh: is the controls where (in terms of the number we show) we take one digit away, e.g. for 1.3GB but 16GB.
         Default is at 15, which is entirely arbitrary. 
         Disable using None.
 
-        nextup makes us switch to the next higher up earlier, e.g. 700GB but 0.96TB
+        @param nextup: makes us switch to the next higher up earlier, e.g. 700GB but 0.96TB
         Disable this behaviour by passing in None.
 
-        extradigits=1 (or maybe more) to unconditionally see a less-rounded number
+        @param extradigits: lets you (unconditionally) see a less-rounded number with 1 or sometimes more.
         (though note rstrip can still apply)
         
-        rstrip0     whether to take off '.0' if present (defaults to true)
-        append      is mostly meant for optional space between number and unit.
+        @param rstrip0:     whether to take off '.0' if present (defaults to true)
+        @param append:      is mostly meant for optional space between number and unit you add yourself
     '''
     mega  = kilo*kilo
     giga  = mega*kilo
