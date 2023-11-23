@@ -1,4 +1,4 @@
-''' Helpers to extract text from images, mainy aimed at PDFs that contains pictures of documents.
+''' Helpers to extract text from images, mainy aimed at PDFs that contain pictures of documents.
 
     Largely a wrapper for OCR package, currently just EasyOCR; we are considering also adding tesseract.  
     CONSIDER: ...and then unify the data format we hand around (particularly because of the helper functions)

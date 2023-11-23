@@ -1,14 +1,20 @@
 #!/usr/biny/python3
-''' An interface to the APIs described https://opendata.tweedekamer.nl/documentatie/odata-api
-    though so far we implement and use mostly the Atom/SyncFeed API, not the OData one.
+''' An interface to the APIs provided by opendata.tweedekamer.nl
 
-    The full information model is fairly complex, see https://opendata.tweedekamer.nl/documentatie/informatiemodel
+    Described at https://opendata.tweedekamer.nl/documentatie/odata-api
+    though so far we implement and use mostly the Atom/SyncFeed API,
+    not the OData one.
 
-    The data almost certainly comes from a relational database and is exposed in basically the same way,
+    The full information model is fairly complex,
+    see https://opendata.tweedekamer.nl/documentatie/informatiemodel
+
+    The data almost certainly comes from a relational database 
+    and is exposed in basically the same way,
     with not only references but also many-to-many tables.
 
     Our initial need was simple, so this only fetches a few parts, with no dependencies.
-    If you want a much more complete implementation, look to https://github.com/openkamer/openkamer
+    If you want a much more complete implementation and pleasant presentation, 
+    look to https://github.com/openkamer/openkamer
 
     
     It is unclear to me how to do certain things with this interface, e.g. list the items in a kamerstukdossier.

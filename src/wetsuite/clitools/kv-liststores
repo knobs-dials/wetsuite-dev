@@ -28,7 +28,7 @@ def main():
                 wetsuite.helpers.format.kmgtp(num_items, extradigits=0),
                 wetsuite.helpers.format.kmgtp(avg, extradigits=0)
                 ), end='')
-            
+
 
         description = item.pop('description', None)
         #if description is not None:

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 '''
-Code to fetch data from rechtspraak.nl's interface
+Fetches data from rechtspraak.nl's API
 
 Note that the data.rechtspraak.nl/uitspraken/zoeken API is primarily for ranges - 
 they do _not_ seem to allow text searches like the web interface does.

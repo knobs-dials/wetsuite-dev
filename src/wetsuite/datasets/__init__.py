@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 '''
-Fetch and load already-created datasets that we provide. ((TODO: quick list here))
+Fetch and load already-created datasets that we provide. (to see a list of actual datasets, look for the wetsuite_datasets.ipynb notebook)
 
 As this is often structured data, each dataset may work a little differently, 
 so there is an describe() to get you started, that each dataset should fill out.
