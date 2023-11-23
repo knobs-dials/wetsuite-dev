@@ -1,19 +1,20 @@
 #!/usr/bin/python3
-''' Fetch and load already-created datasets that we provide.
+'''
+Fetch and load already-created datasets that we provide. ((TODO: quick list here))
 
-    As this is often structured data, each dataset may work a little differently, 
-    so there is an describe() to get you started, that each dataset should fill out.
+As this is often structured data, each dataset may work a little differently, 
+so there is an describe() to get you started, that each dataset should fill out.
 
-    TODO: 
-    * decide how often to re-fetch the index client-side. 
-        Each interpreter (which is what it does right now)?   
-        Store and base on mtime with possible override? 
-        Decide it's cheap enough to fetch each time? (but fall back onto stored?)
-    * decide how to store and access. For very large datasets we may want something like HDF5 
-        because right now we don't have a choice but to have all the dataset in RAM
+TODO: 
+  - decide how often to re-fetch the index client-side. 
+    Each interpreter (which is what it does right now)?   
+    Store and base on mtime with possible override? 
+    Decide it's cheap enough to fetch each time? (but fall back onto stored?)
+  - decide how to store and access. For very large datasets we may want something like HDF5 
+    because right now we don't have a choice but to have all the dataset in RAM
 '''
 
-import sys, os, json, tempfile, bz2
+import sys, os, re, json, tempfile, bz2
 
 import wetsuite.helpers.util
 import wetsuite.helpers.net
@@ -44,17 +45,14 @@ def list_datasets():
 
 def fetch_index():
     ''' Index is expected to be a list of dicts, each with keys includin
-        - url
-        - version             (should probably become semver)
-        - short_description   summary of what this is   (details of use is part of the dataset itself)
-        - download_size       how much transfer you'll need
-        - real_size           Disk storage we expect to need once decompressed
-        - type                type of dataset, 
-                              currently MIME type 
-                              currently indicating it's either 
-                              - a JSON file (for small things) or 
-                              - an SQLite3 database that would be opened via the localdata module
-          {'datasetname':{url:'http://example.com/dataset.tgz', 'description':'Blah'}}
+          - url
+          - version             (should probably become semver)
+          - short_description   summary of what this is   (details of use is part of the dataset itself)
+          - download_size       how much transfer you'll need
+          - real_size           Disk storage we expect to need once decompressed
+          - type                content type of dataset (currently all SQLite3 database that would be opened via the localdata module)
+          
+        Example: TODO
 
         CONSIDER: keep hosting generic (HTTP fetch?) so that any hoster will do.
     '''
@@ -246,19 +244,20 @@ def fetch_index():
 
 
 class Dataset:
-    ''' If you're looking for details about the specific dataset, look at the .description
+    '''
+    If you're looking for details about the specific dataset, look at the .description
 
-        Mostly meant to be instantiated by load()
+    Mostly meant to be instantiated by load()
 
-        This class is provisional and likely to change. Right now it does little more than
-        - put a description into a .description attribute 
-        - put data into .data attribute
-            without even saying what that is 
-            though it's probably an interable giving individually useful things, and be able to tell you its len()gth
-        ...also so that it's harder to accidentally dump gigabytes of text to your console.
+    This class is provisional and likely to change. Right now it does little more than
+      - put a description into a .description attribute 
+      - put data into .data attribute
+        without even saying what that is 
+        though it's probably an interable giving individually useful things, and be able to tell you its len()gth
+    ...also so that it's harder to accidentally dump gigabytes of text to your console.
 
-        This is not the part that does the interpretation.
-        This just contains its results.
+    This is not the part that does the interpretation.
+    This just contains its results.
     '''
     def __init__(self, description, data, name=''):
         #for key in self.data:
@@ -334,7 +333,7 @@ def files_as_dataset(self, in_dir):
 
     ret = Dataset(  description='Files loaded from %r'%in_dir,
                     data=store,
-                    name='filesystem-'+re.sub('[^A-Za-z0-9]+','-',indir)  )
+                    name='filesystem-'+re.sub('[^A-Za-z0-9]+','-',in_dir)  )
     return ret
     
 
@@ -385,28 +384,28 @@ class DatasetItems():
 
 def merge_datasets(map): # maybe make this a @staticmethod on Dataset?
     ''' If you want to take related datasets and see them on one object, this 
-        - takes a dict like
-            { dataset_object:'xml',
-            dataset_object:'meta',
-            dataset_object:'text'}
+        - takes a dict like::
+            {
+              dataset_object:'xml',
+              dataset_object:'meta',
+              dataset_object:'text'}
             }
         Returns a dataset object that has a .xml, .meta, and .text attribute that refers to those respective dataset objects.
 
         TODO: insteadh ave .data return DatasetItems with those attributes
 
-          the main problem with this is that this probably has to be an iterable view,
-          of iterable views, 
-          because otherwise we _probably_ have to materialize data all data into memory somewhere,
-          but will that always be a collections.abc.ValuesView ?
-          (also, that will easily occupy the database from being writable but that's okay for datasts)
-
+        the main problem with this is that this probably has to be an iterable view,
+        of iterable views, 
+        because otherwise we _probably_ have to materialize data all data into memory somewhere,
+        but will that always be a collections.abc.ValuesView ?
+        (also, that will easily occupy the database from being writable but that's okay for datasts)
         ---
 
         The .data member be an iterable of DatasetItem objects, 
-          which will contain at least a .raw (what comes out of the dataset file, which will often be a str, bytes, or nested python structure),
-          if augment==False, just that. If augment==True, there may be some further interpretation of that.
+        which will contain at least a .raw (what comes out of the dataset file, which will often be a str, bytes, or nested python structure),
+        if augment==False, just that. If augment==True, there may be some further interpretation of that.
 
-          (the augmenting is, necessarily, somewhat nasty, because it is based on a hardcoded table of known datasets)
+        (the augmenting is, necessarily, somewhat nasty, because it is based on a hardcoded table of known datasets)
     '''
     namelist = ', '.join(ds.name for ds in map.keys())
     attrlist = ', '.join(map.values())
@@ -521,30 +520,30 @@ def _load_bare(dataset_name: str, verbose=None, force_refetch=False):
 
 
 def _path_to_data(data_path):
-        ' read from disk, return the data and description regardless of what it is '
-        f = open(data_path,'rb')
-        first_bytes = f.read(15)
-        f.seek(0)
+    ' read from disk, return the data and description regardless of what it is '
+    f = open(data_path,'rb')
+    first_bytes = f.read(15)
+    f.seek(0)
 
-        if first_bytes == b'SQLite format 3':
-            f.close()
-            data        = wetsuite.helpers.localdata.LocalKV( data_path, None, None, read_only=True ) # the type enforcement is irrelevant when opened read-only
-            description = data._get_meta('description', missing_as_none=True)
-            if data._get_meta('valtype', missing_as_none=True) == 'msgpack': # This is very hackish - TODO: avoid this
-                data.close()
-                data = wetsuite.helpers.localdata.MsgpackKV( data_path, None, None, read_only=True) 
+    if first_bytes == b'SQLite format 3':
+        f.close()
+        data        = wetsuite.helpers.localdata.LocalKV( data_path, None, None, read_only=True ) # the type enforcement is irrelevant when opened read-only
+        description = data._get_meta('description', missing_as_none=True)
+        if data._get_meta('valtype', missing_as_none=True) == 'msgpack': # This is very hackish - TODO: avoid this
+            data.close()
+            data = wetsuite.helpers.localdata.MsgpackKV( data_path, None, None, read_only=True) 
 
-        else: # Assume JSON - expected to be a dict with two main keys
-            loaded = json.loads( f.read() ) 
-            f.close()
-            # TODO: remove the need for JSON, or at least make this alternative go away:
-            if 'description' in loaded:
-                data        = loaded.get('data')
-                description = loaded.get('description')
-            else:            
-                data        = loaded
-                description = ''
-        return (data, description)
+    else: # Assume JSON - expected to be a dict with two main keys
+        loaded = json.loads( f.read() ) 
+        f.close()
+        # TODO: remove the need for JSON, or at least make this alternative go away:
+        if 'description' in loaded:
+            data        = loaded.get('data')
+            description = loaded.get('description')
+        else:            
+            data        = loaded
+            description = ''
+    return (data, description)
 
 
 def load(dataset_name: str, verbose=None, force_refetch=False, augment=True):
@@ -552,18 +551,18 @@ def load(dataset_name: str, verbose=None, force_refetch=False, augment=True):
         downloads it if necessary - after the first time it's cached in your home directory
 
         Returns a Dataset object - which is a container with little more than  
-        - a .description string
-        - a .data member, some kind of iterable of iterms.   The .description will mention what .data will contain and should give an example of how to use it.
-        
+          - a .description string
+          - a .data member, some kind of iterable of iterms.   The .description will mention what .data will contain and should give an example of how to use it.    
 
         CONSIDER: have load datasetname-* automatically use merge_datasets,
-            one for each matched datasets, with an attribute named for the last bit of the dataset name. 
+        one for each matched datasets, with an attribute named for the last bit of the dataset name.
 
 
-        verbose - tells you more about the download (on stderr)
-           can be given True or False. By default, we try to detect whether we are in an interactive context.
-        force_refetch - whether to remove the current contents before fetching
-           dataset naming should prevent the need for this (except if you're the wetsuite programmer)
+        @param verbose: tells you more about the download (on stderr)
+        can be given True or False. By default, we try to detect whether we are in an interactive context.
+        
+        @param force_refetch: whether to remove the current contents before fetching
+        dataset naming should prevent the need for this (except if you're the wetsuite programmer)
     '''
     
 
