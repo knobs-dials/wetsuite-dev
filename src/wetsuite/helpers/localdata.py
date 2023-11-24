@@ -39,10 +39,13 @@ CONSIDER: writing variants that do convert specific data, letting you e.g. set/f
 import os
 import os.path
 import random
-
-from typing import Tuple
 import collections.abc
+from typing import Tuple
+
 import sqlite3
+# msgpack should be more interoperable and safer than pickle, and slightly faster - but an extra dependency, and does a little less.
+# json is more interoperable, but slower and (also) doesn't e.g. deal with date/datetime
+import msgpack
 
 import wetsuite.helpers.util     # to get wetsuite_dir
 import wetsuite.helpers.net
@@ -451,62 +454,54 @@ class LocalKV:
 
 
 
-try:
-    # msgpack should be more interoperable and safer than pickle, and slightly faster - but an extra dependency, and does a little less.
-    # json is more interoperable, but slower and (also) doesn't e.g. deal with date/datetime
-    import msgpack
+class MsgpackKV(LocalKV):
+    ''' Like localKV, but 
+        - typing fixed at str:bytes 
+        - put() stores using pickle, get() unpickles
 
-    class MsgpackKV(LocalKV):
-        ''' Like localKV, but 
-            - typing fixed at str:bytes 
-            - put() stores using pickle, get() unpickles
+        Will be a bit slower because it's doing that on the fly, but lets you more transparently store things like nested python dicts
+        ...but only of primitive types, and not e.g. datetime.
 
-            Will be a bit slower because it's doing that on the fly, but lets you more transparently store things like nested python dicts
-            ...but only of primitive types, and not e.g. datetime.
-
-            msgpack is used as a somewhat faster alternative to json and pickle (though that barely matters for smaller values)
-        
-            Note that this does _not_ change how the meta table works.
+        msgpack is used as a somewhat faster alternative to json and pickle (though that barely matters for smaller values)
+    
+        Note that this does _not_ change how the meta table works.
+    '''
+    def __init__(self, path, key_type=str, value_type=None, read_only=False):
+        ''' value_type is ignored; I need to restructure this
         '''
-        def __init__(self, path, key_type=str, value_type=None, read_only=False):
-            ''' value_type is ignored; I need to restructure this
-            '''
-            super().__init__( path, key_type=str, value_type=None, read_only=read_only )
+        super().__init__( path, key_type=str, value_type=None, read_only=read_only )
 
-            # this is meant to be able to detect/signal incorrect interpretation, not fully used yet
-            if self._get_meta('valtype', missing_as_none=True) is None:
-                self._put_meta('valtype','msgpack')
+        # this is meant to be able to detect/signal incorrect interpretation, not fully used yet
+        if self._get_meta('valtype', missing_as_none=True) is None:
+            self._put_meta('valtype','msgpack')
 
 
-        def get(self, key:str):
-            ''' Note that unpickling could fail 
-                TODO: clarify the missing missing_as_none
-            '''
-            value = super().get( key )
-            unpacked = msgpack.loads(value)
-            return unpacked
+    def get(self, key:str):
+        ''' Note that unpickling could fail 
+            TODO: clarify the missing missing_as_none
+        '''
+        value = super().get( key )
+        unpacked = msgpack.loads(value)
+        return unpacked
 
 
-        def put(self, key:str, value, commit:bool=True):
-            " See LocalKV.put().   Unlike that, value is not checked for type, just pickled. Which can fail. "
-            packed = msgpack.dumps(value)
-            super().put( key, packed, commit )
+    def put(self, key:str, value, commit:bool=True):
+        " See LocalKV.put().   Unlike that, value is not checked for type, just pickled. Which can fail. "
+        packed = msgpack.dumps(value)
+        super().put( key, packed, commit )
 
 
-        def itervalues(self):
-            curs = self.conn.cursor()
-            for row in curs.execute('SELECT value FROM kv'):
-                yield msgpack.loads( row[0], strict_map_key=False )
+    def itervalues(self):
+        curs = self.conn.cursor()
+        for row in curs.execute('SELECT value FROM kv'):
+            yield msgpack.loads( row[0], strict_map_key=False )
 
 
-        def iteritems(self):
-            curs = self.conn.cursor()
-            for row in curs.execute('SELECT key, value FROM kv'):
-                yield row[0], msgpack.loads( row[1], strict_map_key=False )
+    def iteritems(self):
+        curs = self.conn.cursor()
+        for row in curs.execute('SELECT key, value FROM kv'):
+            yield row[0], msgpack.loads( row[1], strict_map_key=False )
 
-except ImportError:
-    # warning?
-    pass
 
 
 # class PickleKV(LocalKV):

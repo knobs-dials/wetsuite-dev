@@ -413,7 +413,7 @@ def test_resolve_path():
     assert wetsuite.helpers.localdata.resolve_path('foo/bar').count(os.sep) == 1
 
 
-def test_resolve_path( tmp_path ):
+def test_is_file_a_store( tmp_path ):
     import test_localdata
 
     wetsuite.helpers.localdata.is_file_a_store('/')
