@@ -1,3 +1,4 @@
+' '
 import os
 import pytest
 import wetsuite.helpers.localdata
@@ -7,10 +8,10 @@ import wetsuite.helpers.localdata
 #def test_pathlib()
 #    import pathlib
 
-    
 
 
 def test_crud():
+    ' basic getter and setter tests '
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', key_type=str, value_type=str)
     with pytest.raises(KeyError):
         kv.get('a')
@@ -27,6 +28,7 @@ def test_crud():
 
 
 def test_metacrud():
+    ' basic getter and setter tests of the (hidden) meta table '
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', key_type=str, value_type=str)
     with pytest.raises(KeyError):
         kv._get_meta('a')
@@ -37,18 +39,47 @@ def test_metacrud():
     kv._delete_meta('c')
 
 
+def test_readonly():
+    ' test whether read-only things refuse writing '
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str, read_only=True)
+    with pytest.raises(RuntimeError, match=r'.*Attempted*'):
+        kv.put('a','b')
+
+    with pytest.raises(RuntimeError, match=r'.*Attempted*'):
+        kv.delete('a')
+
+    with pytest.raises(RuntimeError, match=r'.*Attempted*'):
+        kv._put_meta('a','b')
+
+    with pytest.raises(RuntimeError, match=r'.*Attempted*'):
+        kv._delete_meta('a')
+
+
 def test_moreapi():
-    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str) 
-    #kv['a'] = 'b'
-    #kv['c'] = 'd'
+    ' More API stuff '
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
     kv.put('a', 'b')
     kv.put('c', 'd')
     assert list( kv.keys() )   == ['a', 'c']
     assert list( kv.values() ) == ['b', 'd']
     assert list( kv.items() )  == [('a','b'), ('c','d')]
     assert 'a' in kv
-    
+
+    assert list( kv.iterkeys() )   == ['a', 'c']
+    assert list( kv.itervalues() ) == ['b', 'd']
+    assert list( kv.iteritems() )  == [('a','b'), ('c','d')]
+
+    assert kv.get('foo', missing_as_none=True) is None
+
+    repr( kv )
+
+    # we can't really know what the testing account has, so this is less deterministic, and the second may take a while
     wetsuite.helpers.localdata.list_stores()
+    wetsuite.helpers.localdata.list_stores(get_num_items=True)
+
+    kv.random_choice()
+
+    kv.random_sample(1)
 
 
 def test_doublecommit():
@@ -60,7 +91,17 @@ def test_doublecommit():
     kv.commit()
 
 
+def test_doublerollback():
+    ' do not trip over excessive rollbacks '
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
+    kv.commit()
+    kv.put('1','2', commit=False)
+    kv.rollback()
+    kv.rollback()
+
+
 def test_rollback():
+    ' see if rollback works, and do not trip after rollback  '
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
     assert len( kv.keys() ) == 0
     kv.put('1','2', commit=False)
@@ -69,17 +110,30 @@ def test_rollback():
     assert len( kv.keys() ) == 0
     kv.commit()  # just to be sure there's no leftover state
     assert len( kv.keys() ) == 0
-    kv.rollback()  # check that it works if not in a transaction 
+    kv.rollback()  # check that it works if not in a transaction
     # TODO: more complex tests
 
 
+def test_moretrans():
+    ' some transaction relates tests '
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
+    kv.put('1','2')
+    assert kv._in_transaction == False
+    kv.delete('1', commit=False) # should start transaction
+    assert kv._in_transaction == True
+    kv.vacuum() # test if it commits before vacuum
+
+    kv.delete('1', commit=False) # should start transaction
+    kv.close() # also a test of 'do we roll back when still in transaction' (at least, whether that code doesn't bork out)
+
+
 def test_context_manager():
+    ' see if use of class as context manager functions '
     with wetsuite.helpers.localdata.LocalKV(':memory:', str, str) as kv:
         assert len( kv.keys() ) == 0
 
-
-
 def test_truncate():
+    ' see if truncating all data works '
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
     assert len( kv.keys() ) == 0
     for i in range(10):
@@ -109,7 +163,7 @@ def test_truncate():
 
 
 def test_bytesize():
-    # mostly that it doesn't bork out
+    ' check that "estimate size of contained data" does not bork out '
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
     initial_size = kv.bytesize()
     assert initial_size > 0   # I believe it counts the overhead
@@ -120,7 +174,17 @@ def test_bytesize():
     assert kv.bytesize() > initial_size
     
 
-def test_type():
+def test_type_init():
+    ' check that we can only use types the code allows (we restrict it for now) '
+    with pytest.raises(TypeError, match=r'.*not allowed*'):
+        wetsuite.helpers.localdata.LocalKV(':memory:', dict, None)
+    
+    with pytest.raises(TypeError, match=r'.*not allowed*'):
+        wetsuite.helpers.localdata.LocalKV(':memory:', None, dict)
+
+
+def test_type_check():
+    ' check that the data passed in is checked for the previously set type, as expected '
     # default str:str
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
     kv.put('1','2')
@@ -257,7 +321,7 @@ def TEMPORARILY_DISABLED_test_thread( tmp_path ):
 
 
 def test_vacuum( tmp_path ):
-    # test that vacuum actually reduces file size
+    ' test that vacuum actually reduces file size, and is estimated to '
     path = tmp_path / 'test1.db'
     kv = wetsuite.helpers.localdata.LocalKV( path, str, str )
     keys = []
@@ -267,17 +331,21 @@ def test_vacuum( tmp_path ):
         kv.put(key,'1234567890'*10000, commit=False)
     kv.commit()
 
-    size_before_vacuum = os.stat(kv.path).st_size
     for key in keys:
         kv.delete( key )
-    kv.vacuum()
 
+    # TODO: check that these are always true to start with
+    assert kv.estimate_waste() > 0
+
+    size_before_vacuum = os.stat(kv.path).st_size
+    kv.vacuum()
     size_after_vacuum = os.stat(kv.path).st_size
     
     assert size_after_vacuum < size_before_vacuum
 
 
 def test_cached_fetch():
+    ' test whether the cacked URL fetch works '
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, bytes) 
     bytedata, fromcache = wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/')
     assert fromcache==False
@@ -287,12 +355,17 @@ def test_cached_fetch():
     assert fromcache==True
     assert b'<html' in bytedata
 
+    bytedata, fromcache = wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/', force_refetch=True)
+    assert fromcache==False
+    assert b'<html' in bytedata
+
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str) 
     with pytest.raises(TypeError, match=r'.*expects*'): # complaint about type
         wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/')
 
 
 def test_msgpack_crud():
+    ' various API tests of things MsgpackKV overrides '
     kv = wetsuite.helpers.localdata.MsgpackKV(':memory:')
     with pytest.raises(KeyError):
         kv.get('a')
@@ -315,61 +388,40 @@ def test_msgpack_crud():
 
 
 
+def test_msgpack_moreapi():
+    ' more API tests of things MsgpackKV overrides '
+    kv = wetsuite.helpers.localdata.MsgpackKV(':memory:')
+    kv.put('b', 1)
+    kv.put('a', 2)
+    kv.put('c', (5,6))
+
+    assert 'a'      in list( kv.iterkeys() )
+    assert 1        in list( kv.itervalues() )
+    assert ('b', 1) in list( kv.iteritems() )
+
+    assert 'a'      in list( kv.keys() )
+    assert 1        in list( kv.values() )
+    assert ('b', 1) in list( kv.items() )
 
 
+def test_resolve_path():
+    ' TODO: better tests '
+    assert wetsuite.helpers.localdata.resolve_path(':memory:') == ':memory:'
 
-# if __name__ == '__main__':
-#     #import pprint
-#     import os
+    assert os.sep in wetsuite.helpers.localdata.resolve_path('foo')
 
-#     #os.unlink("test.db")
-
-#     local_store = LocalKV("test.db")
-#     print( 'getfoo', local_store.get('foo') )
-#     #print('1')
-#     local_store.put('foo', 'bar') 
-#     #print('2')
-#     #local_store.put(b'foo', b'quu') 
-#     #print('3')
-#     print( 'getfoo', local_store.get('foo') )
-
-#     local_store['blee'] = 'bla'
-    
-
-#     if 0:
-#         print( "Deleting" )
-#         for key in local_store.keys():
-#             if key.startswith('kv-ah'):
-#                 local_store.delete( key, commit=False)
-#         local_store.commit()
-#         print( "Done" )
-
-#     #print('4')
-#     #local_store.close()
+    assert wetsuite.helpers.localdata.resolve_path('foo/bar').count(os.sep) == 1
 
 
-#     print( len(local_store) )
+def test_resolve_path( tmp_path ):
+    import test_localdata
 
-#     if 0:
-#         import wetsuite.datasets
-#         kv = wetsuite.datasets.load('kamervragen')
-#         #print(kv.data)
-#         import pprint
-#         i=0
-#         for k, d in kv.data.items():
-#             local_store.put('kv-%s'%k, pprint.pformat(d) )
-#             i+=1
-#             if (i%10)==0:
-#                 print( 'commit', i )
-#                 local_store.commit()
-#             if i>30:
-#                 break
-#         local_store.commit()
+    wetsuite.helpers.localdata.is_file_a_store('/')
 
-#     #or value in local_store.values():
-#     #    print( value )
+    assert wetsuite.helpers.localdata.is_file_a_store( test_localdata.__file__ ) is  False
 
-#     #print( local_store.values() )
-#     print( local_store.keys() )
-#     #print( list( local_store ) ) 
+    path = tmp_path / 'test.db'
+    kv = wetsuite.helpers.localdata.LocalKV( path, str, str )
+    kv.close()
+    assert wetsuite.helpers.localdata.is_file_a_store( kv.path ) is True
 
