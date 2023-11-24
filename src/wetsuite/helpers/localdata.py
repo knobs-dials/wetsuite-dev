@@ -36,7 +36,10 @@ Notes:
 CONSIDER: writing a ExpiringLocalKV that cleans up old entries
 CONSIDER: writing variants that do convert specific data, letting you e.g. set/fetch dicts, or anything else you could pickle
 '''
-import os, random
+import os
+import os.path
+import random
+
 from typing import Tuple
 import collections.abc
 import sqlite3
@@ -111,9 +114,9 @@ class LocalKV:
         self._open()
         # here in part to remind us that we _could_ be using converters  https://docs.python.org/3/library/sqlite3.html#sqlite3-converters
         if key_type not in (str, bytes, int, None):
-            raise ValueError("We are currently a little overly paranoid about what to allow as key types (%r not allowed)"%key_type.__name__)
+            raise TypeError("We are currently a little overly paranoid about what to allow as key types (%r not allowed)"%key_type.__name__)
         if value_type not in (str, bytes, int, float, None):
-            raise ValueError("We are currently a little overly paranoid about what to allow as value types (%r not allowed)"%value_type.__name__)
+            raise TypeError("We are currently a little overly paranoid about what to allow as value types (%r not allowed)"%value_type.__name__)
 
         self.key_type = key_type
         self.value_type = value_type
@@ -200,9 +203,13 @@ class LocalKV:
     def delete(self, key, commit:bool=True):
         ''' delete item by key.
 
-            You should not expect the file to shrink until you do a vacuum()  (which will need to rewrite the file).
+            Note that you should not expect the file to shrink until you do a vacuum()  (which will need to rewrite the file).
         '''
+        if self.read_only:
+            raise RuntimeError('Attempted delete() on a store that was opened read-only.  (you can subvert that but may not want to)')
+        
         self._checktype_key(key)
+
         curs = self.conn.cursor() # TODO: check that's correct when commit==False
         if not commit  and  not self._in_transaction:
             curs.execute('BEGIN')
@@ -335,10 +342,7 @@ class LocalKV:
         return self.iterkeys()
 
     def __getitem__(self, key): # this one is here only really to support the ValuesView and Itemsview
-        ret = self.get(key)
-        if ret is None:
-            raise KeyError()
-        return ret
+        return self.get(key) # which would itself raise KeyError if applicable
 
     #def __setitem__(self, key, value):
     #    self.put(key, value)
@@ -674,7 +678,7 @@ def resolve_path( name:str ):
 #     return ret
 
 
-def list_stores( skip_table_check=True, get_num_items=False ):
+def list_stores( skip_table_check:bool=True, get_num_items:bool=False ):
     ''' Look in the directory that (everything that uses) resolve_path() puts things in,
         check which ones seem to be stores (does IO to do so).
 
@@ -714,27 +718,30 @@ def list_stores( skip_table_check=True, get_num_items=False ):
     return ret
 
 
-def is_file_a_store(path, skip_table_check=False):
+def is_file_a_store(path, skip_table_check:bool=False):
     ''' Checks that the path seems to point to one of our stores.
         More specifailly: whether it is an sqlite(3) database, and has a table called 'kv'
 
         You can skip the latter test. It avoids opening the file, so avoids a possible timeout on someone else having the store open for writing.
     '''
+    if not os.path.isfile(path):
+        return False
+
     is_sqlite3 = None
     with open(path, 'rb') as f:
-        is_sqlite3 =   f.read(15) == b'SQLite format 3'
+        is_sqlite3 =   f.read(15) == b'SQLite format 3' # check file magic
     if not is_sqlite3:
         return False
 
     if skip_table_check:
-        return True
-    else:
-        has_kv_table = None
-        conn = sqlite3.connect( path )
-        curs = conn.cursor()
-        curs.execute("SELECT name  FROM sqlite_master  WHERE type='table'")
-        for tablename, in curs.fetchall():
-            if tablename=='kv':
-                has_kv_table = True
-        conn.close()
-        return has_kv_table
+        return True # good enough for us, then
+
+    has_kv_table = None
+    conn = sqlite3.connect( path )
+    curs = conn.cursor()
+    curs.execute("SELECT name  FROM sqlite_master  WHERE type='table'")
+    for tablename, in curs.fetchall():
+        if tablename=='kv':
+            has_kv_table = True
+    conn.close()
+    return has_kv_table
