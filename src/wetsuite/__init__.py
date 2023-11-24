@@ -1,4 +1,4 @@
-' wetsuite is a set of tools that helps researchers and others deal with legal and other government documents  '
+' wetsuite is a set of tools that helps researchers and others deal with legal and other government documents '
 
 # these are packages for organisation, but it may be nice if they get loaded if you 'import wetsuite' so you don't have to importy each separately
 #import wetsuite.datacollect as datacollect
