@@ -43,7 +43,7 @@ This repository is split into:
 
 
 One idea behind notebooks are that you can easily create a copy to play around with, so that you can do some interactive experimentation without having to worry you're editing our code.
-[See also some more technical notes on that, in botebook form](notebooks/intro/technical_notebook.ipynb).
+See also [some more technical notes on that, in notebook form](notebooks/intro/technical_notebooks.ipynb).
 
 
 And, if you put a copy on [google colab](https://colab.research.google.com/) (particularly the intro notebooks have a "Open in Colab" link to ease this),
