@@ -112,16 +112,18 @@ def easyocr_draw_eval(image, ocr_results):
 
 
 def bbox_height(bbox):
+    ' given a bounding box as a 4-tuple (tl,tr,br,bl), calculate its height '
     topleft, topright, botright, botleft = bbox
     return abs( botright[1] - topleft[1] )
 
 def bbox_width(bbox):
+    ' given a bounding box as a 4-tuple (tl,tr,br,bl), calculate its width '
     topleft, topright, botright, botleft = bbox
     return abs( botright[0] - topleft[0] )
 
 
 def bbox_xy_extent(bbox):
-    ' returns (min(x), max(x), min(y), max(y)) for a single bounding box '
+    ' given a bounding box as a 4-tuple (tl,tr,br,bl),  return (min(x), max(x), min(y), max(y)) '
     xs, ys = [], []
     for x,y in bbox:
         xs.append(x)
@@ -196,7 +198,9 @@ def doc_extent( list_of_page_ocr_fragments ):
     return min(xs), max(xs), min(ys), max(ys)
 
 
-def page_fragment_filter( page_ocr_fragments,  textre=None,  q_min_x=None, q_min_y=None, q_max_x=None, q_max_y=None, pages=None, extent=None, verbose=False ):
+def page_fragment_filter( page_ocr_fragments,  textre=None,
+                         q_min_x=None, q_min_y=None, q_max_x=None, q_max_y=None,
+                         pages=None, extent=None, verbose=False ):
     ''' Searches for specific text patterns on specific parts of pages.
 
         Works on all pages at once. This is sometimes overkill, but for some uses this is easier.
@@ -205,7 +209,8 @@ def page_fragment_filter( page_ocr_fragments,  textre=None,  q_min_x=None, q_min
         minx, miny, maxx, maxy restrict where on the page we search. This can be 
           - floats (relative to height and width of text 
             ...present within the page, by default 
-            ...or the document, if you hand in the document extent via extent (can make more sense to deal with first and last pages being half filled)
+            ...or the document, if you hand in the document extent via extent 
+            (can make more sense to deal with first and last pages being half filled)
           - otherwise assumed to be ints, absolute units (which are likely to be pixels and depend on the DPI),
 
         pages is a list of (zero-based) page numbers to include.  None includes all.
@@ -216,7 +221,9 @@ def page_fragment_filter( page_ocr_fragments,  textre=None,  q_min_x=None, q_min
         page_min_x, page_min_y, page_max_x, page_max_y = page_extent( page_ocr_fragments )
 
     if isinstance(q_min_x, float): # assume it was a fraction
-        q_min_x = q_min_x * (1.15*page_max_x) # times a fudge factor because we assume there is right margin that typically has no detected text, and we want this to be a fraction to be of the page, not of the use of the page
+        # times a fudge factor because we assume there is right margin that typically has no detected text,
+        #  and we want this to be a fraction to be of the whole page, not of the _use_ of the page
+        q_min_x = q_min_x * (1.15*page_max_x)
     if isinstance(q_max_x, float):
         q_max_x = q_max_x * (1.15*page_max_x)
     if isinstance(q_min_y, float):
