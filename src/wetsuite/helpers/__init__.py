@@ -1,1 +1,1 @@
-' a collection of helper modules for varied tasks ' 
+' A collection of helper modules for varied tasks ' 

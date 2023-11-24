@@ -1,5 +1,5 @@
 #!/usr/biny/python3
-''' An interface to the APIs provided by opendata.tweedekamer.nl
+''' Fetches from the APIs provided by U{opendata.tweedekamer.nl<https://opendata.tweedekamer.nl>}
 
     Described at https://opendata.tweedekamer.nl/documentatie/odata-api
     though so far we implement and use mostly the Atom/SyncFeed API,
