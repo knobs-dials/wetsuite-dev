@@ -8,6 +8,8 @@ For more general things, see
 import re
 import sys
 import urllib.parse
+import warnings
+from collections import OrderedDict
 
 import wetsuite.datacollect.koop_repositories
 import wetsuite.helpers.meta
@@ -23,15 +25,8 @@ def cvdr_meta(tree, flatten=False):
 
         Because various elements can repeat - and various things frequently do (e.g. 'source'), each value is a list.
 
-
-        @param tree: an etree object that is either 
-          - a search result's individual record  
-            (in which case we're looking for ./recordData/gzd/originalData/meta
-          - CVDR content xml's root      
-            (in which case it's              ./meta)
-        ...because both contain almost the same metadata almost the same way (the difference is enrichedData in the search results).
-        @param flatten:
-        
+        Context for flatten:
+        ====================
         In a lot of cases we care mainly for tagname and text, and there are no attributes, e.g.
           - owmskern's    <identifier>CVDR641872_2</identifier>
           - owmskern's    <title>Nadere regels jeugdhulp gemeente Pijnacker-Nootdorp 2020</title>
@@ -52,7 +47,14 @@ def cvdr_meta(tree, flatten=False):
         When those attributes matter, you want C{flatten=False} (the default) and you will get a dict like: ::
                 { 'creator': [{'attr': {'scheme': 'overheid:Gemeente'}, 'text': 'Zuidplas'}], ... }
         
-        For quick and dirty presentation (only) you may wish to ask to creatively smush those into one string by asking for C{flatten==True}
+
+        @param tree: an etree object that is either 
+          - a search result's individual record  
+            (in which case we're looking for ./recordData/gzd/originalData/meta
+          - CVDR content xml's root      
+            (in which case it's              ./meta)
+        ...because both contain almost the same metadata almost the same way (the difference is enrichedData in the search results).
+        @param flatten: For quick and dirty presentation (only) you may wish to ask to creatively smush those into one string by asking for C{flatten==True}
         in which case you get something like: ::
                 { 'creator': 'Zuidplas (overheid:Gemeente)', ... }
         Please avoid this when you care to deal with data in a structured way  (even if you can sometimes get away with it due to empty attributs).
@@ -69,16 +71,16 @@ def cvdr_meta(tree, flatten=False):
     # we want tree to be the node under which ./meta lives
     # TODO: review, this looks unclear
     if tree.find('meta') is not None:
-        meta_under = tree 
+        meta_under = tree
     else:
         meta_under = tree.find('recordData/gzd/originalData')
         if meta_under is None:
             raise ValueError("got XML that seems to be neither a document or a search result record")
 
 
-    enrichedData = tree.find('recordData/gzd/enrichedData')
-    if enrichedData is not None: # only appears in search results, not the XML that points to
-        for enriched_key, enriched_val in wetsuite.helpers.etree.kvelements_to_dict( enrichedData ).items():
+    enriched_data = tree.find('recordData/gzd/enrichedData')
+    if enriched_data is not None: # only appears in search results, not the XML that points to
+        for enriched_key, enriched_val in wetsuite.helpers.etree.kvelements_to_dict( enriched_data ).items():
             if enriched_key not in ret:
                 ret[enriched_key] = []
             ret[enriched_key].append( {'text':enriched_val, 'attr':{}} ) # imitate the structure the below use
@@ -116,8 +118,9 @@ def cvdr_meta(tree, flatten=False):
             for item in value_list:
                 text = item['text']
                 if item['attr']:
-                    for attr_key, attr_val in item['attr'].items(): 
-                        text = '%s (%s)'%(text, attr_val)  # this seems to make decent sense half the time (the attribute name is often less interesting)
+                    for attr_key, attr_val in item['attr'].items():
+                        # this seems to make decent sense half the time (the attribute name is often less interesting)
+                        text = '%s (%s)'%(text, attr_val)
                 simplified_text.append( text )
             simpler[meta_key] = (',  '.join( simplified_text )).strip()
         ret = simpler
@@ -140,12 +143,12 @@ def cvdr_parse_identifier(text:str, prepend_cvdr=False):
     '''
     if ':' in text:
         text = text.split(':',1)[1]
-    m = re.match('(?:CVDR)?([0-9]+)([_][0-9]+)?', text.replace('/','_'))
-    if m is not None:
-        work, enum = m.groups()
+    cvdr_matchobject = re.match('(?:CVDR)?([0-9]+)([_][0-9]+)?', text.replace('/','_'))
+    if cvdr_matchobject is not None:
+        work, enum = cvdr_matchobject.groups()
         if prepend_cvdr:
             work = 'CVDR%s'%work
-        if enum==None:
+        if enum is None:
             return work, None
         else:
             return work, work+enum
@@ -154,7 +157,9 @@ def cvdr_parse_identifier(text:str, prepend_cvdr=False):
 
 
 def cvdr_param_parse(rest:str):
-    ''' Picks the parameters from a juriconnect (jci) style identifier string.   Used by cvdr_refs.  Duplicates code in meta.py - TODO: centralize that '''
+    ''' Picks the parameters from a juriconnect (jci) style identifier string.  
+        Used by cvdr_refs.  Duplicates code in meta.py - TODO: centralize that 
+    '''
     params = {}
     for param in rest.split('&'):
         pd = urllib.parse.parse_qs(param)
@@ -210,11 +215,11 @@ def cvdr_text(tree):
 
             # TODO: decide and clean up.
             if 1:
-                # this is a somewhat awkward way to do it, but may be more robust to unusual nesting                
-                for node in apart.iter(): 
+                # this is a somewhat awkward way to do it, but may be more robust to unusual nesting
+                for node in apart.iter():
                     #print( node.tag )
                     if node.tag in ('al', 'table', 'definitielijst'):
-                        text.extend( ['\n'] + 
+                        text.extend( ['\n'] +
                                      wetsuite.helpers.etree.all_text_fragments( node ) )
 
                     elif node.tag in ('extref',):
@@ -303,7 +308,7 @@ def cvdr_text(tree):
     return ret
 
 
-def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False): 
+def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False):
     ''' Given the CVDR XML content document as an etree object, 
         looks for the <source> tags, which are references to laws and other regulations (VERIFY)
 
@@ -353,7 +358,7 @@ def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False):
     tree = wetsuite.helpers.etree.strip_namespace(tree)
     owmsmantel = tree.find('meta/owmsmantel')
     for source in owmsmantel.findall('source'):
-        resourceIdentifier = source.get('resourceIdentifier')
+        resource_identifier = source.get('resourceIdentifier')
         source_text        = source.text
 
         if source_text is None:
@@ -363,43 +368,43 @@ def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False):
         if len(source_text)==0:
             continue
 
-        if resourceIdentifier.startswith('CVDR://')  or  'CVDR' in resourceIdentifier:
-            orig = resourceIdentifier
-            if resourceIdentifier.startswith('CVDR://'):
-                resourceIdentifier = resourceIdentifier[7:]
+        if resource_identifier.startswith('CVDR://')  or  'CVDR' in resource_identifier:
+            orig = resource_identifier
+            if resource_identifier.startswith('CVDR://'):
+                resource_identifier = resource_identifier[7:]
             try:
-                parsed = cvdr_parse_identifier( resourceIdentifier )
+                parsed = cvdr_parse_identifier( resource_identifier )
                 specref = parsed[1]
                 if specref is None:
                     specref = parsed[0]
                 ret.append( ('CVDR', orig, specref, None, source_text) )
             except ValueError as ve:
                 if debug:
-                    print( 'failed to parse CVDR in %s (%s)'%(resourceIdentifier, ve), file=sys.stderr )
+                    print( 'failed to parse CVDR in %s (%s)'%(resource_identifier, ve), file=sys.stderr )
 
             #print( '%r -> %r'%(orig, parsed ))
 
 
-        elif resourceIdentifier.startswith('BWB://'):
+        elif resource_identifier.startswith('BWB://'):
             # I've not found its definition, probably because there is none, but it looks mostly jci?
             # BWB://1.0:r:BWBR0005416
             # BWB://1.0:c:BWBR0008903&artikel=12&g=2011-11-08
             # BWB://1.0:v:BWBR0015703&artikel=art. 30              which is messy
-            m = re.match('(?:jci)?([0-9.]+):([a-z]):(BWB[RV][0-9]+)(.*)', resourceIdentifier)
+            m = re.match('(?:jci)?([0-9.]+):([a-z]):(BWB[RV][0-9]+)(.*)', resource_identifier)
             if m is not None:
                 version, typ, bwb, rest = m.groups() # pylint: disable=W0612
                 params = cvdr_param_parse(rest)
-                ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
+                ret.append( ('BWB', resource_identifier, bwb, params, source_text) )
                 if debug:
                     print( 'BWB://-style   %r  %r'%(bwb, params), file=sys.stderr )
 
-        elif resourceIdentifier.startswith('http://')  or  resourceIdentifier.startswith('https://'):
+        elif resource_identifier.startswith('http://')  or  resource_identifier.startswith('https://'):
             # TODO: centralize a 'reference_from_url' function, because there is more than this one style, and we can extract more
 
             # http://wetten.overheid.nl/BWBR0013016
             # http://wetten.overheid.nl/BWBR0003245/geldigheidsdatum_19-08-2009
-            
-            m = re.match('https?://wetten.overheid.nl/(?:zoeken_op/)?(BWB[RV][0-9]+)(/.*)?', resourceIdentifier)
+
+            m = re.match('https?://wetten.overheid.nl/(?:zoeken_op/)?(BWB[RV][0-9]+)(/.*)?', resource_identifier)
             if m is not None:
                 bwb, rest = m.groups()
                 params={}
@@ -407,7 +412,7 @@ def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False):
                     params =  cvdr_param_parse(rest)
                 if debug:
                     print("http-wetten: %r %r"%(bwb, params), file=sys.stderr)
-                ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
+                ret.append( ('BWB', resource_identifier, bwb, params, source_text) )
 
             #else:
             #    print("http-UNKNOWN: %r"%(resourceIdentifier), file=sys.stderr)
@@ -415,15 +420,15 @@ def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False):
             #
             # though also includes things that are specific but don't look like it, e.g.
             #   http://wetten.overheid.nl/cgi-bin/deeplink/law1/title=Gemeentewet/article=255
-            # actually redirects to 
+            # actually redirects to
             #   https://wetten.overheid.nl/BWBR0005416/2022-08-01/#TiteldeelIV_HoofdstukXV_Paragraaf4_Artikel255
             #
             # or completely free-form, like the following (which is a broken link)
             #   http://www.stadsregioamsterdam.nl/beleidsterreinen/ruimte_wonen_en/wonen/regelgeving_wonen
 
-        elif resourceIdentifier.startswith('jci') or 'v:BWBR' in resourceIdentifier or 'c:BWBR' in resourceIdentifier:
+        elif resource_identifier.startswith('jci') or 'v:BWBR' in resource_identifier or 'c:BWBR' in resource_identifier:
             try:
-                d = wetsuite.helpers.meta.parse_jci( resourceIdentifier )
+                d = wetsuite.helpers.meta.parse_jci( resource_identifier )
             except ValueError as ve:
                 if debug:
                     print("ERROR: bad jci in %r"%ve, file=sys.stderr)
@@ -431,27 +436,27 @@ def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False):
             bwb, params = d['bwb'], d['params']
             if debug:
                 print("JCI: %r %r"%(bwb, params))
-            ret.append( ('BWB', resourceIdentifier, bwb, params, source_text) )
+            ret.append( ('BWB', resource_identifier, bwb, params, source_text) )
 
         else:
             if not ignore_without_id:
                 ret.append( ('unknown', None, None, None, source_text) )
-            if debug and len(resourceIdentifier.strip())>0:
-                print( 'UNKNOWN: %r %r'%(resourceIdentifier, source_text), file=sys.stderr )
+            if debug and len(resource_identifier.strip())>0:
+                print( 'UNKNOWN: %r %r'%(resource_identifier, source_text), file=sys.stderr )
                 #print( wetsuite.helpers.etree.tostring(source) )
-    
+
     return ret
 
 
 # def cvdr_toelichting(tree):
 #     ''' Annoyingly, toelichting can be either in regeling/nota-toelichting
-#         or just be bijlage content 
+#         or just be bijlage content
 #         TODO: also deal with the latter
 #     '''
 #     nota_toelichting = tree.find('body/regeling/nota-toelichting')
 #     ret = wetsuite.helpers.etree.all_text_fragments( nota_toelichting )
 #     return ('\n\n'.join(ret)).strip()
-# 
+#
 #     #bijlage = tree.find('body/regeling/bijlage')
 
 
@@ -473,7 +478,7 @@ def bwb_title_looks_boring(text):
 
 
 
-def bwb_searchresult_meta( record_node ): # TODO: rename bwb_meta to this in files
+def bwb_searchresult_meta( record_node ):
     ''' Takes individual SRU result record as an etree subtrees, 
         picks out BWB-specific metadata (merging the separate metadata sections).
         Returns a dict
@@ -482,15 +487,15 @@ def bwb_searchresult_meta( record_node ): # TODO: rename bwb_meta to this in fil
 
     #recordSchema   = record.find('recordSchema')      # e.g. <recordSchema>http://standaarden.overheid.nl/sru/</recordSchema>
     #recordPacking  = record.find('recordPacking')     # probably <recordPacking>xml</recordPacking>
-    record_data     = record_node.find('recordData')        # the actual record 
+    record_data     = record_node.find('recordData')        # the actual record
     #recordPosition = record.find('recordPosition')    # e.g. <recordPosition>12</recordPosition>
     payload = record_data[0]
     #print( etree.ElementTree.tostring( payload, encoding='unicode' ) )
 
     original_data = payload.find('originalData')
     owmskern     = wetsuite.helpers.etree.kvelements_to_dict( original_data.find('meta/owmskern')   )
-    owmsmantel   = wetsuite.helpers.etree.kvelements_to_dict( original_data.find('meta/owmsmantel') ) 
-    bwbipm       = wetsuite.helpers.etree.kvelements_to_dict( original_data.find('meta/bwbipm')     ) 
+    owmsmantel   = wetsuite.helpers.etree.kvelements_to_dict( original_data.find('meta/owmsmantel') )
+    bwbipm       = wetsuite.helpers.etree.kvelements_to_dict( original_data.find('meta/bwbipm')     )
     enriched_data = wetsuite.helpers.etree.kvelements_to_dict( payload.find('enrichedData') )
 
     merged = {}
@@ -568,13 +573,13 @@ def bwb_wti_usefuls( tree ):
 
     ### wijzigingen ###################################################################################################
     ret['wijzigingen'] = []
-    for datum in wijzigingen.find('regeling'): 
+    for datum in wijzigingen.find('regeling'):
         wijziging = {}
 
         wijziging['waarde'] = datum.get('waarde') # e.g. 1998-01-01
         details = datum.find('details') # contains e.g. betreft, ontstaansbron
         wijziging['betreft'] = details.findtext('betreft') # e.g. nieuwe-regeling, wijziging, intrekking-regeling
-        
+
         ontstaansbron = details.find('ontstaansbron')
         bron = ontstaansbron.find('bron')
 
@@ -582,7 +587,9 @@ def bwb_wti_usefuls( tree ):
 
         bekendmaking = bron.find('bekendmaking') # apparently the urlidentifier, that should be something like stb-1997-581, is sometimes missing
         if bekendmaking is not None:
-            wijziging['bekendmaking'] = ( bekendmaking.get('soort'), bekendmaking.findtext('publicatiejaar'), bekendmaking.findtext('publicatienummer') )  
+            wijziging['bekendmaking'] = ( bekendmaking.get('soort'),
+                                          bekendmaking.findtext('publicatiejaar'),
+                                          bekendmaking.findtext('publicatienummer') )
 
         wijziging['dossiernummer'] = bron.findtext('dossiernummer')
 
@@ -613,7 +620,7 @@ def bwb_manifest_usefuls(tree):
             ex['manifestations'].append( label )
 
         ret['expressions'].append( ex )
-        
+
     #datum_inwerkingtreding
     return ret
 
@@ -644,12 +651,13 @@ def bwb_toestand_text(tree):
         Not structured data, intended to assist generic "how do these setences parse" code
 
         TODO: 
-        * review this, it makes various assumptions about document structure
-        * review the handling of certain elements, like lijst, table, definitielijst
+         -  review this, it makes various assumptions about document structure
+         -  review the handling of certain elements, like lijst, table, definitielijst
 
-        * see if there are contained elements to ignore, like maybe <redactie type="vervanging"> ?
+         -  see if there are contained elements to ignore, like maybe <redactie type="vervanging"> ?
 
-        * generalize to have a parameter ignore_tags=['li.nr', 'meta-data', 'kop', 'tussenkop', 'plaatje', 'adres', 'specificatielijst', 'artikel.toelichting', 'citaat', 'wetcitaat']
+         - generalize to have a parameter ignore_tags=['li.nr', 'meta-data', 'kop', 'tussenkop', 'plaatje', 'adres',
+           'specificatielijst', 'artikel.toelichting', 'citaat', 'wetcitaat']
     '''
     ret=[]
     tree = wetsuite.helpers.etree.strip_namespace( tree )
@@ -737,7 +745,7 @@ def bwb_toestand_text(tree):
         # It seems that the text is consistently under an element called artikel,
         # but there is much less consistency in the organization above that.
         # This section was an experiment of trying to find out what that organisation is.
-        # 
+        #
         # (but below is the much easier answr)
         
         parents_of_artikel = []
@@ -810,7 +818,7 @@ def bwb_toestand_text(tree):
             parents_of_artikel += wetgeving.findall('circulaire/circulaire-tekst/circulaire.divisie')
             parents_of_artikel += wetgeving.findall('regeling/regeling-tekst')
             parents_of_artikel += wetgeving.findall('regeling/regeling-tekst/hoofdstuk')
-    
+
         elif soort == 'pbo':
             parents_of_artikel += wetgeving.findall('regeling/regeling-tekst')
             parents_of_artikel += wetgeving.findall('regeling/regeling-tekst/paragraaf')
@@ -833,8 +841,8 @@ def bwb_toestand_text(tree):
 
         for poa in parents_of_artikel:
 
-            for artikel in (poa.findall('artikel') + 
-                            poa.findall('enig-artikel') + 
+            for artikel in (poa.findall('artikel') +
+                            poa.findall('enig-artikel') +
                             poa.findall('tekst')   # used in circulaire
                             ):
                 pass # got replaced by the below
@@ -868,7 +876,7 @@ def cvdr_versions_for_work( cvdrid:str ) -> list:
         result_expression_id = meta['identifier'][0]['text']
         ret.append( result_expression_id )
     ret = sorted( ret )
-    _versions_cache[cvdrid] = ret 
+    _versions_cache[cvdrid] = ret
     return ret
 
 
@@ -877,7 +885,8 @@ def cvdr_versions_for_work( cvdrid:str ) -> list:
 
 
 def alineas_with_selective_path(tree, start_at_path=None, alinea_elemname='al'): # , ignore=['meta-data']
-    ''' Try to capture most of the interesting structure in easier-to-digest python data form,
+    ''' Given document-style XML data such as that of CVDR XML documents,
+        tries to capture most of the interesting structure in easier-to-digest python data form,
         (and without expecting a specific nesting)
     
         Whenever we hit an <al>, we emit a dict that details all the interesting elements between body and this <al>
@@ -885,7 +894,7 @@ def alineas_with_selective_path(tree, start_at_path=None, alinea_elemname='al'):
 
         Returns a list of dicts, one for each <al>.
         
-        Each such dict should look like: ::
+        Each such output dict should look like: ::
             {
                 'parts': [   {'what': 'hoofdstuk',  'hoofdstuklabel': 'Hoofdstuk', 'hoofdstuknr': '1', 'hoofdstuktitel': 'Algemene bepalingen',},
                             {'what': 'artikel',    'artikellabel': 'Artikel',     'artikelnr': '1:1', 'artikeltitel': 'Begripsomschrijvingen',}  ],
@@ -900,6 +909,9 @@ def alineas_with_selective_path(tree, start_at_path=None, alinea_elemname='al'):
                 'text-flat': 'In deze verordening wordt verstaan dan wel mede verstaan onder:'
             }
         Where:
+          - this is very much intended to then be simplified further, using merge_alinea_data
+            which is separate largely for flexibility's sake, 
+            (CONSIDER: also provide a extract-text-with-reasonable-defaults fuction)
           - 'parts' details each structural element (boek, hoofdstuk, afdeling paragraaf, artikel, lid)
              that encompasses this fragment
              the ...label keys are largely entirely redundant, but there are documents that abuse these, which you may want to know.
@@ -910,7 +922,6 @@ def alineas_with_selective_path(tree, start_at_path=None, alinea_elemname='al'):
           - 'text-flat' is plain text, with any markup elements flattened out 
           - WARNING: currently NONE of these keys in parts/merged are settled on yet, things may change.
     '''
-    import warnings
     warnings.warn('The behaviour of alineas_with_selective_path() is not fully decided, and may still change')
 
     # this is based on observations of CVDR and BWB
@@ -965,7 +976,7 @@ def alineas_with_selective_path(tree, start_at_path=None, alinea_elemname='al'):
             element_stack.pop()
             #print( path_to_element )
 
-            if isinstance(element, _Comment) or isinstance(element, _ProcessingInstruction): 
+            if isinstance(element, _Comment) or isinstance(element, _ProcessingInstruction):
                 pass
             else:
                 if element.tag == alinea_elemname:
@@ -987,7 +998,7 @@ def alineas_with_selective_path(tree, start_at_path=None, alinea_elemname='al'):
                             emit['merged'].update( part_dict ) # duplicated, easier to access, and clobbered whenever you have an element in the structure twice
                             part_dict['what'] = pathelem.tag
                             emit['parts'].append( part_dict )
-                                
+
                     emit['text-flat'] = wetsuite.helpers.etree.all_text_fragments( element, join=' ' )
                     #yield emit
                     ret.append( emit )
@@ -1007,7 +1018,7 @@ def merge_alinea_data( alinea_dicts, if_same={
     'afdeling':'afdelingnr',
     'paragraaf':'paragraafnr',
     'sub-paragraaf':'subparagraafnr',
-    
+
     'artikel':'artikelnr', 
     'lid':'lidnr',
 
@@ -1029,8 +1040,6 @@ def merge_alinea_data( alinea_dicts, if_same={
 
         CONSIDER: returning a meta dict for each such grouped text (instead of the raw key)
     '''
-    from collections import OrderedDict
-
     r=0
 
     merged = OrderedDict()
@@ -1042,17 +1051,17 @@ def merge_alinea_data( alinea_dicts, if_same={
         meta = []
         for part_dict in alinea_dict['parts']:
             what = part_dict['what']
-            #print( part_dict)            
+            #print( part_dict)
             if what in if_same  and if_same[what] in part_dict:
                 sel = if_same[what]
                 #print(sel)
-                if sel==None: # TODO: think about this adjustment
+                if sel is None: # TODO: think about this adjustment
                     interesting_val='_dummy_%d'%r
                     r+=1
                 else:
                     interesting_val = part_dict[sel]
                     if interesting_val is None: # maybe warn that there isn't?
-                        interesting_val=''                
+                        interesting_val=''
                 key.append( '%s:%s'%(what, interesting_val.strip()) )
                 meta.append( (what, interesting_val.strip() ) )
         key = '  '.join(key)
@@ -1061,7 +1070,7 @@ def merge_alinea_data( alinea_dicts, if_same={
 
         if key not in merged:
             merged[key] = []
-            
+
         merged[key].append( alinea_dict['text-flat'] )
 
     ret = []
@@ -1111,4 +1120,3 @@ def iter_chunks_xml(xml):
                    'text': text,
                    'from_table': False,
                    }
-            
