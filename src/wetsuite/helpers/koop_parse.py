@@ -62,8 +62,10 @@ def cvdr_meta(tree, flatten=False):
         @return: a dict containing owmskern, owmsmantel, and cvdripm's elements merged into a single dict.
         If it's a search result, it will also mention its enrichedData.
     '''
+    #if isinstance(tree, bytes):
+    #    tree = wetsuite.helpers.etree.fromstring( tree )
+    
     ret = {}
-
     tree = wetsuite.helpers.etree.strip_namespace(tree)
     #print( wetsuite.helpers.etree.tostring(tree).decode('u8') )
 
@@ -187,6 +189,8 @@ def cvdr_text(tree):
 
         TODO: write functions that support "give me flat text for each article separately"
     '''
+    #if isinstance(tree, bytes):
+    #    tree = wetsuite.helpers.etree.fromstring( tree )
     ret = []
     tree = wetsuite.helpers.etree.strip_namespace( tree )
 
@@ -310,7 +314,7 @@ def cvdr_text(tree):
 
 def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False):
     ''' Given the CVDR XML content document as an etree object, 
-        looks for the <source> tags, which are references to laws and other regulations (VERIFY)
+        looks for the <source> tags (meta/owmsmantel/source), which are references to laws and other regulations (VERIFY)
 
         This function 
           - extracts (only) the source tags that specify
@@ -320,14 +324,13 @@ def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False):
         Be aware this is more creative than a helper function probably should be.
     
         Returns a list of ::
-          (type, orig, specref, parts, source_text)
-        where 
-          - type is currently one of 'BWB' or 'CVDR'
-          - URL-like reference
-          - just the identifier
-          - dict of parts parsed from URL, or None
-          - link text (name and often part to a reference)
-            seem to be more convention-based than standardized.
+          (type, origref, specref, parts, source_text)
+        where
+          - type:         currently one of 'BWB' or 'CVDR'
+          - origref:      URL-like reference
+          - specref:      just the identifier
+          - parts:        dict of parts parsed from URL, or None
+          - source_text:  text (name  and often reference to a part);  seems to be more convention-based than standardized
 
         For example (mostly to point out there is _plenty_ of variation in most parts) ::
          ('BWB', 
@@ -354,6 +357,8 @@ def cvdr_sourcerefs(tree, ignore_without_id=True, debug=False):
           None, 
           'Verordening voorzieningen maatschappelijke participatie 2012-A, artikel 4')
     '''
+    #if isinstance(tree, bytes):
+    #    tree = wetsuite.helpers.etree.fromstring( tree )
     ret = []
     tree = wetsuite.helpers.etree.strip_namespace(tree)
     owmsmantel = tree.find('meta/owmsmantel')
@@ -1039,8 +1044,10 @@ def merge_alinea_data( alinea_dicts, if_same={
         ...etc.
 
         CONSIDER: returning a meta dict for each such grouped text (instead of the raw key)
+
+        @return:
     '''
-    r=0
+    dummy_count = 0
 
     merged = OrderedDict()
     key_meta = {} # key -> meta dict
@@ -1056,12 +1063,12 @@ def merge_alinea_data( alinea_dicts, if_same={
                 sel = if_same[what]
                 #print(sel)
                 if sel is None: # TODO: think about this adjustment
-                    interesting_val='_dummy_%d'%r
-                    r+=1
+                    interesting_val='_dummy_%d'%dummy_count
+                    dummy_count += 1
                 else:
                     interesting_val = part_dict[sel]
                     if interesting_val is None: # maybe warn that there isn't?
-                        interesting_val=''
+                        interesting_val = ''
                 key.append( '%s:%s'%(what, interesting_val.strip()) )
                 meta.append( (what, interesting_val.strip() ) )
         key = '  '.join(key)
