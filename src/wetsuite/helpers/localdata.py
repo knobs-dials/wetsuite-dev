@@ -38,6 +38,7 @@ CONSIDER: writing variants that do convert specific data, letting you e.g. set/f
 '''
 import os
 import os.path
+import pathlib
 import random
 import collections.abc
 from typing import Tuple
@@ -388,17 +389,6 @@ class LocalKV:
     #     self.conn.execute('PRAGMA schema.incremental_vacuum')
 
 
-    def vacuum(self):
-        ''' After a lot of deletes you could compact the store with vacuum().
-            However, note this rewrites the entire file, so the more data you store, the longer this takes.
-            
-            Note that if we were left in a transaction (due to commit=False), ths is commit()ed first. 
-        '''
-        if self._in_transaction:
-            self.commit()
-        self.conn.execute('vacuum')
-
-
     def bytesize(self) -> int:
         ''' Returns the approximate amount of the contained data, in bytes  
             (may be a few dozen kilobytes off, or more, because it counts in pages) 
@@ -412,6 +402,37 @@ class LocalKV:
         #else:
         #    return os.stat( self.path ).st_size
 
+
+    def summary(self, get_num_items:bool=False):
+        ''' Gives the byte size, and optionally the number of items and average size
+            @param get_num_bytes: Also fetch number of items, and calculate average size. Is slower. Adds entries like: ::
+                'num_items':     856716,
+                'avgsize_bytes': 63585,
+            @return: a dictionary like: ::
+                {'size_bytes':     54474244096,
+                 'size_readable': '54G'}
+        '''
+        ret={}
+        bytesize = self.bytesize()
+        ret['size_bytes'] = bytesize
+        ret['size_readable'] = wetsuite.helpers.format.kmgtp( bytesize )
+        if get_num_items:
+            ret['num_items'] = len( self )
+            if ret['num_items'] == 0:
+                ret['avgsize_bytes'] = 0
+            else:
+                ret['avgsize_bytes'] = round( float(bytesize) / ret['num_items'] )
+        return ret
+
+
+    def vacuum(self):
+        ''' After a lot of deletes you could compact the store with vacuum().
+            WARNING: rewrites the entire file, so the more data you store, the longer this takes.
+            NOTE: f we were left in a transaction (due to commit=False), ths is commit()ed first.
+        '''
+        if self._in_transaction: 
+            self.commit()  # CONSIDER: raising an error instead
+        self.conn.execute('vacuum')
 
     def truncate(self, vacuum=True):
         ''' remove all kv entries.
@@ -504,70 +525,23 @@ class MsgpackKV(LocalKV):
 
 
 
-# class PickleKV(LocalKV):
-#     ''' Like localKV, but
-#         - typing fixed at str:bytes
-#         - put() stores using pickle, get() unpickles
-#         Will be a bit slower, but lets you more transpoarently store e.g. nested python structures, like dicts
 
-#         Note that
-#          - pickle isn't the most interoperable choice  (json or msgpack would be preferable)
-#          - pickle isn't the fastest choice             (msgpack would be preferable)
-#          - pickle is chosen mostly in case we want to store a date or datetime (json and msgpack don't like those)
+def cached_fetch(store:LocalKV, url:str, force_refetch:bool=False) -> Tuple[bytes, bool]:
+    ''' Helper to use a LocalKV to cache URL fetch results -- assuming it's a str-to-bytes type.
 
-#         Note that this does _not_ change how the meta table works.
+        In terms of behaviour:
+          - if URL is a key in the given store, fetch and return its value
+          - if URL is not a key in the store,   do wetsuite.helpers.net.download(url), store in store, and return its value
 
-#         Currently only intended to be used by datasets, though feel free to
-#     '''
-#     def __init__(self, path, protocol_version=3):
-#         ''' defaults to pickle protocol 3 to support all of py3.x (though not 2)
-#             consider getting/setting meta to check that an existing store actually _should_ be used like this
-#         '''
-#         super(PickleKV, self).__init__( path, key_type=str, value_type=bytes )
-#         self.protocol_version = protocol_version
-
-#     def get(self, key:str):
-#         " Note that unpickling could fail "
-#         value = super(PickleKV, self).get( key )
-#         unpickled = pickle.loads(value)
-#         return unpickled
-
-#     def put(self, key:str, value):
-#         " See LocalKV.put().   Unlike that, value is not checked for type, just pickled. Which can fail. "
-#         pickled = pickle.dumps(value, protocol=self.protocol_version)
-#         super(PickleKV, self).put( key, pickled )
-
-
-#     def itervalues(self):
-#         curs = self.conn.cursor()
-#         for row in curs.execute('SELECT value FROM kv'):
-#             yield pickle.loads( row[0] )
-
-#     def iteritems(self):
-#         curs = self.conn.cursor()
-#         for row in curs.execute('SELECT key, value FROM kv'):
-#             yield row[0], pickle.loads( row[1] )
-
-
-
-
-
-
-def cached_fetch(store, url:str, force_refetch:bool=False) -> Tuple[bytes, bool]:
-    ''' Helper to use a str-to-bytes LocalKV to cache URL fetch results.
-
-        Takes a store to get/put data from, and a url to fetch,
-        @return: (data, came_from_cache)
+        @param store: a store to get/put data from
+        @param url:   an URL string to fetch
+        @return: (data:bytes, whether_it_came_from_cache:bool)
 
         May raise 
-          - whatever requests.get may range
-          - ValueError when !response.ok, or if the HTTP code is >=400
+          - whatever requests.get may raise (e.g. "timeout waiting for store" type things)
+          - ValueError when networking says C{(not response.ok)}, or if the HTTP code is >=400
             (which is behaviour from wetsuite.helpers.net.download())
             ...to force us to deal with issues and not store error pages.
-
-        Is little more than 
-          - if URL is a key in the store, return its value
-          - if URL not in store,          do wetsuite.helpers.net.download(url), store in store, and return its value
     '''
     if store.key_type not in (str,None)  or  store.value_type not in (bytes, None):
         raise TypeError('cached_fetch() expects a str:bytes store (or for you to disable checks with None,None),  not a %r:%r'%(
@@ -576,18 +550,15 @@ def cached_fetch(store, url:str, force_refetch:bool=False) -> Tuple[bytes, bool]
         ))
     # yes, the following could be a few lines shorter, but this is arguably a little more readable
     if force_refetch is False:
-        try:
+        try: # use cache
             ret = store.get(url)
-            #print("CACHED")
             return ret, True
-        except KeyError:
+        except KeyError: # fetch
             data = wetsuite.helpers.net.download( url )
-            #print("FETCHED")
             store.put( url, data )
             return data, False
     else: # force_refetch is True
         data = wetsuite.helpers.net.download( url )
-        #print("FORCE-FETCHED")
         store.put( url, data )
         return data, False
 
@@ -636,7 +607,6 @@ def resolve_path( name:str ):
             e.g. you having to do symlink juggling
     '''
     # deal with pathlib arguments by flattening it to a string
-    import pathlib
     if isinstance(name, pathlib.Path):
         name = str(name)
 
@@ -691,16 +661,12 @@ def list_stores( skip_table_check:bool=True, get_num_items:bool=False ):
         abspath = os.path.join( stores_dir, basename )
         if os.path.isfile( abspath ):
             if is_file_a_store( abspath, skip_table_check=skip_table_check ):
-                bytesize = os.stat(abspath).st_size
                 kv = LocalKV(abspath, key_type=None, value_type=None, read_only=True)
                 itemdict = {
-                    'basename':basename, 
-                    'path':abspath,
-                    'bytesize':bytesize,
-                    'bytesize_readable':wetsuite.helpers.format.kmgtp( bytesize ),
+                    'path':abspath,        # should be the same as kv.path ?
+                    'basename':basename,   # should be the same as os.path.basename( kv.path ) ?
                 }
-                if get_num_items:
-                    itemdict['num_items'] = len( kv )
+                itemdict.update( kv.summary(get_num_items=get_num_items) )
 
                 try:
                     itemdict['valtype'] = kv._get_meta('valtype')
