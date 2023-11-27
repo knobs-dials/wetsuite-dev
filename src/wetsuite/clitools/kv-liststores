@@ -9,8 +9,8 @@ import wetsuite.helpers.format
 
 def main():
     ' see module docstring '
-    for item in wetsuite.helpers.localdata.list_stores( skip_table_check=True, get_num_items=False ):
-        bytesize = item.pop('bytesize')
+    for item in wetsuite.helpers.localdata.list_stores( skip_table_check=True, get_num_items=True ):
+        bytesize = item.pop('size_bytes')
         num_items = item.pop('num_items', None)
 
         print('  %5sB'%wetsuite.helpers.format.kmgtp(bytesize, extradigits=0), end='')
@@ -18,25 +18,19 @@ def main():
         print('  %8s '%item.get('valtype',''), end='')
 
         if num_items is not None:
-            avg = 0
-            try:
-                avg = bytesize / num_items
-            except ZeroDivisionError:
-                pass
-
             print('   %9s items     %5sB/item'%(
-                wetsuite.helpers.format.kmgtp(num_items, extradigits=0),
-                wetsuite.helpers.format.kmgtp(avg, extradigits=0)
+                wetsuite.helpers.format.kmgtp(num_items,                 extradigits=0),
+                wetsuite.helpers.format.kmgtp(item.pop('avgsize_bytes'), extradigits=0)
                 ), end='')
 
 
-        description = item.pop('description', None)
+        #description = item.pop('description', None)
         #if description is not None:
         #    print('description: %sB'%( '\n'.join(textwrap.wrap(description, 90, subsequent_indent='             '))))
 
         print('       %s'%item.pop('path'), end='')
 
-        #if len(item) > 0:
+        #if len(item) > 0: # debug
         #    print(item, end='')
 
         print()
