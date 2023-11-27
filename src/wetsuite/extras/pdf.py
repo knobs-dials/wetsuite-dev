@@ -46,7 +46,13 @@ def page_text( filedata:bytes ):
 
 
 def doc_text( filedata:bytes, strip=True ):
-    ''' Returns a single string.   Mostly just joins the output of page_text() '''
+    ''' Takes PDF file data, returns a single string of the text in it.   
+        Mostly just puts some newlines between the chunks that page_text() outputs. 
+        
+        @param filedata: PDF file data as a bytes object
+        @param strip: whether to strip after joining.
+        @return: all text as a single string.
+    '''
     ret = '\n\n'.join( page_text( filedata ) )
     if strip:
         ret = ret.strip()
@@ -54,16 +60,19 @@ def doc_text( filedata:bytes, strip=True ):
 
 
 def count_pages_with_text( filedata_or_list, char_threshold=200 ):
-    """ Counts the number of pages that have a reasonabl amount of text on them.
+    """ Counts the number of pages that have a reasonable amount of text on them.
+
+        Mainly intended to detect PDFs that are partly or fully images-of-text.
+
+        Counts characters per page counts spaces between words, but strips edges; 
+        TODO: think about this more
+
         @param filedata_or_list: either: 
           - PDF file data (as bytes) 
           - the output of pages_text()
+        @param char_threshold: how long the text on a page should be, in characters, after strip()ping. 
+        Defaults to 200, which is maybe 50 words.
         @return: (chars_per_page, num_pages_with_text, num_pages)
-
-        The characters per page counts spaces between words, but strips edges; 
-        TODO: think about this more
-
-        Mainly intended to detect PDFs that are partly or fully images-of-text.
     """
     if isinstance(filedata_or_list, bytes):
         it = page_text(filedata_or_list)
@@ -83,8 +92,8 @@ def count_pages_with_text( filedata_or_list, char_threshold=200 ):
     return chars_per_page, count_pages_with_text_count, count_pages
 
 
-def pdf_text_ocr(bytedata: bytes):
-    ''' Takes a PDF and return pageless plain text, entirely with OCR.
+def pdf_text_ocr(filedata: bytes):
+    ''' Takes a PDF and return pageless plain text, entirely with OCR (instead of ).
 
         This is currently
           - wetsuite.datacollect.pdf.pages_as_images()
@@ -95,11 +104,14 @@ def pdf_text_ocr(bytedata: bytes):
         so probably ONLY use this if  
           - extracting text objects (e.g. wetsuite.datacollect.pdf.page_text) gave you nothing
           - you only care about what words exist, not about document structure
+
+        @param filedata:
+        @return: all text, as a single string.
     '''
     ret = []
 
     import wetsuite.extras.ocr
-    for page_image in pages_as_images(bytedata):
+    for page_image in pages_as_images(filedata):
         fragments = wetsuite.extras.ocr.easyocr( page_image )
         for bounding_box, text_fragment, certainty in fragments:
             ret.append( text_fragment )
@@ -109,9 +121,13 @@ def pdf_text_ocr(bytedata: bytes):
 def pages_as_images( filedata, dpi=150 ):
     """ Yields one page of the PDF at a time, as a PIL image object.
 
-        A generator because consider what a 300-page PDF would do to RAM use.
+        Made to be used byL{ pdf_text_ocr}, but you may find use for it too.
+    
+        Depends on PyMuPDF (CONSIDER: leaving in the fallback to poppler).
 
-        Depends on poppler-utils. CONSIDER: alternatives like pymupdf (page.getpixmap?)
+        @param filedata: PDF file contents, as a bytes object
+        @param dpi: the resolution to render at
+        @return: a generator, one page at a time, because consider what a 300-page PDF would do to RAM use.
     """
     #pymupdf
     from PIL import Image
@@ -121,8 +137,8 @@ def pages_as_images( filedata, dpi=150 ):
         for page in document:
             page_pixmap = page.get_pixmap(dpi=dpi)
             im = Image.frombytes(mode='RGB',
-                                    size=[page_pixmap.width, page_pixmap.height],
-                                    data=page_pixmap.samples)
+                                 size=[page_pixmap.width, page_pixmap.height],
+                                 data=page_pixmap.samples)
             yield im
 
     # else:

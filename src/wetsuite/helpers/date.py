@@ -1,5 +1,7 @@
 '''
-Try to deal with varied forms of dates and times, and ease things like "I would like to specify a range of days in a particular format" (e.g. for bulk fetching), and such.
+Try to deal with varied forms of dates and times, 
+and ease things like "I would like to specify a range of days in a particular format" 
+(e.g. for bulk fetching), and such.
 
 Note that this module is focused only on days, not on precise times. 
 And, as a result (timezones), it may be a day off.
@@ -66,8 +68,7 @@ def parse(text:str, exception_as_none=True):
         return None
     else:
         raise ValueError("Did not understand date in %r"%text)
-    
-    
+
 
 _MAAND_RES = 'januar[iy]|jan|februar[yi]|feb|maart|march|mar|april|apr|mei|may|jun|jun[ei]|jul|jul[iy]|august|augustus|aug|o[ck]tober|o[ck]t|november|nov|december|dec'
 
@@ -90,7 +91,8 @@ def find_dates_in_text(text: str):
     
     @return: two lists:
      - list of each found date as strings
-     - according list where each is a date object -- or None where dateutil didn't manage (it usually does, particularly if we pre-filter like this, but it's not a guarantee)
+     - according list where each is a date object -- or None where dateutil didn't manage 
+       (it usually does, particularly if we pre-filter like this, but it's not a guarantee)
     '''
     text_with_pos = []
     for testre in (_re_isolike_date, _re_dutch_date_1, _re_dutch_date_2):
@@ -111,16 +113,41 @@ def find_dates_in_text(text: str):
     return ret_text, ret_dt
 
 
+
+
+def format_date(dt, strftime_format='%Y-%m-%d'):
+    ''' 
+    Takes a single datetime object, calls strftime on it.
+     
+    @param dt: a datetime obkect  
+    @param strftime_format: a string that tells strftime how to format the date
+    Defaults to '%Y-%m-%d', which is a ISO8601-style YYYY-MM-DD thing
+    @return: date string, formatted that way    
+    '''
+    return dt.strftime(strftime_format)
+
+
+def format_date_range(rng, strftime_format='%Y-%m-%d'):
+    ''' 
+    Takes a list of datetime objects, calls format_date() on each of that list.
+    
+    For example: ::
+        format_date_range(  date_range( datetime.date(2022, 1, 29),   datetime.date(2022, 2, 2) )  )
+    would return: ::
+        ['2022-01-29', '2022-01-30', '2022-01-31', '2022-02-01', '2022-02-02']
+
+    @param rng: a list of datetime objects
+    @param strftime_format: a string that tells strftime how to format the date (see also L{format_date})
+    @return: a list of formatted date strings
+    '''
+    return list( format_date(d,strftime_format)   for d in rng  )
+
+
+
 def date_range( frm, to ):
     '''
-    Given two objects that are each one of
-      - date objects
-      - datetime objects - will become their day
-      - string we manage to parse  (using dateutil library)
-        - ...please do not use formats like 02/02/11 and also expect the output to do what you want.
-
-    Returns each day in the range between the two given dates (including the last), as a datetime.date object
-
+    Given a start and end date, returns a list of all days in that range (including the last), as a datetime.date object
+    (Note that if you want something like this for pandas, it has its own date_range that may be nicer)
     
     For example: ::
         date_range( datetime.date(2022, 1, 29),   datetime.date(2022, 2, 2)  )
@@ -128,17 +155,15 @@ def date_range( frm, to ):
         date_range( '29 jan 2022',  '2 feb 2022')
     should both give: ::
         [ datetime.date(2022, 1, 29), 
-            datetime.date(2022, 1, 30), 
-            datetime.date(2022, 1, 31),
-            datetime.date(2022, 2, 1),
-            datetime.date(2022, 2, 2)  ]
-
-    Note that if you want something like this for pandas, it has its own date_range.
+          datetime.date(2022, 1, 30), 
+          datetime.date(2022, 1, 31),
+          datetime.date(2022, 2, 1),
+          datetime.date(2022, 2, 2)  ]
     
-    @param frm: date object, datetime object, or string to parse
-    @param to:  date object, datetime object, or string to parse
-
-    @return: a list of datetime.date objects
+    @param frm: start of range, as a date object, datetime object, or string to parse (using dateutil library)
+    (please do not use formats like 02/02/11 and also expect the output to do what you want)
+    @param to:  end of range, inclusive
+    @return:    a list of datetime.date objects
     '''
     if   isinstance( frm, datetime.datetime): # must come first, it's itself a subclass of date
         frm = frm.date()
@@ -165,22 +190,3 @@ def date_range( frm, to ):
         cur += datetime.timedelta(days=1)
 
     return ret
-
-
-def format_date(dt, strftime_format='%Y-%m-%d'):
-    ' calls strftime on a datetime object, by default like YYYY-MM-DD (ISO8601-style) '
-    return dt.strftime(strftime_format)
-
-
-def format_date_range(rng, strftime_format='%Y-%m-%d'):
-    ''' Formats a sequence of datetime.date objects (e.g. from date_range())
-        with a given strftime format, defaulting to YYYY-MM-DD   (ISO8601-style)
-
-        ...by calling format_date() on each.
-
-        For example: ::
-            format_date_range(  date_range( datetime.date(2022, 1, 29),   datetime.date(2022, 2, 2) )  )
-        would return: ::
-            ['2022-01-29', '2022-01-30', '2022-01-31', '2022-02-01', '2022-02-02']
-    '''
-    return list( format_date(d,strftime_format)   for d in rng  )
