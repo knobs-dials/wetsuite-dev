@@ -7,20 +7,12 @@ import requests
 import bs4
 
 
-
-
 def fetch_by_resource_type(typ='JUDG'):
-    ''' Intends to queries the SPARQL endpoint to ask for most CELEXes of a specific type, here court judgments, 
-        
-        typ can e.g. be 
-          - 'JUDG'  for judgments
-          - 'REG'   for regulations (but there are a handful of related things) 
-        and anything else 
+    ''' Intends to query the SPARQL endpoint to ask for most CELEXes of a specific type, here court judgments, 
 
         TODO: fetch values e.g. at 
         https://github.com/SEMICeu/Excel-to-CPSVAP-RDF-transformation/blob/master/page-objects/utils/CPSVtemplateWithCodelists.json
         in handier form
-
 
         Asks to give its semantic results as JSON data,  which we parse and return as a python structure.
         The structure you get back looks like:  ( see also see also https://www.w3.org/TR/2013/REC-sparql11-results-json-20130321/ ) ::
@@ -41,6 +33,12 @@ def fetch_by_resource_type(typ='JUDG'):
                     ]
                 }
             }
+
+        @param typ: the type to fetch, e.g. 
+          - 'JUDG'  for court judgments
+          - 'REG'   for regulations (but there are a handful of related things) 
+
+        @return: a (possibly-large) nested structure (python structure, loaded from JSON)
     '''
     # The proper way would be to use a library like sparqlwrapper
     #   but for now we can get away with hardcodig a query like:
@@ -64,13 +62,16 @@ def fetch_by_resource_type(typ='JUDG'):
 def extract_html(htmlbytes):
     ''' Extract data from formatted HTML from the website itself.
 
-        Written for JUDG pages, may need work for others.
+        Written for JUDG pages, probably needs work for others.
 
-        There are plenty of assumptions in this code that probably won't hold over time,
+        Also, there are plenty of assumptions in this code that probably won't hold over time,
         so for serious projects you should probably use a data API instead.
 
         TODO: see how language-sensitive this is.
         CONSIDER: extract more link hrefs (would probably need to hand in page url to)
+
+        @param htmlbytes: the page, as a bytes object
+        @return: a nested structure
     '''
     # This code turned messier than it originally was, because the page turned out to be more flexible than I thought.
 
@@ -85,7 +86,7 @@ def extract_html(htmlbytes):
                 # however, the dd can contain a list instead of just a string
                 #    the structure is consistent only within each section, so leave it for code calling this function to process usefully  (forced to be - JSON would choke on it if you insert it as-is)
                 if node.find(['ul','ol']):
-                    ret[what] = node.findAll('li') 
+                    ret[what] = node.findAll('li')
                 else:
                     ret[what] = node.text.strip()
         return ret
@@ -127,13 +128,13 @@ def extract_html(htmlbytes):
     PPProc_Contents = soup.find(id='PPProc_Contents')
     ret['proc'] = {}
     if PPProc_Contents is not None:
-        # procedure looks like a key:value thing (e.g. Defendant:Raad), 
+        # procedure looks like a key:value thing (e.g. Defendant:Raad),
         # but there are cases where the value is a list, which parse_datalist doesn't handle for us so we have to.
         # for consistency's sake, even the single-value cases are returned as a list
         for k, v in parse_datalist( PPProc_Contents.find('dl') ).items():
-            if type(v) is str:
+            if isinstance(v, str):
                 ret['proc'][k] = [v]
-            else: # will be a list of bs4 nodes, e.g.  [<li><a href="./../../../procedure/EN/2018_395">2018/0395/NLE</a></li>] 
+            else: # will be a list of bs4 nodes, e.g.  [<li><a href="./../../../procedure/EN/2018_395">2018/0395/NLE</a></li>]
                 ret['proc'][k] = []
                 for li in v:
                     a = li.find('a')
@@ -160,7 +161,7 @@ def extract_html(htmlbytes):
     if PPLinked_Contents is not None:
         parsed_link = {}
         for what, val in parse_datalist(PPLinked_Contents.find('dl')).items():
-            if type(val) is bs4.element.ResultSet:
+            if isinstance(val, bs4.element.ResultSet):
                 parsedval = []
                 for li in val:
                     a = li.find('a')
@@ -178,7 +179,7 @@ def extract_html(htmlbytes):
     if PPDoc_Contents is not None:
         parsed_doctr = {}
         for what, val in parse_datalist(PPDoc_Contents.find('dl')).items():
-            if type(val) is bs4.element.ResultSet:
+            if isinstance(val, bs4.element.ResultSet):
                 parsedval = []
                 for li in val:
                     a = li.find('a')
@@ -195,14 +196,14 @@ def extract_html(htmlbytes):
     if PPClass_Contents is not None:
         parsed_class = {}
         for what, val in parse_datalist(PPClass_Contents.find('dl')).items():
-            if type(val) is bs4.element.ResultSet:
+            if isinstance(val, bs4.element.ResultSet):
                 parsedval = []
                 for li in val:
                     div = li.find('div')
                     if div is not None:
                         parsedval.append(  list(s.strip()   for s in div.findAll(text=True)  if len(s.strip())>0 )  )
                     else:
-                        parsedval.append( ''.join( li.findAll(text=True) ).strip() )  
+                        parsedval.append( ''.join( li.findAll(text=True) ).strip() )
                 parsed_class[what] = parsedval
             else:
                 parsed_class[what] = val
@@ -233,9 +234,9 @@ def extract_html(htmlbytes):
 
     #Document text  (not always there)
     PP4Contents = soup.find(id='PP4Contents')
-    txt = [] 
+    txt = []
     if PP4Contents is not None:
-
+        
         # TODO: review, this may be overkill and/or not complete
         titerate = []
         TexteOnly = PP4Contents.find(id='TexteOnly') # probably better if it's there?
@@ -243,10 +244,9 @@ def extract_html(htmlbytes):
             titerate.append( TexteOnly )
         else: #  currently looks for  div > p    (because p also appears e.g. inside tables)
             for p in PP4Contents.findAll('p'):
-                #print(p.parent.name)
                 if p.parent.name in ('div',)   and  p.parent not in titerate: # yeah okay, that's nasty
                     titerate.append( p.parent )
-        
+
         # txt will become a list of (section_name_str, section_contents_strlist)
         #   and all the parts will collect into:
         cur_section_name, cur_section_txt = '', []
@@ -314,6 +314,5 @@ def extract_html(htmlbytes):
             txt.append( (cur_section_name, cur_section_txt) )
 
     ret['text'] = txt
-
 
     return ret

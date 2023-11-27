@@ -7,9 +7,7 @@ import os, urllib
 
 
 def kmgtp(amount,kilo=1000, append='',thresh=15, nextup=0.9, rstrip0=True, extradigits=0, i_for_1024=True):
-    ''' For more easily skimmable sizes
-
-        e.g. ::
+    ''' Makes more easily skimmable sizes, e.g. ::
              kmgtp(3429873278462) == '3.4T'
              kmgtp(342987327)     == '343M'
              kmgtp(34298)         == '34K'
@@ -21,7 +19,7 @@ def kmgtp(amount,kilo=1000, append='',thresh=15, nextup=0.9, rstrip0=True, extra
              '%sB'%kmgtp(19342342324, kilo=1024, extradigits=1) == '18GiB'  (because of rstrip0)
 
         @param kilo: Uses decimal/SI kilos by default, so useful beyond bytes.
-        Specify kilo=1024 if you want binary kilos. By default this also adds the i.
+        Specify kilo=1024 if you want binary kilos, as still frequently used for storage sizes. By default this also adds the i.
 
         @param thresh: is the controls where (in terms of the number we show) we take one digit away, e.g. for 1.3GB but 16GB.
         Default is at 15, which is entirely arbitrary. 
@@ -74,7 +72,11 @@ def url_basename(url):
     ''' Give the base filename in an URL - os.path.basename( urllib.parse.urlparse(url).path )
 
         Mostly meant to show a shorter-but-not-necessarily-unique name
+        Yes, this is a filesystemy thing to do to something that isn't, but it can be quite useful.
 
         Yes, basename(url) will often work - except if there's query parameters.
+
+        @param url: url, as a string
+        @return: base name, as a string
     '''
     return os.path.basename( urllib.parse.urlparse(url).path )
