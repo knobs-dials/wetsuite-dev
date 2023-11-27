@@ -44,11 +44,13 @@ stopwords_en = [ # wordcloud.STOPWORDS loads:
     "why", "why's", "with", "won't", "would", "wouldn't", "www", "you", "you'd", "you'll", 
     "you're", "you've", "your", "yours", "yourself", "yourselves" 
 ]
+' Some English stopwords  '
 
 stopwords_nl = (
     'de','het', 'een', 'en','of', 'die','van', 'op','aan','door','voor','tot','bij', 'kan','wordt',
     'in', 'deze', 'dan', 'is', 'dat'
 )
+' Some Dutch stopwords  '
 
 
 def wordcloud_from_freqs(freqs: dict, 
@@ -66,7 +68,7 @@ def wordcloud_from_freqs(freqs: dict,
 
 
 
-def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  normalize_func=None, stopwords=(), stopwords_i=() )  ->  dict:
+def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  normalize_func=None, stopwords=(), stopwords_i=() ):
     ''' Takes a list of strings, returns a string:count dict, with some extra processing
 
         Parameters beyond normalize_func are mostly about removing things you would probably call, 
@@ -84,9 +86,9 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
         @param normalize_func: half the point of this function. Should be a str->str function. 
           - We group things by what is equal after this function is applied, but we report the most common case before it is. 
             For example, to _count_ blind to case, but report just one (the most common case) ::
-              count_normalized( "a A A a A A a B b b B b".split(),  normalize_func=lambda s:s.lower() ) 
+                count_normalized( "a A A a A A a B b b B b".split(),  normalize_func=lambda s:s.lower() ) 
             would give ::
-              {"A":7, "b":5}
+                {"A":7, "b":5}
           - Could be used for other things.  For example, 
             if you make normalize_func map a word to its lemma, then you unify all inflections, and get reported the most common one.
        
@@ -136,7 +138,6 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
 
     # filter counts, choose preferred form
     ret = {}
-    #print( dict(count) )
     # could do this with expression-fu but let's keep it readable
     max_count = 0
     for normform in count:
@@ -158,20 +159,23 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
     return ret
 
 
-
-def count_case_insensitive(strings: List[str],  min_count=1,  min_word_length=0,  stopwords=())  ->  dict:
+def count_case_insensitive(strings: List[str],  min_count=1,  min_word_length=0,  stopwords=()):
     ''' Calls count_normalized()  with  normalize_func=lambda s:s.lower() 
         which means it is case insensitive in counting strings, but it reports the most common capitalisation.
 
         Explicitly writing a function for such singular use is almost pointless, yet this seems like a common case and saves some typing.
+        @param strings:         
+        @param min_count:       
+        @param min_word_length: 
+        @param stopwords:       
+        @return: 
     '''
     return count_normalized( strings, min_count=min_count, min_word_length=min_word_length, normalize_func=lambda s:s.lower(), stopwords=stopwords )
 
 
-
 def count_from_spacy_document(doc_or_sequence_of_docs, remove_stop=True, restrict_to_tags=('NOUN', 'PROPN', 'ADJ', 'ADV', 'VERB'), 
                               add_ents=True, add_ncs=True,
-                              weigh_deps={'nsubj':5, 'obj':3} ) -> dict:
+                              weigh_deps={'nsubj':5, 'obj':3} ):
     ''' Takes a spacy document, returns a string->count dict 
         
         Does a lot of fairly specific things (a bit too specific to smush into one function, really)
@@ -195,6 +199,7 @@ def count_from_spacy_document(doc_or_sequence_of_docs, remove_stop=True, restric
     else:
         things = [doc_or_sequence_of_docs]
 
+    # TODO: REVIEW THE BELOW BLOCK, IT WAS CERTAINLY INCORRECT BEFORE
     for thing in things:
         for token in thing:
             if remove_stop and token.is_stop:
@@ -203,36 +208,39 @@ def count_from_spacy_document(doc_or_sequence_of_docs, remove_stop=True, restric
             if restrict_to_tags is not None  and  token.pos_ not in restrict_to_tags:
                 #print( "SKIP %r - based on tag %s"%(token.text, token.pos_))
                 continue
-        # TODO: REVIEW, THIS SEEMS INCORRECT
-        counts[ token.text  ] += 1
+                
+            counts[ token.text  ] += 1
 
-        # TODO: take dict of weighs
+            # TODO: take dict of weighs
 
-        # TODO: make the following conditional
-        if hasattr(token, 'dep_'):
-            if token.dep_ in weigh_deps:
-                counts[ token.text ] += weigh_deps[token.dep_]
-            else:
-                counts[ token.text ] += 1
+            # TODO: make the following conditional
+            if hasattr(token, 'dep_'):
+                if token.dep_ in weigh_deps:
+                    counts[ token.text ] += weigh_deps[token.dep_]
+                else:
+                    counts[ token.text ] += 1
 
-        if add_ents  and  hasattr(thing, 'ents'): # TODO: tests
-            for ent in  thing.ents:
-                #print( "ENT %s"%ent.text )
-                counts[ ent.text ] += 2
-            # TODO: involve weigh_deps
+            if add_ents  and  hasattr(thing, 'ents'): # TODO: tests
+                for ent in  thing.ents:
+                    #print( "ENT %s"%ent.text )
+                    counts[ ent.text ] += 2
+                # TODO: involve weigh_deps
 
-        if add_ncs  and  hasattr(thing, 'noun_chunks'): # TODO: tests
-            for nc in thing.noun_chunks:
-                #print( "NC %s"%nc.text )
-                counts[ nc.text ] += 2
-            # TODO: involve weigh_deps
+            if add_ncs  and  hasattr(thing, 'noun_chunks'): # TODO: tests
+                for nc in thing.noun_chunks:
+                    #print( "NC %s"%nc.text )
+                    counts[ nc.text ] += 2
+                # TODO: involve weigh_deps
 
     return counts
 
 
 def simple_tokenize(text: str):
-    ' split string into words - in a very dumb way but slightly better than just split() '
-    l = re.split('[\\s!@#$%^&*":;/,?\xab\xbb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a\u2358\u275b\u275c\u275d\u275e\u275f\u2760\u276e\u276f\u2e42\u301d\u301e\u301f\uff02\U0001f676\U0001f677\U0001f678-]+', text)
+    ''' split string into words - in a very dumb way but slightly better than just split() 
+        @param text: a single string
+        @return: a list of words
+    '''
+    l = re.split(r'[\\s!@#$%^&*":;/,?\xab\xbb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a\u2358\u275b\u275c\u275d\u275e\u275f\u2760\u276e\u276f\u2e42\u301d\u301e\u301f\uff02\U0001f676\U0001f677\U0001f678-]+', text)
     return list(e.strip("'")   for e in l  if len(e)>0)
 
 
