@@ -9,7 +9,6 @@ from wetsuite.helpers.meta import parse_celex, equivalent_celex
 
 def test_parse_jci():
     ' basic test '
-
     d = parse_jci('jci1.31:c:BWBR0012345&g=2005-01-01&artikel=3.1')
     assert d['version']           == '1.31'
     assert d['type']              == 'c'
@@ -20,6 +19,11 @@ def test_parse_jci():
 def test_parse_jci_more():
     ' another '
     d = parse_jci('jci1.31:c:BWBR0012345&g=2005-01-01&z=2006-01-01&hoofdstuk=3&paragraaf=2&artikel=3')
+    assert d['params']['g']         == ['2005-01-01']
+    assert d['params']['z']         == ['2006-01-01']
+    assert d['params']['hoofdstuk'] == ['3']
+    assert d['params']['paragraaf'] == ['2']
+    assert d['params']['artikel']   == ['3']
 
 
 def test_parse_jci_al():
@@ -50,31 +54,41 @@ def test_parse_jci_error():
 
 
 def test_parse_ecli():
+    ' basic parse test'
     parsed = parse_ecli('ECLI:NL:RBDHA:2016:4235')
-    #assert
 
-#def test_parse_ecli():
-#    parsed = parse_ecli('ECLI:NL:RBDHA:2016:4235')
-#    #assert
+    assert parsed['country_code'] == 'NL'
+    assert parsed['court_code'] == 'RBDHA'
+    assert parsed['year'] == '2016'
+
+    # this is optional, so maybe don't fail on it?
+    assert parsed['court_details']['name'] == 'Rechtbank Den Haag'
+
 
 def test_parse_ecli_bad1():
+    ' non-ECLI '
     with pytest.raises(ValueError, match=r'.*expected.*'):
         parse_ecli('FIIIISH!')
 
 def test_parse_ecli_bad2():
+    ' ECLI-ish non-ECLI '
     with pytest.raises(ValueError, match=r'.*First.*'):
         parse_ecli('A:B:C:D:E')
 
 def test_parse_ecli_bad3():
+    ' bad ECLI '
     with pytest.raises(ValueError, match=r'.*country.*'):
         parse_ecli('ECLI:B:C:D:E')
 
 
 def test_findall_ecli_strip():
-    assert findall_ecli(' .nl/inziendocument?id=ECLI:NL:RBDHA:2016:4235. ',True) == ['ECLI:NL:RBDHA:2016:4235']
+    ' see if it is found (also stripped) '
+    assert findall_ecli(' .nl/inziendocument?id=ECLI:NL:RBDHA:2016:4235. ', True) == ['ECLI:NL:RBDHA:2016:4235']
+
 
 def test_findall_ecli_nostrip():
-    assert findall_ecli(' .nl/inziendocument?id=ECLI:NL:RBDHA:2016:4235. ',False) == ['ECLI:NL:RBDHA:2016:4235.']
+    ' see if it is found (no stripping) '
+    assert findall_ecli(' .nl/inziendocument?id=ECLI:NL:RBDHA:2016:4235. ', False) == ['ECLI:NL:RBDHA:2016:4235.']
 
 
 def test_parse_celex_noerror():
@@ -85,7 +99,7 @@ def test_parse_celex_noerror():
     parse_celex( '02016R0679-20160504' )
     parse_celex( '32012A0424(01)' )
     parse_celex( '72014L0056FIN_240353' )
-    
+
 
 def test_parse_celex_error():
     ' test that these do throw errors '
@@ -113,8 +127,6 @@ def test_parse_celex_extract():
 
 def test_equivalent_celex():
     ' test the "these two CELEXes ought to be treated as equivalent" test '
-    assert equivalent_celex('CELEX:32012L0019', '32012L0019') == True
-    assert equivalent_celex('02016R0679-20160504', '32016R0679') == True
-    assert equivalent_celex('02016R0679', '32012L0019') == False
-
-
+    assert equivalent_celex('CELEX:32012L0019', '32012L0019')    is True
+    assert equivalent_celex('02016R0679-20160504', '32016R0679') is True
+    assert equivalent_celex('02016R0679', '32012L0019')          is False

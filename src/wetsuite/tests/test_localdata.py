@@ -1,4 +1,4 @@
-' '
+' tests related to the localdata module, mostly LocalKV  '
 import os
 import pytest
 import wetsuite.helpers.localdata
@@ -118,9 +118,9 @@ def test_moretrans():
     ' some transaction relates tests '
     kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
     kv.put('1','2')
-    assert kv._in_transaction == False
+    assert kv._in_transaction is False
     kv.delete('1', commit=False) # should start transaction
-    assert kv._in_transaction == True
+    assert kv._in_transaction is True
     kv.vacuum() # test if it commits before vacuum
 
     kv.delete('1', commit=False) # should start transaction
@@ -172,13 +172,13 @@ def test_bytesize():
         kv.put(str(i),'blah', commit=False)
     kv.commit()
     assert kv.bytesize() > initial_size
-    
+
 
 def test_type_init():
     ' check that we can only use types the code allows (we restrict it for now) '
     with pytest.raises(TypeError, match=r'.*not allowed*'):
         wetsuite.helpers.localdata.LocalKV(':memory:', dict, None)
-    
+
     with pytest.raises(TypeError, match=r'.*not allowed*'):
         wetsuite.helpers.localdata.LocalKV(':memory:', None, dict)
 
@@ -221,11 +221,12 @@ def TEMPORARILY_DISABLED_test_multiread_and_locking( tmp_path ): # disabled beca
     kv1.put('c','d')
 
     assert kv1.items() == kv2.items()
-    assert kv1.items() != []
+
+    assert len( kv1.items() ) > 0
 
 
     # test that not committing leaves the database locked and other opens would fail   (defined sqlite3 behaviour)
-    kv1.put('e','f', commit=False) # this would keep the database locked until 
+    kv1.put('e','f', commit=False) # this would keep the database locked until
     with pytest.raises(sqlite3.OperationalError, match=r'.*database is locked*'): # note this will take the default 5 secs to time out
         kv3 = wetsuite.helpers.localdata.LocalKV( path, str, str )
         kv3.items()
@@ -243,13 +244,13 @@ def TEMPORARILY_DISABLED_test_multiread_and_locking( tmp_path ): # disabled beca
 
 
     # check that delete has the same behaviour
-    kv1.delete('i', commit=False) # this would keep the database locked until 
+    kv1.delete('i', commit=False) # this would keep the database locked until
     with pytest.raises(sqlite3.OperationalError, match=r'.*database is locked*'): # note this will take the default 5 secs to time out ()
         kv5 = wetsuite.helpers.localdata.LocalKV( path, str, str )
         kv5.items()
 
-    kv1.delete('g', commit=False) # this would keep the database locked until 
-    kv1.delete('e') 
+    kv1.delete('g', commit=False) # this would keep the database locked until
+    kv1.delete('e')
     kv6 = wetsuite.helpers.localdata.LocalKV( path, str, str )
     kv6.items()
 
@@ -260,7 +261,7 @@ def TEMPORARILY_DISABLED_test_thread( tmp_path ):
 
         TODO: loosen up the intensity, it may still race to fail under load
     '''
-    import time, threading, logging, random
+    import time, threading
     # It seems threads may share the module, but not connections
     # https://docs.python.org/3/library/sqlite3.html#sqlite3.threadsafety
     path = tmp_path / 'test_thr.db'
@@ -321,45 +322,43 @@ def TEMPORARILY_DISABLED_test_thread( tmp_path ):
 
 
 def test_vacuum( tmp_path ):
-    ' test that vacuum actually reduces file size, and is estimated to '
+    ' test that vacuum actually reduces file size, and is estimated to do so '
     path = tmp_path / 'test1.db'
     kv = wetsuite.helpers.localdata.LocalKV( path, str, str )
-    keys = []
-    for i in range(1000):
-        key = 'key%s'
-        keys.append(key)
-        kv.put(key,'1234567890'*10000, commit=False)
-    kv.commit()
 
-    for key in keys:
+    #add a bunch of data
+    for i in range(10):
+        kv.put(f'key{i}',  '1234567890'*10000, commit=False)
+    kv.commit()
+    # and remove it again
+    for key in list(kv.keys()):  # explicit list to materialize, so that we don't iterate while altering
         kv.delete( key )
 
-    # TODO: check that these are always true to start with
-    assert kv.estimate_waste() > 0
+    assert kv.estimate_waste() > 0 # with the above it would be ~1MB, I think
 
     size_before_vacuum = os.stat(kv.path).st_size
     kv.vacuum()
     size_after_vacuum = os.stat(kv.path).st_size
-    
+
     assert size_after_vacuum < size_before_vacuum
 
 
 def test_cached_fetch():
     ' test whether the cacked URL fetch works '
-    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, bytes) 
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, bytes)
     bytedata, fromcache = wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/')
-    assert fromcache==False
+    assert fromcache is False
     assert b'<html' in bytedata
 
     bytedata, fromcache = wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/')
-    assert fromcache==True
+    assert fromcache is True
     assert b'<html' in bytedata
 
     bytedata, fromcache = wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/', force_refetch=True)
-    assert fromcache==False
+    assert fromcache is False
     assert b'<html' in bytedata
 
-    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str) 
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
     with pytest.raises(TypeError, match=r'.*expects*'): # complaint about type
         wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/')
 
@@ -385,7 +384,6 @@ def test_msgpack_crud():
 
     kv.delete('c')
     assert len(kv)==1
-
 
 
 def test_msgpack_moreapi():
@@ -414,14 +412,17 @@ def test_resolve_path():
 
 
 def test_is_file_a_store( tmp_path ):
-    import test_localdata
+    ' test that we can distinguish between stores and non-stores '
 
+    # fail on a non-file
     wetsuite.helpers.localdata.is_file_a_store('/')
 
+    # fail on a non-sqlite file   (this test source is an easy example that we already have anyway)
+    import test_localdata # pylint: disable=W0406
     assert wetsuite.helpers.localdata.is_file_a_store( test_localdata.__file__ ) is  False
 
+    # make a store, to test that it is one
     path = tmp_path / 'test.db'
     kv = wetsuite.helpers.localdata.LocalKV( path, str, str )
     kv.close()
     assert wetsuite.helpers.localdata.is_file_a_store( kv.path ) is True
-
