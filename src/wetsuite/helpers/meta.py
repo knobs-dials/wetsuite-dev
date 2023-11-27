@@ -77,8 +77,10 @@ def findall_ecli(s:str, rstrip_dot=True):
 
 
 def parse_ecli(text:str):
-    ''' mostly just reports the parts in a dict - I don't actually see much use over .split(':')
+    ''' mostly just reports the parts in a dict
 
+        As an experiment, we try to report more about the court in question, 
+        but note the key ('court_name') is not guaranteed to be there.
     '''
     ret = {}
     ecli_list = text.strip().split(':')
@@ -100,10 +102,15 @@ def parse_ecli(text:str):
     ret['court_code'] = court_code
     ret['year'] = year
     ret['caseid'] = caseid
-    # TODO: court codes
 
-    #if court_code in nl_court_codes:
-    #    ret['court_name'] = nl_court_codes[court_code]
+    # court codes (experiment)
+    try:
+        import wetsuite.extras.gerechtcodes
+
+        if court_code in wetsuite.extras.gerechtcodes.data:
+            ret['court_details'] = wetsuite.extras.gerechtcodes.data[court_code]
+    except ImportError:
+        pass
 
     return ret
 
