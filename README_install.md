@@ -13,7 +13,7 @@ open one that interests you, and click the `Open in colab` that it starts with -
 For more serious work probably want a workstation/server install.
 
 as of this writing, the shortest is probably a direct-from-github install:
-   pip3 install https://github.com/scarfboy/wetsuite-dev/archive/refs/heads/main.zip
+   pip3 install https://github.com/knobs-dials/wetsuite-dev/archive/refs/heads/main.zip
 (We will later start submitting to PyPI so that that becomes `pip3 install wetsuite`)
 
 
