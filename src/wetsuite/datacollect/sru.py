@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 '''
-Talks to SRU repositories, mainly underlies koop_repositories.py
+Talks to SRU repositories, mainly underlies L{koop_repositories}
 
 Very minimal SRU implementationm and not meant to be a generic implementation. 
 
@@ -165,7 +165,7 @@ class SRUBase:
 
 
     def search_retrieve(self,
-                        query:str, 
+                        query:str,
                         start_record=None, maximum_records=None,
                         callback=None,
                         verbose=False):
@@ -220,7 +220,8 @@ class SRUBase:
             r = requests.get( url, timeout=(20,20) ) # TODO: this makes no sense, don't do it
 
         if r.status_code == 500:
-            raise RuntimeError( "SRU server reported an Internal Server Error (HTTP status 500) for %r"%url )
+            raise ValueError( "SRU server reported an Internal Server Error (HTTP status 500) for %r"%url )
+            #raise RuntimeError( "SRU server reported an Internal Server Error (HTTP status 500) for %r"%url )
 
         tree = wetsuite.helpers.etree.fromstring( r.content )
 
@@ -252,10 +253,10 @@ class SRUBase:
         return ret # maybe return list, like _many does?
 
 
-    def search_retrieve_many(self, query:str, 
+    def search_retrieve_many(self, query:str,
                              at_a_time:int=10, start_record:int=1, up_to:int=250,
                              callback=None,
-                             wait_between_sec:float=0.5, 
+                             wait_between_sec:float=0.5,
                              verbose:bool=False):
         ''' This function builds on search_retrieve() to "fetch _many_ results results in chunks", by calling search_retrieve() repeatedly.
             (search_retrieve() will have a limit on how many to search at once, though is still useful to see e.g. if there are results at all)
