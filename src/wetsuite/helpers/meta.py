@@ -1,11 +1,12 @@
-''' Some metadata helpers that we expect to be reusable, anything that isn't tied to a singular API or data source.
+''' Parsing metadata - specifically for things not tied to a singular API or data source, 
+    or we otherwise expect to see some reuse of.
 
     Function name should give you some indication how what it belongs to and how specific it is.
 '''
 import re, collections, urllib.parse
 
 
-_jcifind_re  = re.compile(r'(?:jci)?([0-9.]+):([a-z]):(BWB[RV][0-9]+)([^\s;"\']*)' ) # not meant for finding in free-form text
+_jcifind_re  = re.compile(r'(?:jci)?([0-9.]+):([a-z]):(BWB[RV][0-9]+)([^\s;"\']*)' ) # NOTE: not meant for finding in free-form text
 _eclifind_re = re.compile(r'ECLI:[A-Za-z]{2}:[A-Z-z0-9.]{1,7}:[0-9]{,4}:[A-Z-z0-9.]{,25}')
 
 
@@ -336,10 +337,10 @@ def equivalent_celex(celex1:str, celex2:str):
 
 
 
-_re_celex = re.compile( r'([1234567890CE])([0-9]{4})([A-Z][A-Z]?)([0-9\(\)]+)([^\s&.]*)?' )
+_re_celex = re.compile( r'(\b[1234567890CE])([0-9]{4})([A-Z][A-Z]?)([0-9\(\)]{4,})(\b[^\s\"\>&.]*)?' )
 #_re_celex = re.compile( r'([1234567890CE])([0-9]{4})([A-Z][A-Z]?)([0-9\(\)]+)([A-Z0-9\(\)_]*)?' )
 
-
+#94994L1
 
 def parse_celex(celex: str):
     ''' Normalize a CELEX number (e.g. strips a 'CELEX:' in front)
