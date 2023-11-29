@@ -1,4 +1,4 @@
-''' Code that helps interact with the EUR-Lex website and APIs.
+''' Helps interact with the EUR-Lex website and APIs.
 '''
 import re, datetime, urllib.parse
 
@@ -15,6 +15,14 @@ def fetch_by_resource_type(typ='JUDG'):
         in handier form
 
         Asks to give its semantic results as JSON data,  which we parse and return as a python structure.
+
+
+        @param typ: the type to fetch, e.g. 
+          - 'JUDG'  for court judgments
+          - 'REG'   for regulations (but there are a handful of related things) 
+
+        @return: a (possibly-many-item'd) nested structure (python structure, loaded from JSON)
+
         The structure you get back looks like:  ( see also see also https://www.w3.org/TR/2013/REC-sparql11-results-json-20130321/ ) ::
             {
                 'head': {
@@ -24,21 +32,30 @@ def fetch_by_resource_type(typ='JUDG'):
                     'distinct': False,
                     'ordered': True,
                     'bindings': [
-                        {'work': {'type': 'uri',           'value':'http://publications.europa.eu/resource/cellar/1e3100ce-8a71-433a-8135-15f5cc0e927c'},
-                        'type': {'type': 'uri',           'value':'http://publications.europa.eu/resource/authority/resource-type/JUDG'},
-                        'celex': {'type': 'typed-literal', 'value':'61996CJ0080', 'datatype': 'http://www.w3.org/2001/XMLSchema#string'},
-                        'date': {'type': 'typed-literal', 'value':'1998-01-15',  'datatype': 'http://www.w3.org/2001/XMLSchema#date'}
+                        {
+                            'work':{
+                                'type':'uri',           
+                                'value':'http://publications.europa.eu/resource/cellar/1e3100ce-8a71-433a-8135-15f5cc0e927c'
+                            },
+                            'type':{
+                                'type':'uri',
+                                'value':'http://publications.europa.eu/resource/authority/resource-type/JUDG'
+                            },
+                            'celex':{
+                                'type':'typed-literal', 
+                                'value':'61996CJ0080', 
+                                'datatype': 'http://www.w3.org/2001/XMLSchema#string'
+                            },
+                            'date': {
+                                'type': 'typed-literal',
+                                'value':'1998-01-15',
+                                'datatype': 'http://www.w3.org/2001/XMLSchema#date'
+                            }
                         },
                         # ...one of these for each result
                     ]
                 }
             }
-
-        @param typ: the type to fetch, e.g. 
-          - 'JUDG'  for court judgments
-          - 'REG'   for regulations (but there are a handful of related things) 
-
-        @return: a (possibly-large) nested structure (python structure, loaded from JSON)
     '''
     # The proper way would be to use a library like sparqlwrapper
     #   but for now we can get away with hardcodig a query like:
@@ -54,7 +71,11 @@ def fetch_by_resource_type(typ='JUDG'):
       OPTIONAL { ?work cdm:resource_legal_in-force ?force. } 
       FILTER not exists{?work cdm:do_not_index "true"^^<http://www.w3.org/2001/XMLSchema#boolean>}. }'''%typ
 
-    url = 'http://publications.europa.eu/webapi/rdf/sparql?default-graph-uri=&query='+urllib.parse.quote(query)+'&format=application%2Fsparql-results%2Bjson&timeout=0&debug=on&run=+Run+Query+'
+    url = ''.join([
+        'http://publications.europa.eu/webapi/rdf/sparql?default-graph-uri=&query=',
+        urllib.parse.quote(query),
+        '&format=application%2Fsparql-results%2Bjson&timeout=0&debug=on&run=+Run+Query+'
+    ])
     resp = requests.get(url, timeout=30)
     return resp.json()
 
