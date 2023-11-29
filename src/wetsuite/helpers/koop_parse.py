@@ -54,6 +54,7 @@ def cvdr_meta(tree, flatten=False):
           - CVDR content xml's root      
             (in which case it's              ./meta)
         ...because both contain almost the same metadata almost the same way (the difference is enrichedData in the search results).
+        
         @param flatten: For quick and dirty presentation (only) you may wish to ask to creatively smush those into one string by asking for C{flatten==True}
         in which case you get something like: ::
                 { 'creator': 'Zuidplas (overheid:Gemeente)', ... }
@@ -64,7 +65,7 @@ def cvdr_meta(tree, flatten=False):
     '''
     #if isinstance(tree, bytes):
     #    tree = wetsuite.helpers.etree.fromstring( tree )
-    
+
     ret = {}
     tree = wetsuite.helpers.etree.strip_namespace(tree)
     #print( wetsuite.helpers.etree.tostring(tree).decode('u8') )
@@ -129,8 +130,9 @@ def cvdr_meta(tree, flatten=False):
 
     return ret
 
+   
 
-def cvdr_parse_identifier(text:str, prepend_cvdr=False):
+def cvdr_parse_identifier(text:str, prepend_cvdr:bool=False):
     ''' Given a CVDR style identifier string (sometimes called JCDR), 
         
         returns @return: a tuple of strings: (work ID, expression ID), the latter of which will be None if input was a work ID
@@ -158,23 +160,28 @@ def cvdr_parse_identifier(text:str, prepend_cvdr=False):
         raise ValueError('%r does not look like a CVDR identifier'%text)
 
 
+def cvdr_normalize_expressionid(text:str):
+    nex = cvdr_parse_identifier(text, prepend_cvdr=True)[1]
+    if nex is None:
+        raise ValueError("The given string did not look like a CVDR expression ID  (might be a work ID?)")
+    return nex
+
+
 def cvdr_param_parse(rest:str):
     ''' Picks the parameters from a juriconnect (jci) style identifier string.  
-        Used by cvdr_refs.  Duplicates code in meta.py - TODO: centralize that 
+        Used by cvdr_sourcerefs.  Duplicates code in meta.py - TODO: centralize that 
     '''
+    rest = rest.replace('&amp;','&') # hack for observed bad escaping (hacky in that is assumes things about values)
     params = {}
     for param in rest.split('&'):
         pd = urllib.parse.parse_qs(param)
         for key, val in pd.items():
-            out_key = key
-            if key.startswith('amp;'):    # this variation seems to be a fairly common mistake in general, so try to be robust to it
-                out_key = key[4:]         #   ...though it may well be better to handle this earlier in the function
             if key=='artikel':
-                val = val.lstrip('artikel.')
+                val = list( v.lstrip('artikel.')  for v in val)
             if key not in params:
-                params[out_key] = val
+                params[key] = val
             else:
-                params[out_key].extend( val )
+                params[key].extend( val )
     return params
 
 
