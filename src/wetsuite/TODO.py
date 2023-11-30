@@ -4,25 +4,38 @@
 import os, re, json, sys
 
 # maybe use pygments to do syntax highlighting? (but may be annoying to combine)
-import wetsuite.helpers.shellcolor as sc  
+import wetsuite.helpers.shellcolor as sc
 
 #import TODO # for self reference
 #wetsuite_dir = os.path.dirname( TODO.__file__ ) # should be a little more predictable than '.;
 
-context_lines = 3
-max_bytes     = 51200
 
-for arg in sys.argv[1:]:
+LOOKFOR_AND_COLOR = {
+    'TODO:':            sc.brightyellow,
+    'FIXME:':           sc.brightcyan,
+    'CONSIDER:':        sc.brightmagenta,
+    'WARNING':          sc.brightred,
+    'probably be moved':sc.brightblue,
+}
+
+
+### TODO: proper argument parsing
+
+show_context_line_amt = 3
+# large py-like files are usually data, not code
+max_filesize     = 512000
+max_cellsize     = 51200
+
+args = sys.argv[1:]
+
+if len(args)==0:
+    print("We need paths to work on.   Did you mean:\n %s ."%os.path.basename(sys.argv[0]))
+
+for arg in args:
     arg = os.path.abspath( arg )
 
-    lookfor_and_color = {
-        'TODO:':            sc.brightyellow,
-        'CONSIDER:':        sc.brightmagenta,
-        'WARNING':          sc.brightred,
-        'probably be moved':sc.brightblue,
-    }
-
     for r, ds, fs in os.walk( arg ):
+        # not sure why it's misdetecting that as a constant; pylint: disable=C0103
         for fn in fs:
             ffn = os.path.join( r, fn )
             #if ffn == TODO.__file__:
@@ -30,17 +43,20 @@ for arg in sys.argv[1:]:
             seems_like_notebook, seems_like_python = False, False
             if ffn.endswith('.ipynb'):
                 seems_like_notebook = True
-            elif ffn.endswith('.py'): # TODO: add test 
+            elif ffn.endswith('.py'): # TODO: add test
                 seems_like_python = True
             else: # read first kilobyte, see if it contains python-like things
-                if os.stat(ffn).st_size < max_bytes:
+                if os.stat(ffn).st_size > max_filesize:
+                    pass
+                    #print('SKIP, larger than %d bytes: %r'%(max_filesize, ffn))
+                else:
                     with open(ffn, 'rb') as rf:
                         first_kb = rf.read(1024)
+                        # TODO: better tests for 'does this look like python source?'
                         if b'/python' in first_kb or b'import ' in first_kb:
-                            seems_like_python = True 
+                            seems_like_python = True
                         if len(first_kb)==0  or  first_kb.count(0x00) >= 1:
                             seems_like_python = False
-
 
             ddata = [] # list of  (extramention, onebasedlinenum, linestr)
 
@@ -52,13 +68,19 @@ for arg in sys.argv[1:]:
                         if cell_type == 'markdown':
                             pass
                         elif cell_type == 'code':
-                            for linenum, line in enumerate( cell.get('source') ):
-                                ddata.append( ('(cell %s)'%(cell_number+1), linenum, line)  ) # note: line logic is 0-based, and we print it +1
+                            lines = cell.get('source')
+                            line_bytes = sum( len(line)  for line in lines )
+                            if line_bytes > max_cellsize:
+                                pass
+                                #print( 'SKIP cell %s, larger than %d bytes: %r'%(cell_number+1) )
+                            else:
+                                for linenum, line in enumerate(  ):
+                                    # note: line numbering is 0-based internally, +1 whenever we put it in a string to print
+                                    ddata.append( ('(cell %s)'%(cell_number+1), linenum, line)  )
                         else:
-                            raise ValueError("Don't recognize cell_type=%r"%cel_type)
+                            raise ValueError("Don't recognize cell_type=%r"%cell_type)
 
             elif seems_like_python:
-                #print(ffn)
                 with open(ffn, 'rb') as rf:
                     for linenum, line in enumerate( rf.readlines() ):
                         line = line.decode('utf8') # doesn't need to be explicit but I was planning for a fallback
@@ -67,7 +89,6 @@ for arg in sys.argv[1:]:
             else:
                 continue
 
-            
             # Linedata for ipynb is in cells, split that if necess
 
             sections = sorted( set( extra  for extra,_,_ in ddata ) )
@@ -81,32 +102,34 @@ for arg in sys.argv[1:]:
 
 
                 ### Take linedata, match in it
-                print 
                 matches_on_lines = []
                 for line_i, line_s in linedata:
-                    for restr in lookfor_and_color.keys():
+                    for restr in LOOKFOR_AND_COLOR.keys():
                         if re.search( restr, line_s ):
                             matches_on_lines.append( line_i )
                             break
 
                 if len(matches_on_lines) > 0:
-                    print( sc.brightyellow('=================  %s  %s ======================='%( ffn[len(arg):].lstrip(os.sep), section )  ) ) # relative to root?
+                    print( sc.brightyellow('=================  %s  %s ======================='%(
+                        ffn[len(arg):].lstrip(os.sep),
+                        section
+                    )  ) )
 
-                    # merge and separate ranges.
+                    # merge and separate line ranges.
 
                     # first add all line numbers to one big set (note: 1-based)
-                    showlines = set()   # 
+                    showlines = set()
                     prev = -9
                     ll = len(linedata)
                     for ml in matches_on_lines:
-                        from_line = max(0, ml-context_lines)
-                        to_line   = min(ll-1, ml+context_lines)
+                        from_line = max(0, ml-show_context_line_amt)
+                        to_line   = min(ll-1, ml+show_context_line_amt)
                         for showline in range(from_line, to_line+1):
                             showlines.add( showline )
 
-                    # now we want to make a list of ranges, 
+                    # now we want to make a list of ranges,
                     fragments = [] # like  [ [1,2], [7,8,9,10], ]
-                    
+
                     # this bit's less readable
                     cur_range = []
                     def add_cr():
@@ -142,7 +165,7 @@ for arg in sys.argv[1:]:
                             line_i0, line_s = linedata[ showline ]
                             line_s = line_s.rstrip('\n')
 
-                            for restr, colorfunc in lookfor_and_color.items(): 
+                            for restr, colorfunc in LOOKFOR_AND_COLOR.items():
                                 m = re.search(restr, line_s)
                                 if m is not None:
                                     st, en = m.span()
@@ -155,5 +178,3 @@ for arg in sys.argv[1:]:
 
                     print('')
                     print('')
-
-                        
