@@ -246,25 +246,27 @@ def strip_namespace(tree, remove_from_attr=True):
     '''
     if tree is None: # avoid the below saying something silly when it's you who were silly
         raise ValueError("Handed None to strip_namespace()")
+
+    # make copy, an check it's of the right type
     if not isinstance(tree, lxml.etree._Element): #pylint: disable=W0212,I1101
+        # we assume that means we're using a non-lxml etree  (and not that you handed in something completely unrelated)
+        # 
         warnings.warn(
-            "That tree does not seem to parsed by lxml, and having non-lxml objects can cause issues."
-            "Please consider using lxml, e.g. via wetsuite.helpers.etree.fromstring().  Trying to work around this, which may be slow."
+            "Trying to work around potential issues from non-lxml etrees by converting to it, which might be unnecessarily slow. "
+            "If you parse your XML yourself, please consider lxml.etree.fromstring() / wetsuite.helpers.etree.fromstring() instead of e.g. xml.etree.fromstring()."
         )
-        #print( 'ty', type(tree) )
         try:
             import xml.etree.ElementTree
             if isinstance(tree, xml.etree.ElementTree.Element):
-                tree = lxml.etree.fromstring( xml.etree.ElementTree.tostring( tree ) )  # copy it the dumb way - could possibly be done faster?
-            # implied else: hope for the best
+                # We want a copy anyway, so this isn't too wasteful.   Maybe there is a faster way, though.
+                tree = lxml.etree.fromstring( xml.etree.ElementTree.tostring( tree ) )
+            #implied else: we don't know what that was, and we hope for the best
         except ImportError:
-            #raise
-            pass # no xml.etree? no fix for you, then.
-        #print( 'tt',tree )
-        _strip_namespace_inplace(tree, remove_from_attr=remove_from_attr)
+            pass # xml.etree is stdlib in py3 so this should never happen, but we can fall back to do nothing
     else:
         tree = copy.deepcopy( tree ) # assuming this is enough.  TODO: verify with lxml and etree implementation
-        _strip_namespace_inplace(tree, remove_from_attr=remove_from_attr)
+
+    _strip_namespace_inplace(tree, remove_from_attr=remove_from_attr)
     return tree
 
 
