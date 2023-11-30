@@ -29,23 +29,20 @@ import wetsuite.helpers.koop_parse
 
 
 BASE_URL = "https://data.rechtspraak.nl/"
-
+' base URL for search as well as value lists '
 
 def search(params):
     ''' 
-    Post a search to data.rechtspraak.nl based on a dict of parameters
+    Post a search to the public API on data.rechtspraak.nl,
+    based on a dict of parameters.
+
+    See also:
+      - https://www.rechtspraak.nl/SiteCollectionDocuments/Technische-documentatie-Open-Data-van-de-Rechtspraak.pdf
 
     Note that when when you give it nonsensical parameters, like date=2022-02-30, 
-    the service won't return valid XML and the XML parse raises an exception.
+    the service won't return valid XML, so the XML parse raises an exception.
 
-    @param params: handed to urlencode so could be either a dict or list of tuples, 
-    but because you are likely to repeat variables to specify ranges, should probably be the latter, e.g.::
-        [ ("modified", "2023-01-01), ("modified", "2023-01-05) ]
-
-    @return:  etree object for the search (or raises an exception)
-    CONSIDER: returning only the urls
-         
-    Parameters include:
+    @param params: parameters like:
       -  max       (default is 1000)
       -  from      zero-based, defaults is 0
       -  sort      by modification date, ASC (default, oldest first) or DESC
@@ -59,9 +56,13 @@ def search(params):
 
       -  subject   URI of a rechtsgebied
       -  creator   
+    These are handed to urlencode, so could be either a list of tuples, or a dict,
+    but because you are likely to repeat variables to specify ranges, 'list of tuples' should be your habit, e.g.::
+        [ ("modified", "2023-01-01), ("modified", "2023-01-05) ]
 
-    See also:
-        - https://www.rechtspraak.nl/SiteCollectionDocuments/Technische-documentatie-Open-Data-van-de-Rechtspraak.pdf
+    @return:  etree object for the search (or raises an exception)
+    CONSIDER: returning only the urls
+
     '''
     # constructs something like 'http://data.rechtspraak.nl/uitspraken/zoeken?type=conclusie&date=2011-05-01&date=2011-05-30'
     url = urllib.parse.urljoin(BASE_URL, "/uitspraken/zoeken?"+urllib.parse.urlencode(params))
@@ -73,12 +74,12 @@ def search(params):
 
 
 def parse_search_results(tree):
-    ''' parses search result XML, and returns a list of dicts like: ::
+    ''' Takes search result etree (as given by search()), and returns a list of dicts like::
             {      'ecli': 'ECLI:NL:GHARL:2022:7129',
-                'title': 'ECLI:NL:GHARL:2022:7129, Gerechtshof Arnhem-Leeuwarden, 16-08-2022, 200.272.381/01',
+                  'title': 'ECLI:NL:GHARL:2022:7129, Gerechtshof Arnhem-Leeuwarden, 16-08-2022, 200.272.381/01',
                 'summary': 'some text made shorter for this docstring example',
                 'updated': '2023-01-01T13:29:23Z',
-                'link': 'https://uitspraken.rechtspraak.nl/InzienDocument?id=ECLI:NL:GHARL:2022:7129',
+                   'link': 'https://uitspraken.rechtspraak.nl/InzienDocument?id=ECLI:NL:GHARL:2022:7129',
                     'xml': 'https://data.rechtspraak.nl/uitspraken/content?id=ECLI:NL:GHARL:2022:7129',
             }
         Notes: 
@@ -114,13 +115,14 @@ def parse_search_results(tree):
 
 
 def _para_text(treenode):
+    ' TODO: '
     ret = []
 
     for ch in treenode.getchildren():
 
-        if isinstance(ch, wetsuite.helpers.etree._Comment) or isinstance(ch, wetsuite.helpers.etree._ProcessingInstruction):
+        if isinstance(ch, (wetsuite.helpers.etree._Comment, wetsuite.helpers.etree._ProcessingInstruction)):
             continue
-
+        
         if ch.tag in ('para', 'title', 'bridgehead', 'nr',
                       'footnote', 'blockquote'):
             if len( ch.getchildren() )>0:
@@ -279,17 +281,26 @@ def parse_content(tree):
 
 ## fetch and parse waardelijsten
 
-instanties_url                = urllib.parse.urljoin(BASE_URL, "/Waardelijst/Instanties")
-instanties_buitenlands_url    = urllib.parse.urljoin(BASE_URL, "/Waardelijst/InstantiesBuitenlands")
-rechtsgebieden_url            = urllib.parse.urljoin(BASE_URL, "/Waardelijst/Rechtsgebieden")
-proceduresoorten_url          = urllib.parse.urljoin(BASE_URL, "/Waardelijst/Proceduresoorten")
-formelerelaties_url           = urllib.parse.urljoin(BASE_URL, "/Waardelijst/FormeleRelaties")
-nietnederlandseuitspraken_url = urllib.parse.urljoin(BASE_URL, "/Waardelijst/NietNederlandseUitspraken")
+_INSTANTIES_URL                = urllib.parse.urljoin(BASE_URL, "/Waardelijst/Instanties")
+_INSTANTIES_BUITENLANDS_URL    = urllib.parse.urljoin(BASE_URL, "/Waardelijst/InstantiesBuitenlands")
+_RECHTSGEBIEDEN_URL            = urllib.parse.urljoin(BASE_URL, "/Waardelijst/Rechtsgebieden")
+_PROCEDURESOORTEN_URL          = urllib.parse.urljoin(BASE_URL, "/Waardelijst/Proceduresoorten")
+_FORMELE_RELATIES_URL           = urllib.parse.urljoin(BASE_URL, "/Waardelijst/FormeleRelaties")
+_NIET_NEDERLANDSE_UITSPRAKEN_URL = urllib.parse.urljoin(BASE_URL, "/Waardelijst/NietNederlandseUitspraken")
 
 
 def parse_instanties():
-    ' Parse that fairly fixed list - returns a list of flat dicts, with keys   Naam, Afkorting, Type, BeginDate, Identifier '
-    instanties_bytestring = wetsuite.helpers.net.download( instanties_url )
+    ''' Parse the 'instanties' value list
+    
+    @return: a list of flat dicts, 
+    with keys   Naam, Afkorting, Type, BeginDate, Identifier, for example::
+        {'Identifier': 'http://psi.rechtspraak.nl/AG DH',
+               'Naam': "Ambtenarengerecht 's-Gravenhage",
+          'Afkorting': 'AGSGR',
+               'Type': 'AndereGerechtelijkeInstantie',
+          'BeginDate': '1913-01-01'},
+    '''
+    instanties_bytestring = wetsuite.helpers.net.download( _INSTANTIES_URL )
     tree  = wetsuite.helpers.etree.fromstring( instanties_bytestring )
     ret = []
     for instantie in tree:
@@ -299,8 +310,17 @@ def parse_instanties():
 
 
 def parse_instanties_buitenlands():
-    ' Parse that fairly fixed list -returns a ist of flat dicts, with keys   Naam, Identifier, Afkorting, Type, BeginDate '
-    instanties_buitenlands_bytestring = wetsuite.helpers.net.download( instanties_buitenlands_url )
+    ''' 
+    Parse the 'buitenlandse instanties' value list
+     
+    @return: a list of flat dicts, with keys  Naam, Identifier, Afkorting, Type, BeginDate, for example::
+        {'Identifier': 'http://psi.rechtspraak.nl/instantie/ES/#AudienciaNacionalNationaalHof',
+               'Naam': 'Audiencia Nacional (Nationaal Hof)',
+          'Afkorting': 'XX',
+               'Type': 'BuitenlandseInstantie',
+          'BeginDate': '1950-01-01'}
+    '''
+    instanties_buitenlands_bytestring = wetsuite.helpers.net.download( _INSTANTIES_BUITENLANDS_URL )
     tree  = wetsuite.helpers.etree.fromstring( instanties_buitenlands_bytestring )
     ret = []
     for instantie in tree:
@@ -310,8 +330,14 @@ def parse_instanties_buitenlands():
 
 
 def parse_proceduresoorten():
-    ' Parse that fairly fixed list -returns a list of flat dicts, with keys   Naam, Identifier '
-    proceduresoorten_bytestring = wetsuite.helpers.net.download( proceduresoorten_url )
+    '''
+    Parse the 'proceduresoorten' value list (assmed to be fixed).
+
+    @return: A list of flat dicts, 
+    with keys   Naam, Identifier, for example::
+        {'Identifier': 'http://psi.rechtspraak.nl/procedure#artikel81ROzaken', 'Naam': 'Artikel 81 RO-zaken'}
+    '''
+    proceduresoorten_bytestring = wetsuite.helpers.net.download( _PROCEDURESOORTEN_URL )
     tree  = wetsuite.helpers.etree.fromstring( proceduresoorten_bytestring )
     ret = []
     for proceduresoort in tree:
@@ -322,17 +348,20 @@ def parse_proceduresoorten():
 
 def parse_rechtsgebieden():
     '''
-    Parse that fairly fixed list - which seems to be a depth-2 tree.
-     
-    Returns a dict from identifiers to a list of names, which will e.g. contain 
-      -  'http://psi.rechtspraak.nl/rechtsgebied#bestuursrecht':                   ['Bestuursrecht']
-      -  'http://psi.rechtspraak.nl/rechtsgebied#bestuursrecht_mededingingsrecht': ['Mededingingsrecht', 'Bestuursrecht']
+    Parse the 'rechtsgebieden' value list (assumed to be fixed), 
+    the data of which seems to be a depth-2 tree. 
+    
+    @return: as a dict with items like::
+        'http://psi.rechtspraak.nl/rechtsgebied#bestuursrecht': ['Bestuursrecht'],
+    and::
+        'http://psi.rechtspraak.nl/rechtsgebied#bestuursrecht_ambtenarenrecht': ['Ambtenarenrecht', 'Bestuursrecht'],
+    
     Where 
       - Bestuursrecht is a grouping of this and more, 
       - Mededingingsrecht one of several specific parts of it 
     '''
     # TODO: figure out what the data means and how we want to return it
-    rechtsgebieden_bytestring = wetsuite.helpers.net.download( rechtsgebieden_url )
+    rechtsgebieden_bytestring = wetsuite.helpers.net.download( _RECHTSGEBIEDEN_URL )
     tree  = wetsuite.helpers.etree.fromstring( rechtsgebieden_bytestring )
     ret = {}
     for rechtsgebied1 in tree:
@@ -354,8 +383,15 @@ def parse_rechtsgebieden():
 
 
 def parse_nietnederlandseuitspraken():
-    ''' Parse that fairly fixed list '''
-    nietnederlandseuitspraken_bytestring = wetsuite.helpers.net.download( nietnederlandseuitspraken_url )
+    ''' Parse the 'niet-nederpanse uitspraken' value list 
+
+        @return: a list of items like::
+            {'id': 'ECLI:CE:ECHR:2000:0921JUD003224096', 'ljn': ['AD4213']},
+            {'id': 'ECLI:EU:C:2000:679',                 'ljn': ['AD4227']},
+            {'id': 'ECLI:EU:C:2000:689',                 'ljn': ['AD4228']},
+            {'id': 'ECLI:EU:C:2001:112',                 'ljn': ['AD4244', 'AL3652']},
+    '''
+    nietnederlandseuitspraken_bytestring = wetsuite.helpers.net.download( _NIET_NEDERLANDSE_UITSPRAKEN_URL )
     tree  = wetsuite.helpers.etree.fromstring( nietnederlandseuitspraken_bytestring )
     ret = []
     modified = tree.find('modified').text
@@ -367,8 +403,41 @@ def parse_nietnederlandseuitspraken():
     return modified, ret
 
 
-def zoek(term, start=0, amt=10, timeout=10):
-    ' TODO: docstring '
+def website_zoek(term, start=0, amt=10, timeout=10):
+    ''' Experiment that searches in the API at https://uitspraken.rechtspraak.nl/api/zoek
+
+        ...which is NOT the public-facing API as as detailed by the documentation at https://www.rechtspraak.nl/Uitspraken/paginas/open-data.aspx
+        but the one that is behind the current webpage search at https://uitspraken.rechtspraak.nl/
+    
+        Result items look something like::
+            {                   'Titel': 'Gerecht in Eerste Aanleg van Aruba, 06-04-2021, UA202000260',
+                        'TitelEmphasis': 'ECLI:NL:OGEAA:2021:125',
+              'GerechtelijkProductType': 'uitspraak',
+                   'UitspraakdatumType': 'uitspraak',
+                       'Uitspraakdatum': '06-04-2021',
+                     'Publicatiestatus': 'gepubliceerd',
+                      'Publicatiedatum': '13-04-2021',
+                  'PublicatiedatumDate': '2021-04-13T09:37:29+02:00',
+                     'Proceduresoorten': ['Eerste aanleg - enkelvoudig', 'Beschikking'],  # interface calls this 'Bijzondere kenmerken'
+                       'Rechtsgebieden': ['Civiel recht; Arbeidsrecht'],
+              'InformatieNietGepubliceerdMessage': 'De publicatie van de uitspraak staat gepland op 13-04-2021 om 09:37 uur',
+                           'InterneUrl': 'https://uitspraken.rechtspraak.nl/#!/details?id=ECLI:NL:OGEAA:2021:125&showbutton=true&keyword=test',
+                          'DeeplinkUrl': 'https://deeplink.rechtspraak.nl/uitspraak?id=ECLI:NL:OGEAA:2021:125',
+                           'IsInactief': False,
+                  'RelatieVerwijzingen': [],
+                        'Tekstfragment': 'Arbeid. Ontslag nietig. De stap van een niet '
+                                        'afgenomen test, die gelijk wordt gesteld met '
+                                        'een geweigerde test kan naar het oordeel van '
+                                        'het Gerecht niet zonder meer worden genomen, '
+                                        'waarbij het Gerecht de situatie van een niet '
+                                        'afgenomen test niet ziet als een niet '
+                                        'afgenomen test maar een niet voltooide test.',
+                         'Vindplaatsen': [{'Vindplaats': 'Rechtspraak.nl',
+                                         'VindplaatsAnnotator': '',
+                                         'VindplaatsUrl': ''}]
+            },
+    '''
+
     req_d = {
         "StartRow":start,
         "PageSize":amt,
@@ -384,7 +453,6 @@ def zoek(term, start=0, amt=10, timeout=10):
         "DatumPublicatie":[],
         "DatumUitspraak":[],
         "Advanced":{"PublicatieStatus":"AlleenGepubliceerd"},
-        #"CorrelationId":"12e85334096243079bdb9bce565330aa",
     }
     req_json = json.dumps( req_d )
     response = requests.post(
