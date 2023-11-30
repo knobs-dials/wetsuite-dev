@@ -1,5 +1,15 @@
 '''
-Extracting specific patterns of text, mostly but noy only aimed at references to citations by identifier (BWB-ID, CVDR-ID, ECLI, ECLI, CELEX, other EU references, and less-formal references to dutch laws).
+Extracting specific patterns of text, 
+mostly but not only aimed at references to citations 
+  - by identifier 
+    - BWB-ID
+    - CVDR-ID
+    - ECLI
+    - CELEX
+    - other EU references
+
+  - also to and less-formal references to dutch laws)
+
 
 It exists in part to point out that while probably useful,
 they deal with things that aren't formalized via EBNF or whatnot,
@@ -18,13 +28,13 @@ import textwrap
 import pprint
 
 import wetsuite.helpers.strings
-#from wetsuite.helpers.strings import interpret_ordinal_nl
 import wetsuite.helpers.meta
 
 
 
 def find_identifier_references( text , ljn=False, ecli=True, celex=True, kamerstukken=True, vindplaatsen=True, nonidentifier=True, euoj=True, eudir=True):
-    '''
+    ''' TODO: rename to find_references
+
         There is a good argument to make this more pluggable, rather than one tangle of a function.
     '''
     ret = []
@@ -47,7 +57,10 @@ def find_identifier_references( text , ljn=False, ecli=True, celex=True, kamerst
             match['end']     = rematch.end()
             match['text']    = rematch.group( 0 )
             match['details'] = wetsuite.helpers.meta.parse_ecli( rematch.group(0) )
-
+            try:
+                wetsuite.helpers.meta.parse_ecli( match['text'] )
+            except ValueError:
+                match['invalid'] = True
             ret.append( match )
 
 
@@ -62,9 +75,8 @@ def find_identifier_references( text , ljn=False, ecli=True, celex=True, kamerst
             ret.append( match )
 
     if kamerstukken:
-        print(1)
         # I'm not sure about the standard here, and the things I've found seem frequently violated
-        for rematch in re.finditer( 
+        for rematch in re.finditer(
             r'(Kamerstukken|Aanhangsel Handelingen|Handelingen)( I| II)? ([0-9]+/[0-9]+)(@, [0-9]+( [XVI]+)?|@, item [0-9]|@, nr. [0-9]+|@, p. [0-9-]+|@, [A-Z]+)*'
                 .replace(' ',r'[\n\s]+')
                 .replace('@',r'[\n\s]*')
@@ -246,16 +258,16 @@ def find_nonidentifier_references(text, context_amt=60, debug=False): # TODO: ne
                     for now_mo in re.compile(find_re).finditer(text, pos=rng_st, endpos=rng_en): # TODO: check whether inclusive or exclusive
                         #now_size = now_mo.end() - now_mo.start()
 
-                        if incl_excl == 'E': # recognizing a string that we want _not_ to include (not all that different from just not seeing something
+                        if incl_excl == 'E': # recognizing a string that we want _not_ to include (not all that different from just not seeing something)
                             #print( 'NMATCH', find_name )
                             pass
-                        elif incl_excl == 'I': 
+                        elif incl_excl == 'I':
                             nng = list(s  for s in now_mo.groups()   if s is not None)
                             if len(nng) > 0:
                                 details[find_name] = nng[0]
                             if now_mo.end() <= overallmatch_st:             # roughly the same test as where==before
-                                howmuch = overallmatch_st - now_mo.end()    
-                                overallmatch_st = now_mo.start()            #  extend match  (to exact start of that new bit of match) 
+                                howmuch = overallmatch_st - now_mo.end()
+                                overallmatch_st = now_mo.start()            #  extend match  (to exact start of that new bit of match)
                                 wider_start = max(0, wider_start-howmuch)   #  extend search range (by the size, which is sort of arbitrary)
                             else:                                           # we can assume where==after
                                 howmuch = now_mo.start() - overallmatch_en  #
@@ -264,7 +276,7 @@ def find_nonidentifier_references(text, context_amt=60, debug=False): # TODO: ne
 
 
                             range_was_widened = True
-                            
+
                             if debug:
                                 print( 'MATCHED type=%-20s:   %-25r  %s chars %s '%(
                                     find_name,
@@ -317,7 +329,7 @@ def find_nonidentifier_references(text, context_amt=60, debug=False): # TODO: ne
 
 
 
-def simple_tokenize(text: str):  # 
+def simple_tokenize(text: str):
     ' quick and dirty splitter into words. Mainly used by abbrev_find() '
     l = re.split('[\\s!@#$%^&*":;/,?\xab\xbb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a\u2358\u275b\u275c\u275d\u275e\u275f\u2760\u276e\u276f\u2e42\u301d\u301e\u301f\uff02\U0001f676\U0001f677\U0001f678-]+', text)
     return list(e.strip("'")   for e in l  if len(e)>0)
@@ -474,4 +486,3 @@ def abbrev_count_results(l, remove_dots=True):
             counted[abbrev][word] = len(idlist)
 
     return counted
-
