@@ -110,15 +110,14 @@ def test_kvelements_to_dict():
            </foo>'''), ignore_tagnames=['onderwerp'] ) == {'identifier':'BWBR0001840', 'title':'Grondwet'}
 
 
-
 def test_nonlxml():
-    ' ? '
-    # see also https://lxml.de/compatibility.html
+    ' Test that we work around (at least some) non-lxml etrees, and that we warn about that. '
     import xml.etree.ElementTree
 
-    # the test is whether it warns, but doesn't crash
-    with pytest.warns(UserWarning, match=r'.*lxml.*'):
+    with pytest.warns(UserWarning, match=r'.*non-lxml.*'):
         strip_namespace( xml.etree.ElementTree.fromstring(b'<a><?xml-stylesheet type="text/xsl" href="style.xsl"?></a>') )
+
+    # see also https://lxml.de/compatibility.html
 
 
 def test_path_between():
@@ -133,6 +132,7 @@ def test_path_between():
 
 
 def test_path_between_elsewhere():
+    ' more path related tests '
     xml = '<a><b><c><d/><d/></c><d/></b></a>'
     a = fromstring(xml)
 
