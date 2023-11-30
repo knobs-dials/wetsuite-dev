@@ -1,4 +1,4 @@
-''' Helpers to extract text from images, mainy aimed at PDFs that contain pictures of documents.
+''' Extract text from images, mainy aimed at PDFs that contain pictures of documents
 
     Largely a wrapper for OCR package, currently just EasyOCR; we are considering also adding tesseract.  
     CONSIDER: ...and then unify the data format we hand around (particularly because of the helper functions)
@@ -11,6 +11,32 @@ import numpy
 
 
 _eocr_reader = None  # keep in memory to save time when you call it repeatedly
+
+
+def ocr_pdf_pages(pdfbytes, dpi=150):
+    '''
+    This is a convenience function that tries to get all text from a PDF via OCR.
+
+    More precisely, it iterates through a PDF one page at a time, 
+      - rendering that page it to an image,
+      - runs OCR on that page image
+
+    This depends on another of our modules (L{pdf})
+
+    @return: a 2-tuple:
+      - a list of the results that easyocr_text outputs
+      - a list of "all text on a page" string. Technically somewhat redundant with the last, but good enough for some uses and easier.
+    '''
+    results = []
+    text    = []
+
+    import wetsuite.extras.pdf
+    for page_image in wetsuite.extras.pdf.pages_as_images(pdfbytes, dpi=dpi):
+        page_results = easyocr( page_image )
+        results.append( page_results )
+        text.append(    easyocr_text(page_results ) )
+
+    return results, text
 
 
 def easyocr(image, pythontypes=True, use_gpu=True, languages=('nl','en')):
@@ -66,17 +92,20 @@ def easyocr(image, pythontypes=True, use_gpu=True, languages=('nl','en')):
 
 def easyocr_text(results):
     ''' take bounding boxed results and, right now, 
-        smushes just the text together as-is, without much care about placement.
-        We plan to be smarter than this, given time.
+        smushes just the text together as-is, without much care about placement, 
+
+        This is currently NOT enough to be decent processing,
+        and we plan to be smarter than this, given time.
 
         There is some smarter code in kansspelautoriteit fetching script
         CONSIDER centralizing that and/or 'natural reading order' code
     '''
+    #warnings.warn('Our easyocr_text() call is currently dumb, and should become better at its job later')
     ret = []
     for (_, _, _, _), text, _ in results:
         ret.append(text)
-    return ret
-    #return ' '.join(ret)
+    #return ret
+    return '\n'.join(ret) # newline is not always correct, but better than not
 
 
 def easyocr_draw_eval(image, ocr_results):
