@@ -1,3 +1,8 @@
+''' Some information about the gerechtcodes use in ECLIs 
+
+Note this overlaps with the output of wetsuite.datacollect.rechtspraaknl.parse_instanties()
+'''
+
 data = {
  'AGAMS': {'abbrev': 'AGAMS',
            'extra': ['opgeheven', 'ambtenarengerecht'],
