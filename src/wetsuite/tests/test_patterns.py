@@ -34,7 +34,46 @@ def test_reference_parse():
 #         )
 #         ) == 'Wet milieubeheer'
 
-    
+
+
+
+
+def test_identifier_parse():
+    ' find each type in isolation '
+
+    for test_string, expect in (
+        ('asdf ECLI:NL:CBB:1996:ZG0749 asdf'         , {'type':'ecli',         'text':'ECLI:NL:CBB:1996:ZG0749'}),
+        ('asdf Stb. 2005 asdf'                       , {'type':'vindplaats',   'text':'Stb. 2005'     } ),
+        ('asdf 33684R2020 asdf'                      , {'type':'celex',        'text':'33684R2020'    } ),
+        ('asdf Trb.\xa01966 asdf'                    , {'type':'vindplaats',   'text':'Trb.\xa01966'  } ),
+        ('asdf Trb. 1966, 91 asdf'                   , {'type':'vindplaats',   'text':'Trb. 1966, 91' } ),
+        ('asdf Kamerstukken II 1992/1993, 22 asdf'   , {'type':'kamerstukken', 'text':'Kamerstukken II 1992/1993, 22'} ),
+        ('asdf BB7360 asdf'                          , {'type':'ljn',          'text':'BB7360'        } ),
+        #('asdf BB 7360 asdf'                         , {'type':'ljn',          'text':'BB 7360'       } ),
+        # TODO: complete
+
+        #('asdf Stb 2005 asdf'                       ),
+        #('asdf Kamerstukken 1992/1993, 22 asdf'     ),        
+    ):
+
+        found = find_identifier_references( test_string, 
+            ljn=True, ecli=True, celex=True, kamerstukken=True, vindplaatsen=True, nonidentifier=True, euoj=True, eudir=True
+        )
+        for key, value in expect.items():
+            assert found[0].get( key ) == value
+
+def test_identifier_almost():
+    ' test that it does not accept things that are close but not quite '
+    for test_string in (
+        ('asdf 3684R2020 asdf'                      ),
+        #('asdf ECLI:N:CBB:1996:ZG0749 asdf'         ), # 
+        
+    ):
+
+        assert len( find_identifier_references( test_string, 
+            ljn=True, ecli=True, celex=True, kamerstukken=True, vindplaatsen=True, nonidentifier=True, euoj=True, eudir=True
+        ) ) == 0
+
 
 
 
@@ -68,5 +107,4 @@ for test in [
     #  of the options of lines like "artikel 5 van de Tijdelijke aanvulling Algemene subsidieverordening Hoeksche Waard 2020" we can pick a probably option.
 
 ]:
-    print()
     find_nonidentifier_references( test )
