@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-''' Some helpers for jupyter/ipython-style notebooks, and help detecting you are, or are  _not_, in one.
+''' Tools for jupyter/ipython-style notebooks, and detection that you are, or are _not_, using one right now.
 '''
 import sys
 
@@ -138,6 +138,13 @@ def progress_bar(maxval, description='', display=True): # , **kwargs
         if display:
             IPython.display.display(prog)
         return prog
+
+#class PB:
+#    def __init__(self, seq, descr=None):
+#        progress_bar( len(seq) )
+    
+
+
 
 
 
