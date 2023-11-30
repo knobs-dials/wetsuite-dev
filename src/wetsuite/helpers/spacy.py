@@ -25,7 +25,7 @@ def span_as_doc(span):
     return span.as_doc()
 
 
-class ipython_content_visualisation(object):
+class ipython_content_visualisation:
     ''' Python notebook visualisation to give some visual idea of contents:
         marks out-of-vocabulary tokens red, and highlight the more interesting words (by POS).
     '''
@@ -93,22 +93,17 @@ def interesting_words(span, ignore_stop=True, ignore_pos_=('PUNCT','SPACE','X', 
 
 
 
-
-
-
-
-
 def subjects_in_doc(doc):
     ''' If sentences are annotated, returns the nominal or clausal subjects for each sentence individually,
         as a list of lists (of Tokens), e.g.
           - I am a fish. You are a moose  ->   [ [I ], [You] ]
 
-        If no sentences are annotated, it will return
+        If no sentences are annotated, it will return None
     '''
-    if hasattr(doc, 'sents'): # presumably not all docs hve a .sents?  VERIFY
-        return list( (subjects_sentence(sent))  for sent in doc.sents )
+    if hasattr(doc, 'sents'): # TODO: check that all docs have a .sents - presumably not
+        return list( (subjects_in_span(sent))  for sent in doc.sents )
     else:
-        return list( (subjects_sentence(sent))  for sent in doc.sents )
+        return None
 
 
 def subjects_in_span(span):
@@ -151,7 +146,7 @@ def subjects_in_span(span):
 
 # CONSIDER: making the following less hardcoded
 _dutch = None
-def nl_noun_chunks(text):
+def nl_noun_chunks( text:str ):
     ''' Meant as a quick and dirty way to pre-process text for when experimenting with models,
         as a particularly to remove function words
 
@@ -173,7 +168,7 @@ def nl_noun_chunks(text):
 
 
 _english = None
-def en_noun_chunks(text):
+def en_noun_chunks( text:str ):
     global _english
     if _english is None:
         import spacy
@@ -187,7 +182,7 @@ def en_noun_chunks(text):
 
 
 _langdet_model = None
-def detect_language(text: str):
+def detect_language(text:str):
     ''' Note that this depends on the spacy_fastlang library, which depends on the fasttext library.
         
         Returns (lang, score)
@@ -222,7 +217,7 @@ def detect_language(text: str):
 
 
 _xx_sent_model = None
-def sentence_split(text, as_plain_sents=False):
+def sentence_split( text:str, as_plain_sents=False ):
     ''' A language-agnostic sentence splitter based on the xx_sent_ud_sm model. 
 
         If you hacen't installed it:  python3 -m spacy download xx_sent_ud_sm
