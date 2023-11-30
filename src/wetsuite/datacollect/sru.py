@@ -2,6 +2,9 @@
 '''
 Talks to SRU repositories, mainly underlies L{koop_repositories}
 
+SRU is a search-and-retrieve protocol; 
+to dig more into the what and how to use this in a more advanced way, look for the sru-related notebook (somewhere in extras).
+
 Very minimal SRU implementationm and not meant to be a generic implementation. 
 
 It was written because existing python SRU libraries we tried didn't seem to like
