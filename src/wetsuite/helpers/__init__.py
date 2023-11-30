@@ -1,1 +1,1 @@
-' A collection of helper modules for varied tasks ' 
+' A collection of small singular tools,  useful when composing more complex tasks ' 
