@@ -1,4 +1,4 @@
-''' Asks PDFs about the text that they contain (which is not always clean, structured, correct, or present at all)
+''' Query PDFs about the text objects that they contain (which is not always clean, structured, correct, or present at all)
 
     If you want clean structured output, 
     then you likely want to put it more work,
