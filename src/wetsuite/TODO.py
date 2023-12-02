@@ -20,7 +20,7 @@ LOOKFOR_AND_COLOR = {
 
 
 ### TODO: proper argument parsing
-
+# pragma: no cover
 show_context_line_amt = 3
 # large py-like files are usually data, not code
 max_filesize     = 512000
@@ -28,10 +28,11 @@ max_cellsize     = 51200
 
 args = sys.argv[1:]
 
-if len(args)==0:
+if len(args)==0: # pragma: no cover
     print("We need paths to work on.   Did you mean:\n %s ."%os.path.basename(sys.argv[0]))
 
-for arg in args:
+for arg in args: # pragma: no cover
+
     arg = os.path.abspath( arg )
 
     for r, ds, fs in os.walk( arg ):
