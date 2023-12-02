@@ -706,11 +706,16 @@ def hash_color(s, rgb=False, append=RESET, prepend='', hash_instead=None, on=Non
         @param rgb:
           - if False, uses the basic set of ~8 colors and brightness.
           - if True,  uses true color  (recommended if you can)
+          
+        @hash_instead: if you want to color a more verbose string based on part of it,
+        hand the part into C{hash_instead}, and the whole into C{s}
+
         @param on:
           - if 'dark' suggests we're drawing on dark background,
             so we stay away from very dark rgb values
           - if on == 'light', we stay away from very light rgb values
         by default we don't care, which might be good for area fills
+
     '''
     import hashlib
     m = hashlib.sha256()
