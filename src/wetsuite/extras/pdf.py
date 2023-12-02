@@ -93,7 +93,7 @@ def count_pages_with_text( filedata_or_list, char_threshold=200 ):
 
 
 def pdf_text_ocr(filedata: bytes):
-    ''' Takes a PDF and return pageless plain text, entirely with OCR (instead of ).
+    ''' Takes a PDF and return pageless plain text, entirely with OCR (instead of PDF objects).
 
         This is currently
           - wetsuite.datacollect.pdf.pages_as_images()
@@ -113,7 +113,7 @@ def pdf_text_ocr(filedata: bytes):
     import wetsuite.extras.ocr
     for page_image in pages_as_images(filedata):
         fragments = wetsuite.extras.ocr.easyocr( page_image )
-        for bounding_box, text_fragment, certainty in fragments:
+        for _, text_fragment, _ in fragments:
             ret.append( text_fragment )
     return ' '.join( ret )
 
