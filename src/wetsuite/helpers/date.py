@@ -44,7 +44,8 @@ def parse(text:str, exception_as_none=True):
     '''
     Try to parse a string as a date.
 
-    Mostly just calls dateutil.parser.parse(), a library that deals with more varied date formats
+    Mostly just calls dateutil.parser.parse(), 
+    a library that deals with more varied date formats
     ...but we have told it a litte more about Dutch, not just English.
     TODO: add French, there is some early legal text in French.
 
@@ -71,26 +72,31 @@ def parse(text:str, exception_as_none=True):
 
 
 _MAAND_RES = 'januar[iy]|jan|februar[yi]|feb|maart|march|mar|april|apr|mei|may|jun|jun[ei]|jul|jul[iy]|august|augustus|aug|o[ck]tober|o[ck]t|november|nov|december|dec'
+' regexp fragment to match most month spellings, English and Dutch '
 
 _re_isolike_date  = re.compile(r'\b[12][0-9][0-9][0-9]-[0-9]{1,2}-[0-9]{1,2}\b')
-_re_dutch_date_1  = re.compile(r'\b[0-9]{1,2} (%s),? [0-9]{2,4}\b'%_MAAND_RES, re.I)
-_re_dutch_date_2  = re.compile(r'\b(%s) [0-9]{1,2},? [0-9]{2,4}\b'%_MAAND_RES, re.I) # this is more an english-style thing
+_re_dutch_date_1  = re.compile(r'\b[0-9]{1,2} (%s),? ([12][0-9]{1,3}|[0-9][0-9])\b'%_MAAND_RES, re.I)
+_re_dutch_date_2  = re.compile(r'\b(%s) [0-9]{1,2},? ([12][0-9]{1,3}|[0-9][0-9])\b'%_MAAND_RES, re.I) # this is more an english-style thing
 
 def find_dates_in_text(text: str):
     '''
     Tries to fish out date-like strings from free-form text.  
+    Not general-purpose - it's targeted at some specific fields 
+    we know have mainly/only contain dates, and have relatively well formatted dates,
+    mostly to normalize those.
 
-    Currently looks only for three specific patterns (1980-01-01, 1 jan 1980, jan 1 1980, the latter two in both Dutch and English),
-    aimed at some specific fields we know mainly/only contain dates, mostly to normalize those.
-    
-    Targeted at specific fields with relatively well formatted dates, because "try to find everthing, hope for the best" 
-    is likely to have false positives.
+    ...because "try to find everthing, hope for the best" is likely to have false positives.
     TODO: add such a freer mode in here anyway, just not as the default.
-
-    @param text:  the str to find dates in
     
+    Currently looks only for three specific patterns:
+      - 1980-01-01
+      - 1 jan 1980
+      - jan 1 1980
+    ...the latter two in both Dutch and English,
+
+    @param text:  the string to find dates in   
     @return: two lists:
-     - list of each found date as strings
+     - list of each found date, as strings
      - according list where each is a date object -- or None where dateutil didn't manage 
        (it usually does, particularly if we pre-filter like this, but it's not a guarantee)
     '''
@@ -105,14 +111,13 @@ def find_dates_in_text(text: str):
     ret_dt   = []
     for dtt in ret_text:
         try:
-            ret_dt.append( parse( dtt ) )
-        except Exception as e:
+            parsed = parse( dtt ) # we coung on this
+            ret_dt.append( parsed )
+        except Exception as e: # unsure which exceptions 
             print( 'ERROR: %s'%e )  #raise
             ret_dt.append( None )
     assert len(ret_text) == len(ret_dt)
     return ret_text, ret_dt
-
-
 
 
 def format_date(dt, strftime_format='%Y-%m-%d'):
@@ -127,7 +132,7 @@ def format_date(dt, strftime_format='%Y-%m-%d'):
     return dt.strftime(strftime_format)
 
 
-def format_date_range(rng, strftime_format='%Y-%m-%d'):
+def format_date_list(datelist, strftime_format='%Y-%m-%d'):
     ''' 
     Takes a list of datetime objects, calls format_date() on each of that list.
     
@@ -140,13 +145,27 @@ def format_date_range(rng, strftime_format='%Y-%m-%d'):
     @param strftime_format: a string that tells strftime how to format the date (see also L{format_date})
     @return: a list of formatted date strings
     '''
-    return list( format_date(d,strftime_format)   for d in rng  )
+    return list( format_date(d,strftime_format)   for d in datelist  )
 
 
-
-def date_range( frm, to ):
+def _date_from_date_datetime_or_parse( a_date ):
+    ''' Intended to normalzing date/datetime/date-as-string parameters into date objects.
+        @param a_Date: date as a date object, datetime object, or string to parse (using dateutil library)
+        @return: date object
     '''
-    Given a start and end date, returns a list of all days in that range (including the last), as a datetime.date object
+    if   isinstance( a_date, datetime.datetime): # must come first, it's itself a subclass of date
+        return a_date.date()
+    elif isinstance( a_date, datetime.date):
+        return a_date
+    elif isinstance( a_date, str ):
+        return dateutil.parser.parse( a_date ).date()
+    else:
+        raise ValueError("Do not understand date of type %s (%s)"%(type(a_date), a_date))
+
+
+def days_in_range( from_date, to_date, strftime_format=None ):
+    '''
+    Given a start and end date, returns a list of all individual days in that range (including the last), as a datetime.date object.
     (Note that if you want something like this for pandas, it has its own date_range that may be nicer)
     
     For example: ::
@@ -159,34 +178,50 @@ def date_range( frm, to ):
           datetime.date(2022, 1, 31),
           datetime.date(2022, 2, 1),
           datetime.date(2022, 2, 2)  ]
-    
-    @param frm: start of range, as a date object, datetime object, or string to parse (using dateutil library)
-    (please do not use formats like 02/02/11 and also expect the output to do what you want)
-    @param to:  end of range, inclusive
-    @return:    a list of datetime.date objects
-    '''
-    if   isinstance( frm, datetime.datetime): # must come first, it's itself a subclass of date
-        frm = frm.date()
-    elif isinstance( frm, datetime.date):
-        pass
-    elif isinstance( frm, str ):
-        frm = dateutil.parser.parse( frm ).date()
-    else:
-        raise ValueError("Do not understand date of type %s (%s)"%(type(frm), frm))
 
-    if   isinstance( to, datetime.datetime):
-        to = to.date()
-    elif isinstance( to, datetime.date):
-        pass
-    elif isinstance( to, str ):
-        to = dateutil.parser.parse( to ).date()
-    else:
-        raise ValueError("Do not understand date of type %s (%s)"%(type(to), to))
+    @param from_date: start of range, as a date object, datetime object, or string to parse (using dateutil library)
+    (please do not use formats like 02/02/11 and also expect the output to do what you want)
+    @param to_date:   end of range, inclusive
+    @return:          a list of datetime.date objects
+    '''
+    from_date = _date_from_date_datetime_or_parse( from_date )
+    to_date   = _date_from_date_datetime_or_parse( to_date   )
+    ret = []
+    cur = from_date
+    while cur <= to_date:
+        if strftime_format is None:
+            ret.append( cur )
+        else:
+            ret.append( cur.strftime( strftime_format ) )
+        cur += datetime.timedelta(days=1)
+    return ret
+
+
+def date_ranges( from_date, to_date, increment_days, strftime_format=None ):
+    ''' Given a larger interval, return a series of shorter intervals no larger than increment_days long.
+        (currently first and last days overlap; TODO: parameter to control that)
+
+        @param from_date:      start of range, as a date object, datetime object, or string to parse (using dateutil library)
+        (please do not use formats like 02/02/11 and also expect the output to do what you want)
+        @param to_date:        end of range, inclusive
+        @param increment_days: size of each range
+    
+        @return: a list of tuples, which are either 
+          - date objects (if strftime==None), or 
+          - strings (if strftime is specified; you might want it to be "%Y-%m-%d")
+    '''
+    from_date = _date_from_date_datetime_or_parse( from_date )
+    to_date   = _date_from_date_datetime_or_parse( to_date   )
 
     ret = []
-    cur = frm
-    while cur <= to:
-        ret.append( cur )
-        cur += datetime.timedelta(days=1)
-
+    ongoing = from_date
+    span = datetime.timedelta( days=increment_days ) 
+    while ongoing < to_date:
+        thisrange_from  = ongoing
+        thisrange_to    = min( (ongoing + span), to_date )
+        if strftime_format is None:
+            ret.append( (thisrange_from, thisrange_to) )
+        else:
+            ret.append( (thisrange_from.strftime(strftime_format), thisrange_to.strftime(strftime_format) ) )
+        ongoing += span
     return ret
