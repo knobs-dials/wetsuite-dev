@@ -14,6 +14,7 @@ def test_import():
 
 @pytest.mark.filterwarnings("ignore::UserWarning")
 def test_image():
+    ' test that OCR basically functions, on an image we generate with PIL '
     image = Image.new("RGB", (200, 200))
     draw = ImageDraw.Draw(image)
     draw.text((10, 10), "Hello from" )
@@ -28,4 +29,13 @@ def test_image():
     wetsuite.extras.ocr.easyocr_draw_eval(image, bbox_results)
 
 
-# TODO: page_extent, doc_extent, page_fragment_filter, probably on a real pdf
+#CONSIDER: use_gpu
+
+
+# TODO:
+#def test_page_extent():
+#def test_doc_extent():
+
+
+# page_fragment_filter,
+# probably on a real pdf
