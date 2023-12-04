@@ -3,11 +3,16 @@
 
     Function name should give you some indication how what it belongs to and how specific it is.
 '''
-import re, collections, urllib.parse
+import re
+import collections
+import urllib.parse
+import warnings
+
+import wetsuite.extras.gerechtcodes
 
 
-_jcifind_re  = re.compile(r'(?:jci)?([0-9.]+):([a-z]):(BWB[RV][0-9]+)([^\s;"\']*)' ) # NOTE: not meant for finding in free-form text
-_eclifind_re = re.compile(r'ECLI:[A-Za-z]{2}:[A-Z-z0-9.]{1,7}:[0-9]{,4}:[A-Z-z0-9.]{,25}')
+_RE_JCIFIND  = re.compile(r'(?:jci)?([0-9.]+):([a-z]):(BWB[RV][0-9]+)([^\s;"\']*)' ) # NOTE: not meant for finding in free-form text
+_RE_ECLIFIND = re.compile(r'ECLI:[A-Za-z]{2}:[A-Z-z0-9.]{1,7}:[0-9]{,4}:[A-Z-z0-9.]{,25}')
 
 
 def parse_jci(text: str):
@@ -15,10 +20,12 @@ def parse_jci(text: str):
         so e.g. ::
             jci1.31:c:BWBR0012345&g=2005-01-01&artikel=3.1
         returns something like ::
-            {'version': '1.31', 'type': 'c', 'bwb': 'BWBR0012345', 'params': {'g': ['2005-01-01'], 'artikel': ['3.1']}}
+            {'version': '1.31', 'type': 'c', 'bwb': 'BWBR0012345', 
+             'params': {'g': ['2005-01-01'], 'artikel': ['3.1']}}
 
         Notes:
-          - params is actually an an OrderedDict, so you can also fetch them in the order they appeared, for the cases where that matters.
+          - params is actually an an OrderedDict, so you can also fetch them 
+            in the order they appeared, for the cases where that matters.
           - tries to be robust to a few non-standard things we've seen in real use
           - for type=='c' (single consolidation), expected params include
             - g  geldigheidsdatum
@@ -27,12 +34,16 @@ def parse_jci(text: str):
             - s  start of geldigheid
             - e  end of geldigheid
             - z  zichtdatum
-          Note that precise interpretation, and generation of these links, is a little more involved,
+          Note that precise interpretation, and generation of these links, 
+          is a little more involved,
           in that versions made small semantic changes to the meanings of some parts.
     """
     ret = {}
-    text = text.replace('&amp;','&') # hack for observed bad escaping (hacky in that is assumes things about values)
-    match_object = _jcifind_re.match( text )
+
+    # hack for observed bad escaping (hacky in that is assumes things about other values)
+    text = text.replace('&amp;','&') 
+
+    match_object = _RE_JCIFIND.match( text )
     if match_object is None:
         raise ValueError('%r does not look like a valid jci'%text)
     else:
@@ -40,9 +51,11 @@ def parse_jci(text: str):
         ret['version'] = version
         ret['type']    = typ
         ret['bwb']     = bwb
-        # The jci standard doesn't seem to make it clear whether it's supposed to be a conformant URL or URN,
-        # so it's unsure whether there is specific parameter encoding.
-        # The below is somewhat manual, but might prove more robust then just   d['params']  = urllib.parse.parse_qs(rest)
+        # The jci standard doesn't seem to make it clear
+        #   whether it's supposed to be a conformant URL or URN,
+        #   so it's unsure whether there is specific parameter encoding.
+        # The below is somewhat manual, but might prove more robust then just
+        #   d['params']  = urllib.parse.parse_qs(rest)
         params = collections.OrderedDict()
         for param in rest.split('&'):
             param_dict = urllib.parse.parse_qs(param)
@@ -60,17 +73,21 @@ def parse_jci(text: str):
 
 
 def findall_ecli(s:str, rstrip_dot=True):
-    ''' Within plain text, this tries to find all occurences of things that look like an ECLI identifier
-        Returns a list of strings.
-
+    ''' Within plain text, this tries to find all occurences of things 
+        that look like an ECLI identifier
+        
         @param rstrip_dot: whether to return the match stripped of any final dot(s).
         While dots are valid in an ECLI (typically used as a separator),
-        it is more likely that a dot on the end is an ECLI into a sentence than it is to be part of the ECLI.
-        This stripping is enabled by default, but it would be more correct for you to always control this parameter,
-        and for well-controlled metadata fields it may be more correct to use False.
+        it is more likely that a dot on the end is an ECLI into a sentence 
+        than it is to be part of the ECLI.
+        This stripping is enabled by default, but it would be more correct for you 
+        to always control this parameter, and for well-controlled metadata fields
+        it may be more correct to use False.
+
+        @return: a list of strings.
     '''
     ret = []
-    for match_str in _eclifind_re.findall( s ):
+    for match_str in _RE_ECLIFIND.findall( s ):
         if rstrip_dot:
             match_str = match_str.rstrip('.')
         ret.append( match_str )
@@ -78,26 +95,62 @@ def findall_ecli(s:str, rstrip_dot=True):
 
 
 def parse_ecli(text:str):
-    ''' mostly just reports the parts in a dict
+    ''' Parses something we know is an ECLI, reports the parts in a dict.
+
+        Currently hardcoded to remove any final period.
+
+        Returns a dict with keys that contain at least::
+            'country_code': 'NL', 
+            'court_code': 'HR', 
+            'year': '1977', 
+            'caseid': 'AC1784', 
+        And perhaps (TODO: settle this)::
+            'normalized': 'ECLI:NL:HR:1977:AC1784', 
+            'removed': ').', 
+            'court_details': {'abbrev': 'HR', 'extra': ['hr'], 'name': 'Hoge Raad'}   
 
         As an experiment, we try to report more about the court in question, 
-        but note the key ('court_name') is not guaranteed to be there.
+        but note the key ('court_details') is not guaranteed to be there.
     '''
     ret = {}
+
+    # in case you gave something in running text...
+    m = re.search(r'[^A-Za-z0-9:.]', text)
+    if m is not None:
+        ret['removed_pre'] = text[m.end():]
+        text = text[:m.end()]
+
     ecli_list = text.strip().split(':')
     if len(ecli_list) != 5:
-        raise ValueError("ECLI is expected to have five elements separated by four colons, %r does not"%text)
+        raise ValueError("ECLI is expected to have 5 elements (not %d) separated by four colons, %r does not"%(len(ecli_list), text))
 
     uppercase_ecli, country_code, court_code, year, caseid = ecli_list
+
     if uppercase_ecli.upper() != 'ECLI':
-        raise ValueError("First ECLI string isn't 'ECLI' in %r"%text)
+        raise ValueError(f"First ECLI string isn't 'ECLI' in %r"%text)
 
-    if len(country_code)!=2:
-        raise ValueError("ECLI country %s isn't two characters"%country_code)
+    if len(country_code) != 2:
+        raise ValueError(f"ECLI country %s isn't two characters"%country_code)
 
-    #if len(court):
+    if len(court_code) > 7:
+        raise ValueError(f"ECLI court code too long: {repr(court_code)}")
 
-    # caseod    seems to be [A-Z-z0-9.]{,25} but countries usually keep shorter and structured, and may have historical numbering sorted in, etc.
+    mo_caseid = re.match(r'([A-Z-z0-9.]{1,25})', caseid)
+    if mo_caseid is None:
+        raise ValueError(f"Does not look like a valid ECLI: {repr(text)}")
+
+    end = mo_caseid.end()
+    while end>0  and  caseid[end-1] == '.':
+        end -= 1
+
+    if end < len(caseid): # we are removing things
+        rest   = caseid[ end: ]
+        caseid = caseid[ :end ]
+        #raise ValueError( repr(rest) )
+        ret['removed'] = rest
+
+
+    ret['normalized'] = (':'.join([uppercase_ecli, country_code, court_code, year, caseid])).upper()
 
     ret['country_code'] = country_code
     ret['court_code'] = court_code
@@ -106,25 +159,24 @@ def parse_ecli(text:str):
 
     # court codes (experiment)
     try:
-        import wetsuite.extras.gerechtcodes
 
         if court_code in wetsuite.extras.gerechtcodes.data:
             ret['court_details'] = wetsuite.extras.gerechtcodes.data[court_code]
-    except ImportError:
+    except ImportError: # pragma nocover  we might want to know, but the point of this is n
+        warnings.warn("Could not find our own gerechtcodes")
         pass
 
     return ret
 
 
 
-
-
-
-# member countries slowly change over time, of course, so maybe we should just accept any three letters,
+# members slowly change over time,
+#  so maybe we should just accept any three letters,
 #  or more pragmatically, any existing nearby country?
 CELEX_COUNTRIES = [
-    'BEL', 'DEU', 'FRA', 'CZE', 'ESP', 'PRT',  'AUT', 'CYP', 'BGR', 'EST', 'FIN', 'GBR', 'HUN', 'IRL', 
-    'LTU', 'MLT', 'LVA', 'SVN', 'SWE', 'GRC,', 'POL', 'DNK', 'ITA', 'LUX', 'NLD', 'SVK', 'ROU', 'HRV',
+    'BEL', 'DEU', 'FRA', 'CZE', 'ESP', 'PRT', 'AUT', 'CYP', 'BGR', 'EST',
+    'FIN', 'GBR', 'HUN', 'IRL', 'LTU', 'MLT', 'LVA', 'SVN', 'SWE', 'GRC', 
+    'POL', 'DNK', 'ITA', 'LUX', 'NLD', 'SVK', 'ROU', 'HRV',
 ]
 
 CELEX_SECTORS = {
@@ -337,8 +389,8 @@ def equivalent_celex(celex1:str, celex2:str):
 
 
 
-_re_celex = re.compile( r'(\b[1234567890CE])([0-9]{4})([A-Z][A-Z]?)([0-9\(\)]{4,})(\b[^\s\"\>&.]*)?' )
-#_re_celex = re.compile( r'([1234567890CE])([0-9]{4})([A-Z][A-Z]?)([0-9\(\)]+)([A-Z0-9\(\)_]*)?' )
+_RE_CELEX = re.compile( r'(\b[1234567890CE])([0-9]{4})([A-Z][A-Z]?)([0-9\(\)]{4,})(\b[^\s\"\>&.]*)?' )
+#_RE_CELEX = re.compile( r'([1234567890CE])([0-9]{4})([A-Z][A-Z]?)([0-9\(\)]+)([A-Z0-9\(\)_]*)?' )
 
 #94994L1
 
@@ -348,13 +400,15 @@ def parse_celex(celex: str):
         Describes its parts in more readable form, where possible.
         All values are returned as strings, even where they are (ostensibly) numbers.
 
-        Returns a dict detailing the parts.  NOTE that the details will change when I actually read the specs properly
+        Returns a dict detailing the parts.  
+        NOTE that the details will change when I actually read the specs properly
           - norm is what you fed in, uppercased, and with an optional 'CELEX:' stripped
             but otherwise untouched
           - id is recoposed from sector_number, year, document_type, document_number
             which means it is stripped of additions - it may strip more than you want!
 
-        Keep in mind that this will _not_ resolve things like "go to the consolidated version" like the EUR-Lex site will do
+        Keep in mind that this will _not_ resolve things like 
+        "go to the consolidated version" like the EUR-Lex site will do
 
         TODO: read the spec, because I'm not 100% on 
           - sector 0
@@ -375,7 +429,7 @@ def parse_celex(celex: str):
 
     ret = { 'norm': norm }
     # TODO: read up on the possible additions, how they combine, because the current parsing is probably incomplete
-    match = _re_celex.match( norm )
+    match = _RE_CELEX.match( norm )
     # -[0-9]{8}|[A-Z]{3}_[0-9]+
 
     if match is None:
@@ -408,3 +462,4 @@ def parse_celex(celex: str):
     #ret['id_nonattrans']   = ''.join( (sector_number, year, document_type, document_number) )
 
     return ret
+
