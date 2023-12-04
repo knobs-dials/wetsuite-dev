@@ -1,8 +1,25 @@
 ''' Some information about the gerechtcodes use in ECLIs 
 
-Note this overlaps with the output of wetsuite.datacollect.rechtspraaknl.parse_instanties()
+    Note this overlaps with the output of wetsuite.datacollect.rechtspraaknl.parse_instanties()
 '''
 
+
+def case_insensitive_lookup(code_text:str):
+    ''' Case insensitive code lookup, in part because ECLI is technically case insensitive 
+        
+        @return: either None, or a a dict with some details like::
+            {'abbrev': 'GHARL',
+             'extra': ['gerechtshof'],
+             'name': 'Gerechtshof Arnhem-Leeuwarden'}
+    '''
+    code_text = code_text.upper()
+    for key, value in data.items():
+        if key.upper() == code_text:
+            return value
+    return None
+
+
+# CONSIDER: putting this in a .json file or similar, also to be able to update it more easily.
 data = {
  'AGAMS': {'abbrev': 'AGAMS',
            'extra': ['opgeheven', 'ambtenarengerecht'],
@@ -401,7 +418,7 @@ data = {
  'RBUTR': {'abbrev': 'RBUTR',
            'extra': ['opgeheven', 'rechtbank'],
            'name': 'Rechtbank Utrecht'},
- 'RBZLY ': {'abbrev': 'RBZLY ',
+ 'RBZLY': {'abbrev': 'RBZLY',
             'extra': ['opgeheven', 'rechtbank'],
             'name': 'Rechtbank Zwolle-Lelystad'},
  'RBZUT': {'abbrev': 'RBZUT',
@@ -643,3 +660,5 @@ data = {
                 'identificatiecode voor jurisprudentie (ECLI), en van een '
                 'minimumaantal uniforme metagegevens betreffende '
                 "jurisprudentie' (2011/C 127/01)) "}}
+''' nested dict with gerecthtcode-data '''
+
