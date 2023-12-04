@@ -25,21 +25,25 @@ we may want contributions to go to a contrib/ at least at first
 import re
 import collections
 import textwrap
-import pprint
 
 import wetsuite.helpers.strings
 import wetsuite.helpers.meta
 
 
 
-def find_identifier_references( text , ljn=False, ecli=True, celex=True, kamerstukken=True, vindplaatsen=True, nonidentifier=True, euoj=True, eudir=True):
-    ''' TODO: rename to find_references
+def find_identifier_references( text,
+                                ecli=True, celex=True,                     # more identifier-y
+                                ljn=False,
+                                vindplaatsen=True,
+                                kamerstukken=True, euoj=True, eudir=True,  # more textual
+                                nonidentifier=True,                        # even more textual
+                               ):
+    ''' TODO: rename to find_references or something else that's clear
 
         There is a good argument to make this more pluggable, rather than one tangle of a function.
     '''
     ret = []
 
-    #LJN
     if ljn:
         for rematch in re.finditer( r'\b[A-Z][A-Z][0-9][0-9][0-9][0-9](,[\n\s]+[0-9]+)?\b', text, flags=re.M ):
             match = {}
@@ -49,8 +53,9 @@ def find_identifier_references( text , ljn=False, ecli=True, celex=True, kamerst
             match['text']  = rematch.group( 0 )
             ret.append( match )
 
+
     if ecli:
-        for rematch in wetsuite.helpers.meta._eclifind_re.finditer( text ):
+        for rematch in wetsuite.helpers.meta._RE_ECLIFIND.finditer( text ):
             match = {}
             match['type']    = 'ecli'
             match['start']   = rematch.start()
@@ -74,6 +79,7 @@ def find_identifier_references( text , ljn=False, ecli=True, celex=True, kamerst
             match['text']  = rematch.group( 0 )
             ret.append( match )
 
+
     if kamerstukken:
         # I'm not sure about the standard here, and the things I've found seem frequently violated
         for rematch in re.finditer(
@@ -90,7 +96,7 @@ def find_identifier_references( text , ljn=False, ecli=True, celex=True, kamerst
 
 
     if celex:
-        for rematch in wetsuite.helpers.meta._re_celex.finditer( text ):
+        for rematch in wetsuite.helpers.meta._RE_CELEX.finditer( text ):
             match = {}
             match['type']  = 'celex'
             match['start'] = rematch.start()
@@ -99,11 +105,11 @@ def find_identifier_references( text , ljn=False, ecli=True, celex=True, kamerst
             match['details'] = wetsuite.helpers.meta.parse_celex( rematch.group(0) )
             ret.append( match )
 
-    _euoj_re = re.compile(r'(OJ|Official Journal)[\s]?(C|CA|CI|CE|L|LI|LA|LM|A|P) [0-9]+([\s]?[A-Z]|/[0-9])*(, p. [0-9](\s*[\u2013-]\s*[0-9]+)*|, [0-9]{1,2}[./][0-9]{1,2}[./][0-9][0-9]{2,4})'.replace(' ',r'[\s\n]+'),
+    _RE_EUOJ = re.compile(r'(OJ|Official Journal)[\s]?(C|CA|CI|CE|L|LI|LA|LM|A|P) [0-9]+([\s]?[A-Z]|/[0-9])*(, p. [0-9](\s*[\u2013-]\s*[0-9]+)*|, [0-9]{1,2}[./][0-9]{1,2}[./][0-9][0-9]{2,4})'.replace(' ',r'[\s\n]+'),
                           flags=re.M)
 
     if euoj:
-        for rematch in _euoj_re.finditer( text ):
+        for rematch in _RE_EUOJ.finditer( text ):
             match = {}
             match['type']  = 'euoj'
             match['start'] = rematch.start()
@@ -111,11 +117,11 @@ def find_identifier_references( text , ljn=False, ecli=True, celex=True, kamerst
             match['text']  = rematch.group( 0 )
             ret.append( match )
 
-    _eudir_re = re.compile(r'(Directive) [0-9]{2,4}/[0-9]+(/EC|EEC|EU)?'.replace(' ',r'[\s\n]+'),
+    _RE_EUDIR = re.compile(r'(Directive) [0-9]{2,4}/[0-9]+(/EC|EEC|EU)?'.replace(' ',r'[\s\n]+'),
                           flags=re.M)
 
     if eudir:
-        for rematch in _eudir_re.finditer( text ):
+        for rematch in _RE_EUDIR.finditer( text ):
             match = {}
             match['type']  = 'eudir'
             match['start'] = rematch.start()
@@ -123,57 +129,65 @@ def find_identifier_references( text , ljn=False, ecli=True, celex=True, kamerst
             match['text']  = rematch.group( 0 )
             ret.append( match )
 
+
     if nonidentifier:
         for match in find_nonidentifier_references( text ):
             match['type'] = 'nonidentifier' # not the best name
             match['details'] = list( match['details'].items() )
             ret.append( match )
 
-    ret.sort(key=lambda m: m['start'])
+
+    ret.sort( key=lambda m: m['start'] )
 
     return ret
 
 
 
-def find_nonidentifier_references(text, context_amt=60, debug=False): # TODO: needs a better name
+def find_nonidentifier_references(text, context_amt=60, debug=False):    # TODO: needs a better name
     ''' Attempts to find references like ::
             "artikel 5.1, tweede lid, aanhef en onder i, van de Woo"
         and parse and resolve as much as it can.
+
+        @return: a list of (matched_text, parsed_details_dict)
            
-        Returns a list of (matched_text, parsed_details_dict)
 
+        This is not a formalized format, 
+        and while the law ( https://wetten.overheid.nl/BWBR0005730/ ) that suggests the format of these
+        suggests succinctness and has near-templates, that is not what real-world use looks like.
 
-        This is not a formalized format, and while law ( https://wetten.overheid.nl/BWBR0005730/ )
-        suggests the format of these suggests succinctness and has near-templates, 
-        that is not what real-world use looks like.
+        
+        One reasonable approach might be 
+          including each real-world variant explicitly, 
+          as it lets you put stronger patterns first and fall back on fuzzier,
+          it makes it clear what is being matched, and it's easier to see how common each is.
+        However, it easily leads to false negatives -- missing real things.
 
-        You can argue for include each real-world variant explicitly, 
-        as it lets you put stronger patterns first and fall back on fuzzier,
-        it makes it clear what is being matched, and it's easier to see how common each is.
-        However, it easily leads to false negatives.
+        
+        Instead, we 
+        - start by finding some strong anchors
+        - keep accepting bits of adjacent string as long as they look like things we know
+          "artikel 5.1,"   "tweede lid,"   "aanhef en onder i"
+        - then seeing what text is around it, which should be at least the law name
+        
 
-        In fact, for the briefest forms ("81 WWB") you may only be certain if you
-        recognize either side (by known law name, or fragments that 
-        ...though we should not accept that example unless context makes it clearer (e.g. parentheses help)
-        that this is a reference, rather than just some characters that happen to be next to each other)
+        Neither will deal with the briefest forms, e.g. "(81 WWB)"
+        which is arguably only reasonable to recognize when you recognize either side
+        (by known law name, which is harder for abbreviations in that it probably leads to false positives)
+        ...and in that example, we might want to 
+        - see if character context makes it reasonable - the parthentheses make it more reasonable than
+          if you found the six characters '81 WWB' in any context 
+        - check whether the estimated law (Wet werk en bijstand - BWBR0015703) has an article 81
+        - check, in some semantic way, whether Wet werk en bijstand makes any sense in context of the text
 
+        ...also so that we can return some estimation of 
+        - how sure we are this is a reference,
+        - how complete a reference is, and/or
+        - how easy to resolve a reference is.
 
-        Instead, we start by finding some strong anchors
-        (currently 'artikel' as this ,
-
-        and keep accepting bits of string as long as they look like things we know
-        # # "artikel 5.1,"   "tweede lid,"   "aanhef en onder i"
-
-        then seeing what text is around it
-        because around it should appear at least the law name,
-        and proably lid, and more
-
-        This should let the same function find complete ones,
-        and report incomplete or hard to resolve ones.
+        
     '''
     ret = []
     artikel_matches = []
-
 
     for artikel_mo in re.finditer(r'\b(?:[Aa]rt(?:ikel|[.]|\b)\s*([0-9.:]+[a-z]*))', text):
         artikel_matches.append( artikel_mo )
