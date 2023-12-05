@@ -543,6 +543,9 @@ def cached_fetch(store:LocalKV, url:str, force_refetch:bool=False) -> Tuple[byte
             (which is behaviour from wetsuite.helpers.net.download())
             ...to force us to deal with issues and not store error pages.
     '''
+    if not isinstance(store, LocalKV):
+        raise TypeError('the store parameter should be a LocalKV or descendant, not %r'%( type(store) ) )
+                        
     if store.key_type not in (str,None)  or  store.value_type not in (bytes, None):
         raise TypeError('cached_fetch() expects a str:bytes store (or for you to disable checks with None,None),  not a %r:%r'%(
             store.key_type.__name__,

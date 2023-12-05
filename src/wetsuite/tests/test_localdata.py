@@ -363,6 +363,16 @@ def test_cached_fetch():
         wetsuite.helpers.localdata.cached_fetch(kv, 'https://www.google.com/')
 
 
+def test_cached_fetch_type():
+    ' test what happens when you reverse the arguments or otherwise get them wrong '
+    kv = wetsuite.helpers.localdata.LocalKV(':memory:', str, str)
+
+    with pytest.raises(TypeError, match=r'.*descend*'): # complaint about type
+        wetsuite.helpers.localdata.cached_fetch('https://www.google.com/', kv)
+    with pytest.raises(TypeError, match=r'.*descend*'): # complaint about type
+        wetsuite.helpers.localdata.cached_fetch({}, kv)
+
+
 def test_msgpack_crud():
     ' various API tests of things MsgpackKV overrides '
     kv = wetsuite.helpers.localdata.MsgpackKV(':memory:')
