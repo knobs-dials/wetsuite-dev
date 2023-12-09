@@ -1,6 +1,10 @@
 ' tests of meta.py '
 # pylint: disable=C0301
+import os
+
 import pytest
+
+import test_meta
 
 from wetsuite.helpers.meta import parse_jci
 from wetsuite.helpers.meta import parse_ecli, findall_ecli
@@ -82,13 +86,26 @@ def test_parse_ecli_bad3():
 
 
 def test_findall_ecli_strip():
-    ' see if it is found (also stripped) '
+    ' see if an ECLI is found (also stripped of the period) '
     assert findall_ecli(' .nl/inziendocument?id=ECLI:NL:RBDHA:2016:4235. ', True) == ['ECLI:NL:RBDHA:2016:4235']
 
 
 def test_findall_ecli_nostrip():
-    ' see if it is found (no stripping) '
+    ' see if an ECLI is found (no stripping of the period) '
     assert findall_ecli(' .nl/inziendocument?id=ECLI:NL:RBDHA:2016:4235. ', False) == ['ECLI:NL:RBDHA:2016:4235.']
+
+
+def test_parse_ecli_good_file():
+    ' see if it is found (no stripping) '
+    good_ecli_fn = os.path.join( os.path.dirname( test_meta.__file__ ), 'good_ecli.txt' )
+    with open(good_ecli_fn,'r', encoding='utf8') as good_ecli_file:
+        for line in good_ecli_file:
+            text, _ = line.rstrip('\n').split('\t')
+            parse_ecli( text )
+
+
+#    assert findall_ecli(' .nl/inziendocument?id=ECLI:NL:RBDHA:2016:4235. ', False) == ['ECLI:NL:RBDHA:2016:4235.']
+
 
 
 def test_parse_celex_noerror():
