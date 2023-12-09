@@ -404,11 +404,11 @@ def test_msgpack_moreapi():
     kv.put('c', (5,6))
 
     assert 'a'      in list( kv.iterkeys() )
-    assert 1        in list( kv.itervalues() )
+    assert  1       in list( kv.itervalues() )
     assert ('b', 1) in list( kv.iteritems() )
 
     assert 'a'      in list( kv.keys() )
-    assert 1        in list( kv.values() )
+    assert  1       in list( kv.values() )
     assert ('b', 1) in list( kv.items() )
 
 
@@ -428,7 +428,7 @@ def test_is_file_a_store( tmp_path ):
     wetsuite.helpers.localdata.is_file_a_store('/')
 
     # fail on a non-sqlite file   (this test source is an easy example that we already have anyway)
-    import test_localdata # pylint: disable=W0406
+    import test_localdata   # self-import to get a file we know exists    so pylint: disable=W0406
     assert wetsuite.helpers.localdata.is_file_a_store( test_localdata.__file__ ) is  False
 
     # make a store, to test that it is one

@@ -38,6 +38,7 @@ CONSIDER: writing variants that do convert specific data, letting you e.g. set/f
 '''
 import os
 import os.path
+import time
 import pathlib
 import random
 import collections.abc
@@ -211,7 +212,7 @@ class LocalKV:
         '''
         if self.read_only:
             raise RuntimeError('Attempted delete() on a store that was opened read-only.  (you can subvert that but may not want to)')
-        
+
         self._checktype_key(key)
 
         curs = self.conn.cursor() # TODO: check that's correct when commit==False
@@ -430,7 +431,7 @@ class LocalKV:
             WARNING: rewrites the entire file, so the more data you store, the longer this takes.
             NOTE: f we were left in a transaction (due to commit=False), ths is commit()ed first.
         '''
-        if self._in_transaction: 
+        if self._in_transaction:
             self.commit()  # CONSIDER: raising an error instead
         self.conn.execute('vacuum')
 
@@ -526,15 +527,20 @@ class MsgpackKV(LocalKV):
 
 
 
-def cached_fetch(store:LocalKV, url:str, force_refetch:bool=False) -> Tuple[bytes, bool]:
+def cached_fetch(store:LocalKV, url:str, force_refetch:bool=False, sleep_sec:float=None) -> Tuple[bytes, bool]:
     ''' Helper to use a LocalKV to cache URL fetch results -- assuming it's a str-to-bytes type.
 
         In terms of behaviour:
           - if URL is a key in the given store, fetch and return its value
-          - if URL is not a key in the store,   do wetsuite.helpers.net.download(url), store in store, and return its value
+          - if URL is not a key in the store,   do wetsuite.helpers.net.download(url), 
+            store in store, and return its value
 
-        @param store: a store to get/put data from
-        @param url:   an URL string to fetch
+        Arguably belongs in a mixin or such, but for now its usefulness puts it here.
+
+        @param store:     a store to get/put data from
+        @param url:       an URL string to fetch
+        @param sleep_sec: whenever we fetch (rather than return from cache), sleep this long,
+        so that when you use this in scraping, we can be nicer to a server.
         @return: (data:bytes, whether_it_came_from_cache:bool)
 
         May raise 
@@ -545,7 +551,7 @@ def cached_fetch(store:LocalKV, url:str, force_refetch:bool=False) -> Tuple[byte
     '''
     if not isinstance(store, LocalKV):
         raise TypeError('the store parameter should be a LocalKV or descendant, not %r'%( type(store) ) )
-                        
+
     if store.key_type not in (str,None)  or  store.value_type not in (bytes, None):
         raise TypeError('cached_fetch() expects a str:bytes store (or for you to disable checks with None,None),  not a %r:%r'%(
             store.key_type.__name__,
@@ -553,16 +559,20 @@ def cached_fetch(store:LocalKV, url:str, force_refetch:bool=False) -> Tuple[byte
         ))
     # yes, the following could be a few lines shorter, but this is arguably a little more readable
     if force_refetch is False:
-        try: # use cache
+        try: # use cache?
             ret = store.get(url)
             return ret, True
         except KeyError: # fetch
             data = wetsuite.helpers.net.download( url )
             store.put( url, data )
+            if sleep_sec is not None:
+                time.sleep( sleep_sec )
             return data, False
     else: # force_refetch is True
         data = wetsuite.helpers.net.download( url )
         store.put( url, data )
+        if sleep_sec is not None:
+            time.sleep( sleep_sec )
         return data, False
 
 
