@@ -23,8 +23,8 @@ def detect_env():
         return ret
 
     try: # probably slightly less nasty than by-classname below
-        # pylint ignore because it not being available or not is the thing under test and the point
-        import google.colab  # pylint:disable=E0401,E0611,C0415,W0611
+        # pylint disable,  because it not being available or not is the thing under test, and the point
+        import google.colab    # pylint: disable=E0401,E0611,C0415,W0611
         ret['ipython']     = True
         ret['interactive'] = True
         ret['notebook']    = True
@@ -68,7 +68,8 @@ def is_notebook():
 
 
 def is_ipython():
-    ' returns whether IPython is available (see detect_env)  -  note that depending on what you are testing, you might want to combine this with is_interactive '
+    ''' returns whether IPython is available (see detect_env) - note that you might want to combine this with is_interactive
+        (depending on what you are really testing ) '''
     return detect_env()['ipython']
 
 
@@ -83,10 +84,14 @@ def is_ipython_interactive():
     return env['ipython'] and detect_env()['interactive']
 
 
+
+
+
 def progress_bar(maxval, description='', display=True): # , **kwargs
     ''' Wrapper that prefers tqdm, falls back to ipywidgets's IntProgress progress bar.
         
-        You can set (and get) .value and .description and they should be shown,
+        Compared to L{progress_bar}, this one does a little more,
+        letting you set (and get) .value and .description and they should be shown,
         so e.g. usable like::
             prog = progress_bar( 10, 'overall' )
             for i in range(10):
@@ -133,17 +138,61 @@ def progress_bar(maxval, description='', display=True): # , **kwargs
         return TqdmWrap(maxval, description)
 
     except ImportError:
-        import IPython.display, ipywidgets 
+        import IPython.display, ipywidgets
         prog = ipywidgets.IntProgress(max=maxval, description=description)
         if display:
             IPython.display.display(prog)
         return prog
 
-#class PB:
-#    def __init__(self, seq, descr=None):
-#        progress_bar( len(seq) )
-    
 
+class ProgressBar:
+    ''' A sequence-iterating progress bar (like tqdm),
+        that prefers notebook over console style.
+
+        Compared to L{progress_bar}, this one is less typing.
+
+        E.g. usable like::
+            data = ['a','b',3]
+            for item in ProgressBar(data, 'parsing... '):
+                time.sleep(1)
+
+        It's also pretty dumb:
+        - Unlike creating a progress_bar object, you don't get to change its description.
+                
+        - Unlike tqdm, we only work with something that has a length and is subscriptable,
+          and has no fallback for 
+          - unknown-length iterables               (such as generators)
+          - known-length unsubscriptable iterators (such as set - wrap a list() around it)
+
+        Yes, it's silly that we e.g. wrap tqdm in two layers of interfaces
+        to then present a poorer version of what it presents in the first place. 
+        We could try being cleverer, but for now it works.
+    '''
+    def __init__(self, iterable, description=''):
+        self._iterable = iterable
+        #if isinstance(self._iterable, set):# hack
+        #    self._iterable = list(self._iterable)
+        try:
+            self._len = len( self._iterable )
+        except TypeError as te:
+            #if 'has no len' in str(te): # we could give a nicer anser, maybe only adding to the existing TypeError message?
+            raise te
+        self._cur = -1
+        self.pb = progress_bar(self._len, description=description)
+
+    def __len__(self):
+        return self._len
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        self._cur +=1
+        if self._cur == self._len:
+            raise StopIteration
+        else:
+            self.pb.value = self._cur
+            return self._iterable[self._cur]
 
 
 
@@ -237,7 +286,7 @@ class etree_visualize_selection:
 
 
 if is_notebook():
-    # for debug: make the process easier to recognize for people wondering what's taking so much CPU. 
+    # for debug: make the process easier to recognize for people wondering what's taking so much CPU.
     # Should probably be in a function, or otherwise conditional, NOT happen globally on import
     try:
         import setproctitle
