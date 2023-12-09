@@ -118,11 +118,19 @@ def parse_ecli(text:str):
     m = re.search(r'[^A-Za-z0-9:.]', text)
     if m is not None:
         ret['removed_pre'] = text[m.end():]
-        text = text[:m.end()]
+        text = text[:m.end()-1]
+
 
     ecli_list = text.strip().split(':')
+
+    # :DOC or :INH stuck on an ECLI is an internal convention at... was it open-rechtspraak?
+    if len(ecli_list) == 6  and  ecli_list[-1] in ('DOC','INH'): 
+        # remove that, that may well leave us with a valid ECLI
+        ecli_list = ecli_list[:5] 
+
     if len(ecli_list) != 5:
         raise ValueError("ECLI is expected to have 5 elements (not %d) separated by four colons, %r does not"%(len(ecli_list), text))
+
 
     uppercase_ecli, country_code, court_code, year, caseid = ecli_list
 
