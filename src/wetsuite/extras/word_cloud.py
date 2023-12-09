@@ -245,15 +245,15 @@ def simple_tokenize(text: str):
 
 
 
-if __name__ == '__main__':
-    # quick and dirty tests from text files handed in
-    import sys
-
-    for fn in sys.argv[1:]:
-        with open(fn) as f:
-            filedata = f.read()
-            toks = simple_tokenize( filedata )
-            freqs = count_normalized( toks, min_count=2, normalize_func=lambda s:s.lower().strip('([])') )
-            #print( freqs )
-        im = wordcloud_from_freqs(freqs)
-        im.show() # show in GUI
+# if __name__ == '__main__':
+#     # quick and dirty tests from text files handed in
+#     import sys
+# 
+#     for fn in sys.argv[1:]:
+#         with open(fn) as f:
+#             filedata = f.read()
+#             toks = simple_tokenize( filedata )
+#             freqs = count_normalized( toks, min_count=2, normalize_func=lambda s:s.lower().strip('([])') )
+#             #print( freqs )
+#         im = wordcloud_from_freqs(freqs)
+#         im.show() # show in GUI
