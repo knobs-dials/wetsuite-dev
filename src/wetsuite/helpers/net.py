@@ -29,6 +29,7 @@ def download( url:str, tofile_path:str = None, show_progress=None, chunk_size=13
             ret.append(data)
 
     def progress_update():
+        # TODO: consider using our own notebook.progress_bar here
         bar_str = ''
         if total_length is not None:
             frac = float(fetched)/total_length
@@ -39,9 +40,14 @@ def download( url:str, tofile_path:str = None, show_progress=None, chunk_size=13
             )
         return "\rDownloaded %8sB  %s"%(wetsuite.helpers.format.kmgtp( fetched, kilo=1024 ), bar_str)
 
-    response = requests.get(url, stream=True,
-                            headers={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'}
-                            )
+    response = requests.get(
+        url,
+        stream=True,
+        headers={
+            'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
+        },
+        timeout=10
+    )
     total_length = response.headers.get('content-length')
 
     if not response.ok:
