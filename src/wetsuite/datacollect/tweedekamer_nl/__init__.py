@@ -17,8 +17,8 @@
     look to https://github.com/openkamer/openkamer
 
     
-    It is unclear to me how to do certain things with this interface, e.g. list the items in a kamerstukdossier.
-    (we can get those via e.g. https://zoek.officielebekendmakingen.nl/dossier/36267 though)
+    It is unclear how to do certain things with this interface, e.g. list the items in a kamerstukdossier.
+    (though we can get those via e.g. https://zoek.officielebekendmakingen.nl/dossier/36267)
 '''
 
 import wetsuite.helpers.net
@@ -38,34 +38,46 @@ resource_types = (
 ## First interface: SyncFeed/Atom
 
 SYNCFEED_BASE = 'https://gegevensmagazijn.tweedekamer.nl/SyncFeed/2.0/'
-#                        gegevensmagazijn.tweedekamer.nl/SyncFeed/2.0/Feed
-#                        gegevensmagazijn.tweedekamer.nl/SyncFeed/2.0/Entiteiten/<id>     single entity. The type
-#                        gegevensmagazijn.tweedekamer.nl/SyncFeed/2.0/Resources/<id>      resources for entity
+' Base URL for a few different fetches (mostly /Feed) '
+
+# TODO: figure out and provide more of interface
+# /SyncFeed/2.0/Feed
+# /SyncFeed/2.0/Entiteiten/<id>     single entity. The type
+# /SyncFeed/2.0/Resources/<id>      resources for entity
+#
+# Feed?category
+#
+# Resources seem to be either
+# - referenced   e.g. in enclosure tags
+# - implied (?), e.g. each Document can be fetched its listed Id
 
 
-#Feed?category
-#Resources seem to be either
-#- referenced e.g. in enclosure tags
-#- implied, e.g. each Document can be fetched its listed Id,
-
-#/Resources
-#/Entiteiten is the document metadata
-
-
-def fetch_resource(resource_id):
-    ''' Note that if these don't exist, they will cause a 500 Internal Server Error '''
+def fetch_resource( resource_id ):
+    ''' Note that if these don't exist, they will cause a 500 Internal Server Error,
+        which should get thrown as an exception(VERIFY) 
+    '''
     url = f'{SYNCFEED_BASE}Resources/%s'%resource_id
     return wetsuite.helpers.net.download( url )
 
 
-def fetch_all(soort="Persoon"):
+def fetch_all(soort="Persoon", break_actually=False):
     ''' Fetches all feed items of a single soort.
 
-        Returns items from what might be multiple documents, because this API has a "and here is a link for more items from the same search" feature
-        Keep in mind that for some categories of things, this can be a _lot_ of fetches.
+        Returns items from what might be multiple documents,
+        because this API has a "and here is a link for more items from the same search" feature.
+        Keep in mind that for some categories of things, this can be a _lot_ of fetches and data.
 
-        Returns as a list of etree documents
-        which are also stripped of namespaces (atom for the wrapper, tweedekamer for <content>).
+        @param soort: what object type to fetch everything for.
+        For the available values, see e.g. https://opendata.tweedekamer.nl/documentatie/introductie
+        Note that if you misspell the soort, it returns an empty list rather than erroring out.
+
+        @param break_actually: break after first fetch, mostly for faster debug and testing
+
+        
+        @return: a list of etree objects, which are also stripped of namespaces (atom for the wrapper, tweedekamer for <content>).
+
+        This is not immediately useful,
+        and you probably want to feed this into L{merge_etrees} to make a single large document  (some types are hundreds of MByte, though).
     '''
     url = f'{SYNCFEED_BASE}Feed?category=%s'%soort
     ret = []
@@ -88,6 +100,9 @@ def fetch_all(soort="Persoon"):
 
         ret.append( tree )
 
+        if break_actually:
+            break
+
         if url is None: # no 'next' link, we're done.
             break
 
@@ -106,38 +121,48 @@ def merge_etrees( trees ):
     return ret
 
 
+def entry_dict_from_node(entry_node):
+    edict = {}
+    edict['title']    = entry_node.findtext('title')  #which seems the be the GUID, not a title?
+    #edict['author']  = entry.findtext('author/name')
+
+    edict['updated']  = entry_node.findtext('updated')
+    edict['category'] = entry_node.find('category').get('term')
+    content = entry_node.find('content')
+    item = content[0]
+    for elem in item:
+        #print( wetsuite.helpers.etree.debug_pretty(elem))
+        if elem.attrib.get('nil','false') == 'true':
+            edict[ elem.tag ] = None  # .text should be anyway, but this is at least clearer
+            continue
+
+        if len(elem.attrib)==0:
+            edict[ elem.tag ] = elem.text
+            continue
+
+        refval = elem.attrib.get('ref', None)
+        if refval is not None:
+            edict[ elem.tag ] = ('ref', refval)
+            continue
+
+        raise ValueError( "ERROR: programmer didn't think of case like %r"%wetsuite.helpers.etree.tostring(elem) )
+
+    edict['id'] = item.get('id') # it's in three places and should aways be identical,
+                                    # but this seems the most sensible place, should it ever change
+
+    return edict
+
+
 def entries(feed_etree):
-    ''' Returns all <entry> nodes from en etree, as a list of dicts 
+    ''' @param feed_etree: an etree object for a syncfeed list.
+        ...mostly made for the output of L{merge_etrees}. 
+
+        @return: A list of dicts, one for each <entry> nodes from that etree.
         Most values are strings, while e.g. links are (rel, url) pairs.
     '''
     ret = []
-    for entry in feed_etree.findall('entry'):
-        edict = {}
-        #edict['title']    = entry.findtext('title')  #which seems the be the GUID
-        #edict['id']       = entry.findtext('id')
-        edict['updated']  = entry.findtext('updated')
-        edict['category'] = entry.find('category').get('term')
-        content = entry.find('content')
-        item = content[0]
-        for elem in item:
-            if elem.attrib.get('nil','false') == 'true':
-                edict[ elem.tag ] = None  # .text should be anyway, but this is at least clearer
-                continue
-
-            if len(elem.attrib)==0:
-                edict[ elem.tag ] = elem.text
-                continue
-
-            refval = elem.attrib.get('ref', None)
-            if refval is not None:
-                edict[ elem.tag ] = ('ref', refval)
-                continue
-
-            raise ValueError( "ERROR: programmer didn't think of case like %r"%wetsuite.helpers.etree.tostring(elem) )
-        edict['id'] = item.get('id') # it's in three places and should aways be identical,
-                                     # but this seems the most sensible place, should it ever change
-
-        ret.append( edict )
+    for entry_node in feed_etree.findall('entry'):
+        ret.append( entry_dict_from_node( entry_node ) )
     return ret
 
 
@@ -147,6 +172,9 @@ def entries(feed_etree):
 ## Other interface: OData
 
 ODATA_BASE = 'https://gegevensmagazijn.tweedekamer.nl/OData/v4/2.0/'
+
+
+# TODO: figure out and provide more of interface
 
 # list all items of soort:
 # url = f'{odata_base}/{%s}'%(soort,)
