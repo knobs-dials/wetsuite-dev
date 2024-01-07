@@ -1,10 +1,13 @@
 #!/usr/bin/python3
 ''' Tools for jupyter/ipython-style notebooks, and detection that you are, or are _not_, using one right now.
+
 '''
 import sys
 
 def detect_env():
-    ''' Returns a dict with keys that map to booleans:
+    ''' Use this to detect what kind of environment the calling code is running in.
+    
+        Returns a dict with keys that map to booleans:
         - 'interactive'  - whether it's interactive        
                 (e.g. regular python REPL, ipython REPL, notebook, or qtconsole)
         - 'notebook'     - whether it's a notebook         
@@ -79,24 +82,29 @@ def is_interactive():
 
 
 def is_ipython_interactive():
-    ' return whether this seems to be interactive (in the sense of REPL-ish) '
+    ' return whether this seems to be interactive in the REPL-like sense (is_ipython and is_interactive) '
     env = detect_env()
-    return env['ipython'] and detect_env()['interactive']
+    return env['ipython'] and env['interactive']
 
 
 
 
 
 def progress_bar(maxval, description='', display=True): # , **kwargs
-    ''' Wrapper that prefers tqdm, falls back to ipywidgets's IntProgress progress bar.
+    ''' A progress bar that should work in notebooks -- but also outside them if you have tqdm installed
         
-        Compared to L{progress_bar}, this one does a little more,
-        letting you set (and get) .value and .description and they should be shown,
+        More precisely: 
+        - wraps tqdm and ipywidgets's IntProgress progress bar; 
+        - prefers tqdm if installed, falls back to IntProgress.
+        
+        Compared to L{ProgressBar}, this one is more typing but also does a little more,
+        letting you set (and get) .value and .description on the fly,
         so e.g. usable like::
             prog = progress_bar( 10, 'overall' )
             for i in range(10):
                 prog.value += 1
                 time.sleep(1)
+            prog.description = 'finished'
 
         Arguments
           - maximum value (required)
@@ -105,6 +113,10 @@ def progress_bar(maxval, description='', display=True): # , **kwargs
         You should only call this after you know you are in an ipython environment - e.g. with is_ipython() / is_notebook()
     '''
     try:
+        import warnings
+        from tqdm import TqdmExperimentalWarning
+        warnings.filterwarnings("ignore", category=TqdmExperimentalWarning) # TODO: actually read up on what that warning means exactly
+
         import tqdm.autonotebook  # pylint: disable=C0415
         class TqdmWrap:
             ' make it act enough like the ipywidget, in terms of our description '
@@ -137,7 +149,7 @@ def progress_bar(maxval, description='', display=True): # , **kwargs
 
         return TqdmWrap(maxval, description)
 
-    except ImportError:
+    except ImportError: # tqdm not installed
         import IPython.display, ipywidgets
         prog = ipywidgets.IntProgress(max=maxval, description=description)
         if display:
@@ -149,20 +161,19 @@ class ProgressBar:
     ''' A sequence-iterating progress bar (like tqdm),
         that prefers notebook over console style.
 
-        Compared to L{progress_bar}, this one is less typing.
-
-        E.g. usable like::
+        Compared to L{progress_bar}, this one is less typing, and a little more basic, e.g. usable like::
             data = ['a','b',3]
             for item in ProgressBar(data, 'parsing... '):
                 time.sleep(1)
 
-        It's also pretty dumb:
+        It's more basic in that...
         - Unlike creating a progress_bar object, you don't get to change its description.
                 
         - Unlike tqdm, we only work with something that has a length and is subscriptable,
           and has no fallback for 
-          - unknown-length iterables               (such as generators)
-          - known-length unsubscriptable iterators (such as set - wrap a list() around it)
+          - unknown-length iterables                   (such as generators)
+          - known-length but unsubscriptable iterators (such as dict_items, and set type - yould need to wrap a list() around it)
+            we could hardcode those to work, though...
 
         Yes, it's silly that we e.g. wrap tqdm in two layers of interfaces
         to then present a poorer version of what it presents in the first place. 
