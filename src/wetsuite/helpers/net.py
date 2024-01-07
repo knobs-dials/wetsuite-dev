@@ -7,7 +7,7 @@ import requests
 import wetsuite.helpers.format
 
 
-def download( url:str, tofile_path:str = None, show_progress=None, chunk_size=131072 ):
+def download( url:str, tofile_path:str = None, show_progress=None, chunk_size=131072, timeout=20 ):
     ''' Wrapper around requests.get() with some optional extras.
 
         One of them is the option to stream-download to filesystem:     
@@ -46,7 +46,7 @@ def download( url:str, tofile_path:str = None, show_progress=None, chunk_size=13
         headers={
             'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0'
         },
-        timeout=10
+        timeout=timeout
     )
     total_length = response.headers.get('content-length')
 
@@ -59,7 +59,7 @@ def download( url:str, tofile_path:str = None, show_progress=None, chunk_size=13
         #chunkrange = range(total_length/chunksize)
 
     fetched = 0
-    for data in response.iter_content(chunk_size=chunk_size):
+    for data in response.iter_content( chunk_size=chunk_size ):
         handle_chunk(data)
         fetched += len(data)
         if show_progress:
