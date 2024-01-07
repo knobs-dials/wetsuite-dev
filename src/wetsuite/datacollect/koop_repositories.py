@@ -130,7 +130,12 @@ class WetgevingsKalender(wetsuite.datacollect.sru.SRUBase):
                                                   verbose=verbose)
 
 
-# broken in that the documents URLs it links to will 404 - this seems to be because PLOOI beta led to a half-retraction and redesign?
+
+
+## Not working?
+
+
+# broken in that the documents URLs it links to will 404 - this seems to be because this PLOOI beta led to a retraction and redesign?
 class PLOOI(wetsuite.datacollect.sru.SRUBase):
     ''' SRU endpoint for the Platform Open Overheidsinformatie repository 
 
