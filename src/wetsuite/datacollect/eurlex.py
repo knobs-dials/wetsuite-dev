@@ -105,7 +105,9 @@ def extract_html(htmlbytes):
                 what = node.text.strip().strip(':')
             elif node.name == 'dd':
                 # however, the dd can contain a list instead of just a string
-                #    the structure is consistent only within each section, so leave it for code calling this function to process usefully  (forced to be - JSON would choke on it if you insert it as-is)
+                #    the structure is consistent only within each section,
+                #    so leave it for code calling this function to process usefully
+                #    (forced to be - JSON would choke on it if you insert it as-is)
                 if node.find(['ul','ol']):
                     ret[what] = node.findAll('li')
                 else:
@@ -119,8 +121,8 @@ def extract_html(htmlbytes):
     celex = soup.find('meta', attrs={'name':'WT.z_docID'}).get('content')
     ret['celex'] = celex
 
-    PP1Contents = soup.find(id='PP1Contents')
     ret['titles']={}
+    PP1Contents = soup.find(id='PP1Contents')
     if PP1Contents is not None:
         ret['titles']['title'] = PP1Contents.find(id='title').text
         ret['titles']['englishTitle'] = PP1Contents.find(id='englishTitle').text
@@ -140,14 +142,14 @@ def extract_html(htmlbytes):
                 val = datetime.datetime.strptime(val, "%d/%m/%Y").strftime('%Y-%m-%d')
             ret['dates'][what] = val
 
-    PPMisc_Contents = soup.find(id='PPMisc_Contents')
     ret['misc'] = {}
+    PPMisc_Contents = soup.find(id='PPMisc_Contents')
     if PPMisc_Contents is not None:
         ret['misc'] = parse_datalist( PPMisc_Contents.find('dl') )
 
 
-    PPProc_Contents = soup.find(id='PPProc_Contents')
     ret['proc'] = {}
+    PPProc_Contents = soup.find(id='PPProc_Contents')
     if PPProc_Contents is not None:
         # procedure looks like a key:value thing (e.g. Defendant:Raad),
         # but there are cases where the value is a list, which parse_datalist doesn't handle for us so we have to.
@@ -177,17 +179,21 @@ def extract_html(htmlbytes):
             #     #ret['proc'] = it
 
 
-    PPLinked_Contents = soup.find(id='PPLinked_Contents')
     ret['linked'] = {}
+    PPLinked_Contents = soup.find(id='PPLinked_Contents')
     if PPLinked_Contents is not None:
         parsed_link = {}
-        for what, val in parse_datalist(PPLinked_Contents.find('dl')).items():
+        for what, val in parse_datalist(PPLinked_Contents.find('dl')).items(): 
             if isinstance(val, bs4.element.ResultSet):
                 parsedval = []
+                # This is far from complete
                 for li in val:
                     a = li.find('a')
                     data_celex = a.get('data-celex')
-                    parsedval.append(   (  'CELEX:'+data_celex, ''.join( li.findAll(text=True) ).strip()  )   )
+                    if data_celex is not None:
+                        parsedval.append(   (  'CELEX:'+data_celex, ''.join( li.findAll(text=True) ).strip()  )   )
+                    else:
+                        pass # TODO: handle other types
                 parsed_link[what] = parsedval
             else:
                 parsed_link[what] = val
@@ -195,8 +201,8 @@ def extract_html(htmlbytes):
 
 
     # Doctrine
-    PPDoc_Contents = soup.find(id='PPDoc_Contents')
     ret['doctrine'] = {}
+    PPDoc_Contents = soup.find(id='PPDoc_Contents')
     if PPDoc_Contents is not None:
         parsed_doctr = {}
         for what, val in parse_datalist(PPDoc_Contents.find('dl')).items():
@@ -212,8 +218,8 @@ def extract_html(htmlbytes):
 
 
     # Classifications
-    PPClass_Contents = soup.find(id='PPClass_Contents')
     ret['classifications'] = {}
+    PPClass_Contents = soup.find(id='PPClass_Contents')
     if PPClass_Contents is not None:
         parsed_class = {}
         for what, val in parse_datalist(PPClass_Contents.find('dl')).items():
@@ -232,8 +238,8 @@ def extract_html(htmlbytes):
 
 
     # Languages and formats available   (not always there)
-    PP2Contents = soup.find(id='PP2Contents')
     ret['contents'] = []
+    PP2Contents = soup.find(id='PP2Contents')
     if PP2Contents is not None:
         parsed_contents = []
         for ul in PP2Contents.findAll('ul'):
@@ -248,8 +254,10 @@ def extract_html(htmlbytes):
                         lang = a.find('span').text
                         if format == 'VIEW':
                             continue
-                        # constructing the URL like that is cheating and may not always work. Ideally we'd urllib.parse.urljoin  it from the href, but then we must know the URL this was fetched from.
-                        parsed_contents.append( (lang, format, 'https://eur-lex.europa.eu/legal-content/%s/TXT/%s/?uri=CELEX:%s'%(lang, format, celex)) )
+                        # constructing the URL like that is cheating and may not always work. 
+                        # Ideally we'd urllib.parse.urljoin  it from the href, but then we must know the URL this was fetched from.
+                        parsed_contents.append(
+                            (lang, format, 'https://eur-lex.europa.eu/legal-content/%s/TXT/%s/?uri=CELEX:%s'%(lang, format, celex)) )
         ret['contents'] = parsed_contents
 
 
@@ -257,7 +265,7 @@ def extract_html(htmlbytes):
     PP4Contents = soup.find(id='PP4Contents')
     txt = []
     if PP4Contents is not None:
-        
+
         # TODO: review, this may be overkill and/or not complete
         titerate = []
         TexteOnly = PP4Contents.find(id='TexteOnly') # probably better if it's there?
