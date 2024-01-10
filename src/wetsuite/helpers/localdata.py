@@ -464,9 +464,9 @@ class LocalKV:
     def random_sample(self, amount):
         ''' Returns an amount of [(key, value), ...] list from the store, selected randomly.
         
-            Convenience function, because doing this properly yourself takes two or three lines 
-            (you can't random.choice/random.sample a view,  
-            so to do it properly you basically have to materialize all keys - and not accidentally all values)
+            Convenience function, because you can do this yourself in two or three lines - 
+            while you can't random.choice/random.sample a view,
+            to do it properly you basically have to materialize all keys (and probably not accidentally all values)
             BUT assume this is slower than working on the keys yourself.
         '''
         all_keys = list( self.keys() )
@@ -560,10 +560,10 @@ def cached_fetch(store:LocalKV, url:str, force_refetch:bool=False, sleep_sec:flo
     # yes, the following could be a few lines shorter, but this is arguably a little more readable
     if force_refetch is False:
         try: # use cache?
-            ret = store.get(url)
+            ret = store.get(url) 
             return ret, True
-        except KeyError: # fetch
-            data = wetsuite.helpers.net.download( url )
+        except KeyError: # get() notices it's not there, so fetch it ourselves
+            data = wetsuite.helpers.net.download( url ) # note that this can error out, which we don't handle
             store.put( url, data )
             if sleep_sec is not None:
                 time.sleep( sleep_sec )
