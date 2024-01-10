@@ -127,8 +127,11 @@ def progress_bar(maxval, description='', display=True): # , **kwargs
 
             def set_value(self, val):
                 ' setter wrapper (will be part of property decorator) '
+                diff = val - self._value
                 self._value = val
-                self.tq.update( 1 ) # self._value
+                # tqdm seems to want the amount of increase, not the new value
+                if diff > 0:
+                    self.tq.update( diff )
 
             def get_value(self):
                 ' getter wrapper (will be part of property decorator) '
@@ -149,7 +152,7 @@ def progress_bar(maxval, description='', display=True): # , **kwargs
 
         return TqdmWrap(maxval, description)
 
-    except ImportError: # tqdm not installed
+    except ImportError: # tqdm not installed? fall back to ipywidgets.IntProgress bar
         import IPython.display, ipywidgets
         prog = ipywidgets.IntProgress(max=maxval, description=description)
         if display:
