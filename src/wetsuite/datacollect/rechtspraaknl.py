@@ -66,7 +66,7 @@ def search(params):
     '''
     # constructs something like 'http://data.rechtspraak.nl/uitspraken/zoeken?type=conclusie&date=2011-05-01&date=2011-05-30'
     url = urllib.parse.urljoin(BASE_URL, "/uitspraken/zoeken?"+urllib.parse.urlencode(params))
-    print( url )
+    #print( url )
     results = wetsuite.helpers.net.download( url )
     tree = wetsuite.helpers.etree.fromstring( results )
     return tree
