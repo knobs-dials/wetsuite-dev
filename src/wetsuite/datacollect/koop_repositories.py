@@ -116,6 +116,13 @@ class TuchtRecht(wetsuite.datacollect.sru.SRUBase):
 
 
 
+
+
+
+
+
+
+
 # Does not seem to do what I think - though I may be misunderstanding it.
 class WetgevingsKalender(wetsuite.datacollect.sru.SRUBase):
     ''' SRU endpoint for wetgevingskalender, see e.g. https://wetgevingskalender.overheid.nl/ 
@@ -128,8 +135,6 @@ class WetgevingsKalender(wetsuite.datacollect.sru.SRUBase):
                                                   x_connection='wgk',
                                                   #extra_query='c.product-area any wgk',
                                                   verbose=verbose)
-
-
 
 
 ## Not working?
