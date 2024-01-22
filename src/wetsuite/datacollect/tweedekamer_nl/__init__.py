@@ -60,7 +60,7 @@ def fetch_resource( resource_id ):
     return wetsuite.helpers.net.download( url )
 
 
-def fetch_all(soort="Persoon", break_actually=False):
+def fetch_all(soort="Persoon", break_actually=False, timeout=60):
     ''' Fetches all feed items of a single soort.
 
         Returns items from what might be multiple documents,
@@ -82,7 +82,7 @@ def fetch_all(soort="Persoon", break_actually=False):
     url = f'{SYNCFEED_BASE}Feed?category=%s'%soort
     ret = []
     while True:
-        xml  = wetsuite.helpers.net.download( url )
+        xml  = wetsuite.helpers.net.download( url, timeout=timeout )
         tree = wetsuite.helpers.etree.fromstring( xml )
         tree = wetsuite.helpers.etree.strip_namespace( tree )
 
@@ -122,6 +122,11 @@ def merge_etrees( trees ):
 
 
 def entry_dict_from_node(entry_node):
+    ''' Helper for entries(). 
+        Given a single etree node (that came from an <entry>),
+        returns the contained information in a dict. 
+        This is mostly key-value (elem.tag, elem.value) but smooths over a few details.
+    '''
     edict = {}
     edict['title']    = entry_node.findtext('title')  #which seems the be the GUID, not a title?
     #edict['author']  = entry.findtext('author/name')
