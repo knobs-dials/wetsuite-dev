@@ -141,7 +141,7 @@ def format_date_list(datelist, strftime_format='%Y-%m-%d'):
     would return: ::
         ['2022-01-29', '2022-01-30', '2022-01-31', '2022-02-01', '2022-02-02']
 
-    @param rng: a list of datetime objects
+    @param datelist: a list of datetime objects
     @param strftime_format: a string that tells strftime how to format the date (see also L{format_date})
     @return: a list of formatted date strings
     '''
@@ -150,7 +150,7 @@ def format_date_list(datelist, strftime_format='%Y-%m-%d'):
 
 def _date_from_date_datetime_or_parse( a_date ):
     ''' Intended to normalzing date/datetime/date-as-string parameters into date objects.
-        @param a_Date: date as a date object, datetime object, or string to parse (using dateutil library)
+        @param a_date: date as a date object, datetime object, or string to parse (using dateutil library)
         @return: date object
     '''
     if   isinstance( a_date, datetime.datetime): # must come first, it's itself a subclass of date
