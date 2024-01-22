@@ -702,13 +702,13 @@ def hash_color(s, rgb=False, append=RESET, prepend='', hash_instead=None, on=Non
         hand the part into hash_instead
 
         TODO: variant that gives just the escapes, so we can avoid calling this a lot
-     
+
         @param rgb:
           - if False, uses the basic set of ~8 colors and brightness.
           - if True,  uses true color  (recommended if you can)
-          
-        @hash_instead: if you want to color a more verbose string based on part of it,
-        hand the part into C{hash_instead}, and the whole into C{s}
+        
+        @param hash_instead: if you want to color a verbose string based on just
+        part of it, hand the color-determining part into C{hash_instead}, and the whole into C{s}
 
         @param on:
           - if 'dark' suggests we're drawing on dark background,
