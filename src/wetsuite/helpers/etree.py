@@ -314,8 +314,8 @@ def indent(tree, strip_whitespace:bool=True):
         so this output should _only_ be used for presentation of the debugging sort.
 
         See also L{_indent_inplace}
-        @param tree:            tree to copy and reindent
-        @param whitespacestrip: make contents that contain a lot of newlines look cleaner, but changes the stored data even more.
+        @param tree:             tree to copy and reindent
+        @param strip_whitespace: make contents that contain a lot of newlines look cleaner, but changes the stored data even more.
     '''
     newtree = copy.deepcopy( tree )
     _indent_inplace(newtree, level=0, strip_whitepsace=strip_whitespace)
