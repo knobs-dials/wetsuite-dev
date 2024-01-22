@@ -157,34 +157,32 @@ def find_nonidentifier_references(text, context_amt=60, debug=False):    # TODO:
 
         
         One reasonable approach might be 
-          including each real-world variant explicitly, 
-          as it lets you put stronger patterns first and fall back on fuzzier,
-          it makes it clear what is being matched, and it's easier to see how common each is.
+        include each real-world variant explicitly, 
+        as it lets you put stronger patterns first and fall back on fuzzier,
+        it makes it clear what is being matched, and it's easier to see how common each is.
+        
         However, it easily leads to false negatives -- missing real things.
-
         
         Instead, we 
-        - start by finding some strong anchors
-        - keep accepting bits of adjacent string as long as they look like things we know
-          "artikel 5.1,"   "tweede lid,"   "aanhef en onder i"
-        - then seeing what text is around it, which should be at least the law name
+            - start by finding some strong anchors
+            - keep accepting bits of adjacent string as long as they look like things we know
+            "artikel 5.1,"   "tweede lid,"   "aanhef en onder i"
+            - then seeing what text is around it, which should be at least the law name
         
 
         Neither will deal with the briefest forms, e.g. "(81 WWB)"
         which is arguably only reasonable to recognize when you recognize either side
         (by known law name, which is harder for abbreviations in that it probably leads to false positives)
         ...and in that example, we might want to 
-        - see if character context makes it reasonable - the parthentheses make it more reasonable than
-          if you found the six characters '81 WWB' in any context 
-        - check whether the estimated law (Wet werk en bijstand - BWBR0015703) has an article 81
-        - check, in some semantic way, whether Wet werk en bijstand makes any sense in context of the text
+            - see if character context makes it reasonable - the parthentheses make it more reasonable than
+            if you found the six characters '81 WWB' in any context 
+            - check whether the estimated law (Wet werk en bijstand - BWBR0015703) has an article 81
+            - check, in some semantic way, whether Wet werk en bijstand makes any sense in context of the text
 
         ...also so that we can return some estimation of 
-        - how sure we are this is a reference,
-        - how complete a reference is, and/or
-        - how easy to resolve a reference is.
-
-        
+            - how sure we are this is a reference,
+            - how complete a reference is, and/or
+            - how easy to resolve a reference is.
     '''
     ret = []
     artikel_matches = []
