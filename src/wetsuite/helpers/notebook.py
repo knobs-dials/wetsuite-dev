@@ -8,12 +8,12 @@ def detect_env():
     ''' Use this to detect what kind of environment the calling code is running in.
     
         Returns a dict with keys that map to booleans:
-        - 'interactive'  - whether it's interactive        
-                (e.g. regular python REPL, ipython REPL, notebook, or qtconsole)
-        - 'notebook'     - whether it's a notebook         
-                (also including colab, qtconsole)
-        - 'ipython'      - whether IPython is available    
-                (note this will also return True if the module just happens to be installed and available)
+            - 'interactive'  - whether it's interactive        
+                    (e.g. regular python REPL, ipython REPL, notebook, or qtconsole)
+            - 'notebook'     - whether it's a notebook         
+                    (also including colab, qtconsole)
+            - 'ipython'      - whether IPython is available    
+                    (note this will also return True if the module just happens to be installed and available)
 
         (when we see pytest, we fake all False, because that's probably closer -- probably better than noticing the IPython that pytest seems to mock)
     '''
@@ -94,8 +94,8 @@ def progress_bar(maxval, description='', display=True): # , **kwargs
     ''' A progress bar that should work in notebooks -- but also outside them if you have tqdm installed
         
         More precisely: 
-        - wraps tqdm and ipywidgets's IntProgress progress bar; 
-        - prefers tqdm if installed, falls back to IntProgress.
+            - wraps tqdm and ipywidgets's IntProgress progress bar; 
+            - prefers tqdm if installed, falls back to IntProgress.
         
         Compared to L{ProgressBar}, this one is more typing but also does a little more,
         letting you set (and get) .value and .description on the fly,
@@ -170,13 +170,13 @@ class ProgressBar:
                 time.sleep(1)
 
         It's more basic in that...
-        - Unlike creating a progress_bar object, you don't get to change its description.
-                
-        - Unlike tqdm, we only work with something that has a length and is subscriptable,
-          and has no fallback for 
-          - unknown-length iterables                   (such as generators)
-          - known-length but unsubscriptable iterators (such as dict_items, and set type - yould need to wrap a list() around it)
-            we could hardcode those to work, though...
+            - Unlike creating a progress_bar object, you don't get to change its description.
+                    
+            - Unlike tqdm, we only work with something that has a length and is subscriptable,
+            and has no fallback for 
+            - unknown-length iterables                   (such as generators)
+            - known-length but unsubscriptable iterators (such as dict_items, and set type - yould need to wrap a list() around it)
+                we could hardcode those to work, though...
 
         Yes, it's silly that we e.g. wrap tqdm in two layers of interfaces
         to then present a poorer version of what it presents in the first place. 
