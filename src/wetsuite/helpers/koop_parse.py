@@ -1134,3 +1134,32 @@ def iter_chunks_xml(xml):
                    'text': text,
                    'from_table': False,
                    }
+
+
+
+def prefer_types(l):
+    ''' Given a bunch of document types such as::
+            ['metadata', 'metadataowms', 'pdf','odt', 'jpg', 'coordinaten', 'ocr', 'html', 'xml']
+        we return only the variants we prefer (going for the smaller, more data-like variants, and avoiding redundance when there is also e.g. odt, pdf), so e.g.::
+            ['metadata', 'metadataowms', 'xml', 'html']
+        This takes a lit of strings, and returns a list of our preferences
+    '''
+    ret = list()
+    if 'metadata' in l: # we only need to choose when it's types, using this as an indicator
+        for always in [
+            'metadata', 'metadataowms',
+            'xml',
+        ]:
+            if always in l:
+                ret.append( always )
+        for first_of in ('html','pdf','odt'):
+            if first_of in l:
+                ret.append( first_of )
+                break
+        #for never in ('coordinaten', 'jpg', 'ocr'):
+    else: # if 'metadata' is not a string in that list, assume you mistakenly handed in another folder directory
+        ret = list(l)
+    return ret
+
+## test
+#prefer_types(['metadata', 'metadataowms', 'pdf','odt', 'jpg', 'coordinaten', 'ocr', 'html', 'xml'])
