@@ -20,15 +20,15 @@ TODO:     try parsing in smaller chunks, and stream out results
 
 def load_models( model_list ):
     ''' @param model_list: A list of 3-tuples, each
-        - language
-        - preference of where to load it - 'cpu' or 'gpu'
-        - model name
+            - language
+            - preference of where to load it - 'cpu' or 'gpu'
+            - model name
 
         @return: a list of 4-tuples:
-        - language                                         (as handed in)
-        - preference of where to load it - 'cpu' or 'gpu'  (as handed in)
-        - model name                                       (as handed in)
-        - spacy model object
+            - language                                         (as handed in)
+            - preference of where to load it - 'cpu' or 'gpu'  (as handed in)
+            - model name                                       (as handed in)
+            - spacy model object
     '''
     ret = []
     import spacy
