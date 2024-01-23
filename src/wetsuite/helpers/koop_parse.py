@@ -551,13 +551,17 @@ def bwb_wti_usefuls( tree ):
     ### algemene_informatie ###########################################################################################
     ret['algemene_informatie'] = {}
 
-    ret['algemene_informatie']['citeertitels'] = []
+    ret['algemene_informatie']['citeertitels_withdate'] = []
     citeertitels = algemene_informatie.find('citeertitels')
     if citeertitels is not None:
         for citeertitel in citeertitels:
-            ret['algemene_informatie']['citeertitels'].append( (citeertitel.get('geldig-van'), citeertitel.get('geldig-tot'), citeertitel.text) )
+            ret['algemene_informatie']['citeertitels_withdate'].append( (citeertitel.get('geldig-van'), citeertitel.get('geldig-tot'), citeertitel.text) )
+
+    # CONSIDER: case-insensitive uniqueness
+    ret['algemene_informatie']['citeertitels_distinct'] = list(set( titel   for _,_,titel in ret['algemene_informatie']['citeertitels_withdate'] ))
 
     # TODO: similar for niet-officiele-titels
+
 
     for name in ('eerstverantwoordelijke', 'identificatienummer'):
         ret['algemene_informatie'][name] = algemene_informatie.findtext(name)
