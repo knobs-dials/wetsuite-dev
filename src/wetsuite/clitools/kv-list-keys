@@ -1,0 +1,32 @@
+#!/usr/bin/python3
+''' Given one or more paths to a LocalKV style database,
+    list all its keys, one per line
+'''
+
+import sys
+import os
+
+import wetsuite.helpers.localdata
+
+def main():
+    ' see module docstring '
+    for path in sys.argv[1:]:
+        if not os.path.exists( path ):
+            print( 'Specified path not found: %r'%path )
+            continue
+
+        if not wetsuite.helpers.localdata.is_file_a_store( path ):
+            print( 'Specified path does not seem to be an SQLite file create by us: %r'%path )
+            continue
+
+        print('== %r =='%path)
+        # the types are not actually used because we don't use put()
+        store = wetsuite.helpers.localdata.LocalKV(path, str, str)
+        count = 0
+        for key in store.iterkeys():
+            print(key)
+            count += 1
+        sys.stderr.write( '# Listed %d keys\n'%count )
+
+if __name__ == '__main__':
+    main()

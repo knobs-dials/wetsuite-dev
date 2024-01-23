@@ -18,6 +18,7 @@ if __name__ == '__main__':
             print( 'Specified path does not seem to be an SQLite file created by us: %r'%path )
             continue
 
-        store = wetsuite.helpers.localdata.LocalKV(path, None,None, read_only=True) # the types are not actually used because we don't write
+        # the types are not actually used because we don't write
+        store = wetsuite.helpers.localdata.LocalKV(path, None,None, read_only=True) 
         print( store.estimate_waste(), path )
         store.close()
