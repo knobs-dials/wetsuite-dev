@@ -16,13 +16,14 @@ def main():
         sys.exit(-1)
     else:
         path, key = sys.argv[1:]
+        path = os.path.abspath( path ) # mostly to avoid localdata.resolve_path interpretation
 
         if not os.path.exists( path ):
             print( 'Specified path not found: %r'%path )
             sys.exit(-2)
 
         if not wetsuite.helpers.localdata.is_file_a_store( path ):
-            print( 'Specified path does not seem to be an SQLite file create by us: %r'%path )
+            print( 'Specified path does not seem to be an SQLite file created by us: %r'%path )
             sys.exit(-3)
 
         # the types are not actually used because we don't use put()

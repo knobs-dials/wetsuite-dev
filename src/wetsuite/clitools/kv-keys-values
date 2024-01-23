@@ -15,23 +15,29 @@ def main():
     # CONSIDER: "show x amount of random items"
 
     for path in sys.argv[1:]:
+        path = os.path.abspath( path ) # mostly to avoid localdata.resolve_path interpretation
+
         if not os.path.exists( path ):
             print( 'Specified path not found: %r'%path )
             continue
 
         if not wetsuite.helpers.localdata.is_file_a_store( path ):
-            print( 'Specified path does not seem to be an SQLite file create by us: %r'%path )
+            print( 'Specified path does not seem to be an SQLite file created by us: %r'%path )
             continue
 
         print( '====== STORE: %r ======'%path )
 
         # the types are not actually used because we don't use put()
         store = wetsuite.helpers.localdata.LocalKV(path, None, None, read_only=True)
+        print(store.summary(True))
 
         # CONSIDER: deal with msgpack more cleanly
         if store._get_meta('valtype', missing_as_none=True) == 'msgpack':
+            print(store.summary(True))
             store.close()
             store = wetsuite.helpers.localdata.MsgpackKV(path, str, read_only=True)
+
+        print(store.summary(True))
 
 
         count = 0
@@ -39,7 +45,7 @@ def main():
 
             # format for shell output
 
-            print( '\nkey: %s'%(wetsuite.helpers.shellcolor.blue( repr(key) )) )
+            print( '\nkey: %s'%(wetsuite.helpers.shellcolor.yellow( repr(key) )) )
             count += 1
 
             val = store.get( key )

@@ -11,12 +11,13 @@ import wetsuite.helpers.localdata
 def main():
     ' see module docstring '
     for path in sys.argv[1:]:
+        path = os.path.abspath( path ) # mostly to avoid localdata.resolve_path interpretation
         if not os.path.exists( path ):
             print( 'Specified path not found: %r'%path )
             continue
 
         if not wetsuite.helpers.localdata.is_file_a_store( path ):
-            print( 'Specified path does not seem to be an SQLite file create by us: %r'%path )
+            print( 'Specified path does not seem to be an SQLite file created by us: %r'%path )
             continue
 
         print('== %r =='%path)
