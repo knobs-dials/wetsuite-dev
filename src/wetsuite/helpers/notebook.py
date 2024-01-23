@@ -2,6 +2,8 @@
 ''' Tools for jupyter/ipython-style notebooks, and detection that you are, or are _not_, using one right now.
 
 '''
+import warnings
+import time
 import sys
 
 def detect_env():
@@ -110,12 +112,13 @@ def progress_bar(maxval, description='', display=True): # , **kwargs
           - maximum value (required)
           - optional description
           - if display==True (default), it calls display on the IPython widget, so you don't have to
-        You should only call this after you know you are in an ipython environment - e.g. with is_ipython() / is_notebook()
+        You should only call this after you know you are in an ipython environment,
+        e.g. with is_ipython() / is_notebook()
     '''
     try:
-        import warnings
         from tqdm import TqdmExperimentalWarning
-        warnings.filterwarnings("ignore", category=TqdmExperimentalWarning) # TODO: actually read up on what that warning means exactly
+        # TODO: actually read up on what that warning means exactly
+        warnings.filterwarnings("ignore", category=TqdmExperimentalWarning) 
 
         import tqdm.autonotebook  # pylint: disable=C0415
         class TqdmWrap:
@@ -164,7 +167,8 @@ class ProgressBar:
     ''' A sequence-iterating progress bar (like tqdm),
         that prefers notebook over console style.
 
-        Compared to L{progress_bar}, this one is less typing, and a little more basic, e.g. usable like::
+        Compared to L{progress_bar}, this one is less typing, and a little more basic.
+        e.g. usable like::
             data = ['a','b',3]
             for item in ProgressBar(data, 'parsing... '):
                 time.sleep(1)
@@ -173,9 +177,11 @@ class ProgressBar:
             - Unlike creating a progress_bar object, you don't get to change its description.
                     
             - Unlike tqdm, we only work with something that has a length and is subscriptable,
-            and has no fallback for 
-            - unknown-length iterables                   (such as generators)
-            - known-length but unsubscriptable iterators (such as dict_items, and set type - yould need to wrap a list() around it)
+              and has no fallback for 
+            - unknown-length iterables                   
+              (such as generators)
+            - known-length but unsubscriptable iterators 
+              (such as dict_items, and set type - yould need to wrap a list() around it)
                 we could hardcode those to work, though...
 
         Yes, it's silly that we e.g. wrap tqdm in two layers of interfaces
@@ -183,14 +189,26 @@ class ProgressBar:
         We could try being cleverer, but for now it works.
     '''
     def __init__(self, iterable, description=''):
-        self._iterable = iterable
-        #if isinstance(self._iterable, set):# hack
-        #    self._iterable = list(self._iterable)
+        self.is_notebook = is_notebook()
+
         try:
-            self._len = len( self._iterable )
+            self._len = len( iterable )
         except TypeError as te:
-            #if 'has no len' in str(te): # we could give a nicer anser, maybe only adding to the existing TypeError message?
+            #if 'has no len' in str(te): # CONSIDER give a nicer answer
             raise te
+
+        # this may be a cleanish way to support things that are known-length but unsubscriptable,
+        # like set or dict_items without materializing them entirely
+        # (wraps an iterator around things that already are), but this needs reading up and testing
+        if not hasattr(iterable, '__next__'): # assumes py3
+            # assumes you handed is iterable.  What do you expect of a progress bar otherwise?
+            iterable = iter( iterable )
+            #print( "making iterator over %s"%type(iterable) )
+        #else:
+        #    print( "already iterable: %s"%type(iterable) )
+
+        self._iterable = iterable
+
         self._cur = -1
         self.pb = progress_bar(self._len, description=description)
 
@@ -202,11 +220,17 @@ class ProgressBar:
 
     def __next__(self):
         self._cur +=1
+
         if self._cur == self._len:
             raise StopIteration
-        else:
-            self.pb.value = self._cur
-            return self._iterable[self._cur]
+
+        # this is a hacky way to make it likelier a dynamic in-notebook progress bar gets updated -- I _think_
+        if self.is_notebook:
+            time.sleep(0.0000001) 
+
+        self.pb.value = self._cur
+        #return self._iterable[self._cur]
+        return self._iterable.__next__()
 
 
 
