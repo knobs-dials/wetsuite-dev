@@ -1,7 +1,9 @@
 #!/usr/bin/python3
-''' Show mentions of "TODO:" and "CONSIDER:" in code.
-'''
-import os, re, json, sys
+''' Show mentions of "TODO:" and "CONSIDER:" in code. '''
+import os
+import re
+import json
+import sys
 
 # maybe use pygments to do syntax highlighting? (but may be annoying to combine)
 import wetsuite.helpers.shellcolor as sc
@@ -20,13 +22,13 @@ LOOKFOR_AND_COLOR = {
 
 
 ### TODO: proper argument parsing
-# pragma: no cover
 show_context_line_amt = 3
 # large py-like files are usually data, not code
-max_filesize     = 512000
-max_cellsize     = 51200
+max_filesize          = 512000
+max_cellsize          = 51200
 
 args = sys.argv[1:]
+
 
 if len(args)==0: # pragma: no cover
     print("We need paths to work on.   Did you mean:\n %s ."%os.path.basename(sys.argv[0]))
@@ -38,10 +40,17 @@ for arg in args: # pragma: no cover
     for r, ds, fs in os.walk( arg ):
         # not sure why it's misdetecting that as a constant; pylint: disable=C0103
         for fn in fs:
+            # things we don't care about
+            if fn.endswith('.pyc'):
+                continue
+            if fn.endswith('.pyo'):
+                continue
+
             ffn = os.path.join( r, fn )
             #if ffn == TODO.__file__:
             #    continue
             seems_like_notebook, seems_like_python = False, False
+            # things we might care about
             if ffn.endswith('.ipynb'):
                 seems_like_notebook = True
             elif ffn.endswith('.py'): # TODO: add test
@@ -51,14 +60,17 @@ for arg in args: # pragma: no cover
                     pass
                     #print('SKIP, larger than %d bytes: %r'%(max_filesize, ffn))
                 else:
-                    with open(ffn, 'rb') as rf:
-                        first_kb = rf.read(1024)
-                        # TODO: better tests for 'does this look like python source?'
-                        if b'/python' in first_kb or b'import ' in first_kb:
-                            seems_like_python = True
-                        if len(first_kb)==0  or  first_kb.count(0x00) >= 1:
-                            seems_like_python = False
-
+                    try:
+                        with open(ffn, 'rb') as rf:
+                            first_kb = rf.read(1024)
+                            # TODO: better tests for 'does this look like python source?'
+                            if b'/python' in first_kb or b'import ' in first_kb:
+                                seems_like_python = True
+                            if len(first_kb)==0  or  first_kb.count(0x00) >= 1:
+                                seems_like_python = False
+                    except PermissionError as pe:
+                        if not ffn.endswith('.pyc'): # TODO: exclude more things we don't want to complain about
+                            print("SKIP, no permission to %r"%ffn)
             ddata = [] # list of  (extramention, onebasedlinenum, linestr)
 
             if seems_like_notebook:
