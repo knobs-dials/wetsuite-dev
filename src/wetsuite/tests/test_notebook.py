@@ -1,6 +1,9 @@
 ' tests related to ipyton/jupyter notebook code '
+import time
+
 import wetsuite.helpers.etree
-from wetsuite.helpers.notebook import detect_env, is_interactive, is_ipython, is_notebook,  progress_bar, etree_visualize_selection
+from wetsuite.helpers.notebook import detect_env, is_interactive, is_ipython, is_notebook,  progress_bar, ProgressBar, etree_visualize_selection
+
 
 def test_count_normalized():
     ' test that detect_env, well, detects the pyenv special case '
@@ -20,6 +23,27 @@ def test_progress_console():
     pb = progress_bar(10)
     pb.value += 1
     pb.description = 'foo'
+
+
+def test_progress_iter():
+    ' test that it iterates over various things, including things that have a length but are not subscriptable '
+
+    for _ in ProgressBar( [1,2,3,4] ):
+        time.sleep(0.001)
+
+    # set type
+    for _ in ProgressBar( set([1,2,3,4]) ):
+        time.sleep(0.001)
+
+    # dict views
+    for _ in ProgressBar( {1:2, 3:4}.items() ):
+        time.sleep(0.001)
+
+    for _ in ProgressBar( {1:2, 3:4}.keys() ):
+        time.sleep(0.001)
+
+    for _ in ProgressBar( {1:2, 3:4}.values() ):
+        time.sleep(0.001)
 
 
 def test_etree_visualize_selection():
@@ -48,5 +72,4 @@ def test_etree_visualize_selection_given():
 
 def test_etree_visualize_selection_bytes():
     ' test that it does not bork out '
-    import wetsuite.helpers.etree
     etree_visualize_selection( b'<a><b/></a>', '//b' )
