@@ -90,79 +90,6 @@ def contains_all_of( haystack:str, needles:List[str], case_sensitive=True, regex
 
 
 
-# def contains_any_of( haystack:str, needles:List[str], case_sensitive=True, regexp=False, encoding='utf8' ):
-#     ''' Given a string and a list of strings,  returns whether the former contains at least one of the strings in the latter
-#         e.g. contains_any_of('microfishes', ['mikrofi','microfi','fiches']) == True
-
-#         @param needles: the things to look for
-#         Note that if you use regexp=True and case_sensitive=True, the regexp gets lowercased before compilation,
-#         which may not always be correct.
-#         @param case_sensitive: if False, lowercasing hackstack and needle before testing. Defauts to True.
-#         @param regexp: treat needles as regexps rather than subbstrings.  Default is False, i.e.  substriungs
-#         @param haystack: is treated like a regular expression (the test is whether re.search for it is not None)
-#         @param encoding : lets us deal with bytes, by saying "if you see a bytes haystack or needle, decode using this encoding". 
-#         Defaults to utf-8
-#     '''
-#     # and deal with bytes type (if you handed in an encoding)
-#     if isinstance(haystack, bytes):
-#         haystack = haystack.decode(encoding)
-#     elif not isinstance(haystack, str):
-#         raise TypeError('haystack %r is not str or bytes'%haystack)
-#     fneedles = []
-#     for needle in needles:
-#         if isinstance(needle, bytes):
-#             fneedles.append( needle.decode(encoding) )
-#         elif isinstance(needle, str):
-#             fneedles.append( needle )
-#         else: # assume str
-#             raise TypeError('needle %r is not str or bytes'%needle)
-#     needles = fneedles
-
-#     # deal with case insensitivity 
-#     reflags = 0
-#     if not case_sensitive:
-#         if regexp:
-#             reflags = re.I
-#         else:
-#             haystack = haystack.lower()
-#             needles = list(needle.lower()  for needle in needles)
-
-#     # do actual test, regexp or not
-
-#     for needle in needles:
-#         if regexp:
-#             if re.search(needle, haystack, flags=reflags) is not None:
-#                 return True
-#         else:
-#             if needle in haystack:
-#                 return True
-
-#     return False
-
-
-# def contains_all_of( haystack:str, needles:List[str], case_sensitive=True, regexp=True ):
-#     ''' Given a string and a list of strings,  returns whether the former contains all of the strings in the latter 
-#         e.g. contains_all_of('AA (B/CCC)', ('AA', 'BB') ) == False
-#     '''
-#     reflags = 0
-#     if not case_sensitive:
-#         if regexp:
-#             reflags = re.I
-#         else:
-#             haystack = haystack.lower()
-#             needles = list(needle.lower()  for needle in needles)
-
-#     for needle in needles:
-#         if regexp:
-#             if re.search(needle, haystack, flags=reflags) is None:
-#                 return False
-#         else:
-#             if needle not in haystack:
-#                 return False
-
-#     return True
-
-
 def ordered_unique( strlist, case_sensitive=True, remove_none=True ):
     ''' Makes strings in a list of strings unique,
         and keep the first of each / take out later duplicates
@@ -238,14 +165,14 @@ def simplify_whitespace(string: str): #, strip=True, newline_to_space=True, sque
 
 
 
-### A little more creative
+### Somewhat more creative functions
 
 
 # TODO: add tests
 def simple_tokenize(text):
     ''' Split string into words 
         _Very_ basic - splits on and swallows symbols and such.
-        Real NLP tokenizers are often more robust, but for a quick test we can avoid a big depdenency
+        Real NLP tokenizers are often more robust, but for a quick test we can avoid a big depdenency and/or slowness
     '''
     l = re.split(r'[\s!@#$%^&*()"\':;/.,?\xab\xbb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a\u2358\u275b\u275c\u275d\u275e\u275f\u2760\u276e\u276f\u2e42\u301d\u301e\u301f\uff02\U0001f676\U0001f677\U0001f678-]+', text)
     return list(e   for e in l  if len(e)>0)
@@ -352,5 +279,3 @@ def ordinal_nl(i:int):
         i10 = i-i1  # round(-1) may be clearer?
         return '%s%s'%( tigste1_rev[i1], tigste10_rev[i10] )
     raise ValueError("can't yet do integers > 99")
-
-#def match_ordinal(s):
