@@ -85,8 +85,9 @@ def count_pages_with_text( filedata_or_list, char_threshold=200 ):
 
     for page in it:
         count_pages += 1
+
         chars_per_page.append( len(page.strip() ))
-        if len(page) >= char_threshold:
+        if len(page.strip()) >= char_threshold:
             count_pages_with_text_count += 1
 
     return chars_per_page, count_pages_with_text_count, count_pages
