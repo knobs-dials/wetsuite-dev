@@ -41,7 +41,7 @@ def main():
 
 
         count = 0
-        for key in store.iterkeys():
+        for key in store.iterkeys(): # keeps the store open, but for potentially very large stores, we'd want streaming
 
             # format for shell output
 
@@ -50,6 +50,8 @@ def main():
 
             val = store.get( key )
             if isinstance(val, bytes):
+                # CONSIDER: that this is probably not safe
+                # CONSIDER: detecting and highlighting types like XML, PDF
                 bytemsg = val
             elif isinstance(val, str):
                 bytemsg = wetsuite.helpers.shellcolor.magenta( val ).encode('utf8')
