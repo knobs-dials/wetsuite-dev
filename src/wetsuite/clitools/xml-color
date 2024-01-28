@@ -13,8 +13,8 @@ from wetsuite.helpers import etree, escape, shellcolor
 
 def ns_format(ns):
     ' known namespaces are shown as a recognizable prefix, the rest are shown {ET-style} '
-    if ns in etree.some_ns_prefixes:
-        return '%s:'%shellcolor.red(etree.some_ns_prefixes[ns])
+    if ns in etree.SOME_NS_PREFIXES:
+        return '%s:'%shellcolor.red(etree.SOME_NS_PREFIXES[ns])
     else:
         return '{%s}'%shellcolor.red(ns)
 
@@ -33,7 +33,6 @@ def attrib_format(d):
             shellcolor.darkgray('"'),shellcolor.magenta(escape.attr(d[k])), shellcolor.darkgray('"')
         ) )
     return ' '.join(ret)
-
 
 
 def color_print(node, show_attribs=True):
