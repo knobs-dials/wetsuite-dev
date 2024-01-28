@@ -20,11 +20,14 @@ def main():
             print( 'Specified path does not seem to be an SQLite file created by us: %r'%path )
             continue
 
-        print('== %r =='%path)
+        sys.stderr.write( '== %r ==\n'%path )
+        sys.stderr.flush()
+        # materialize that list to avoid keeping the store open for longer than necessary (takes proportional amounts of RAM, though)
         # the types are not actually used because we don't use put()
-        store = wetsuite.helpers.localdata.LocalKV(path, str, str)
+        with wetsuite.helpers.localdata.LocalKV(path, None,None) as store:
+            keys = list( store.iterkeys() )
         count = 0
-        for key in store.iterkeys():
+        for key in keys:
             print(key)
             count += 1
         sys.stderr.write( '# Listed %d keys\n'%count )
