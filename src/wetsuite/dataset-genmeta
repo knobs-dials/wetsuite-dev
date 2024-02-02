@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     in_dir = args[0] # '/var/www/wetsuite/datasets/'
 
-    fns = glob.glob( in_dir+'*' )
+    fns = glob.glob( os.path.join( os.path.abspath(in_dir), '*') )
     #fns = glob.glob( in_dir+'*xz' )
     for fn in fns:
         ffn = os.path.join( in_dir, fn )
