@@ -1,0 +1,71 @@
+#!/usr/bin/python3
+''' Given one or more paths to a LocalKV style database,
+    list all its keys and items
+'''
+
+import sys
+import os
+import pprint
+import wetsuite.helpers.localdata
+import wetsuite.helpers.shellcolor
+
+def main():
+    ' see module docstring '
+
+    # CONSIDER: "show x amount of random items"
+
+    for path in sys.argv[1:]:
+        path = os.path.abspath( path ) # mostly to avoid localdata.resolve_path interpretation
+
+        if not os.path.exists( path ):
+            print( 'Specified path not found: %r'%path )
+            continue
+
+        if not wetsuite.helpers.localdata.is_file_a_store( path ):
+            print( 'Specified path does not seem to be an SQLite file created by us: %r'%path )
+            continue
+
+        print( '\n\n====== STORE: %r ======'%path )
+
+        # the types are not actually used because we don't use put()
+        store = wetsuite.helpers.localdata.LocalKV(path, None, None, read_only=True)
+        
+        # CONSIDER: deal with msgpack more cleanly
+        if store._get_meta('valtype', missing_as_none=True) == 'msgpack':
+            #print(store.summary(True))
+            store.close()
+            store = wetsuite.helpers.localdata.MsgpackKV(path, str, read_only=True)
+
+        #print(store.summary(True))
+
+
+        count = 0
+
+        curs = store.conn.cursor()
+        curs.execute("SELECT key, value FROM meta")
+        for row in curs:
+
+            key, val = row
+
+            print( '\nmeta key:   %s'%(wetsuite.helpers.shellcolor.yellow( key )) )
+            count += 1
+
+            if isinstance(val, bytes):
+                # CONSIDER: that this is probably not safe
+                # CONSIDER: detecting and highlighting types like XML, PDF
+                bytemsg = val
+            elif isinstance(val, str):
+                bytemsg = wetsuite.helpers.shellcolor.magenta( val ).encode('utf8')
+            else:
+                bytemsg = wetsuite.helpers.shellcolor.magenta( str(val) ).encode('utf8')
+
+            sys.stdout.buffer.write( b'value:      %s'%bytemsg )
+            sys.stdout.write( '\n' )
+
+        store.close()
+
+        sys.stderr.write('# Listed %d items\n'%count)
+
+
+if __name__ == '__main__':
+    main()
