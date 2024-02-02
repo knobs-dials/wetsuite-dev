@@ -56,32 +56,41 @@ import wetsuite.helpers.format
 
 class LocalKV:
     '''
-    A key-value store backed by a local filesystem.
-    This is currently a fairly thin wrapper around SQLite - this may change.
-
-    SQLite will still just store the type it gets, and this won't do conversions for you,
-    it only enforces the values that go in are of the type you said you would put in.
-    This will makes things more consistent, but is not a strict guarantee.
+    A key-value store backed by a local filesystem  (wrapping sqlite3).
     
-    You could change both key and value types - e.g. the cached_fetch function expects a str:bytes store
-
     Given: ::
-        db = LocalKv('path/to/dbfile')
+        db = LocalKV('path/to/dbfile')
     Basic use is: ::
         db.put('foo', 'bar')
         db.get('foo')
-
     
     Notes:
+      - On typing:        
+          - SQLite will just store what it gets, which makes it easy to store mixed types.
+            To allow programmers to enforce some runtime checking, you can specify key_type and value_type.
+
+          - This class won't do conversions for you, 
+            it only enforces the values that go in are of the type you said you would put in.
+
+          - This should make things more consistent, but is not a strict guaranteem, and you can subvert this easily.
+
+                
+          - Some uses may wish for a specific key and value type.
+            You could change both key and value types - e.g. the cached_fetch function expects a str:bytes store
+
       - It is a good idea to open the store with the same typing each  or you will still confuse yourself.
         CONSIDER: storing typing in the file in the meta table
+
       - doing it via functions is a little more typing yet also exposes some sqlite things 
         (using transactions, vacuum) for when you know how to use them.
         and is arguably clearer than 'this particular dict-like happens to get stored magically'
+
       - On concurrency: As per basic sqlite behaviour, multiple processes can read the same database,
-        but only one can write, and when you leave a writer with uncommited data for nontrivial amounts of time,
-        readers are likely to bork out on the fact it's locked (CONSIDER: have it retry / longer).
-        This is why by default we leave it on autocommit, even though that can be slower.
+        but only one can write and writing is exclusive with reading. 
+        So 
+        - when you leave a writer with uncommited data for nontrivial amounts of time, readers are likely to time out
+          - If you leave it on autocommit this should be a little rarer
+        - and a very slow read through the database might time out a write.
 
       - It wouldn't be hard to also make it act largely like a dict,   implementing __getitem__, __setitem__, and __delitem__
         but this muddies the waters as to its semantics, in particularly when things you set are actually saved. 
@@ -106,16 +115,23 @@ class LocalKV:
             key_type and value_type do not have defaults, so that you think about how you are using these,
             but we often use   str,str  and  str,bytes
 
-            The database file will be created if it does not yet exist 
-            so you proably want think to think about repeating the same path in absolute sense
-            ...see also the module docstring, and resolve_path()'s docstring
+            @param path: database name/pat. File will be created if it does not yet exist, 
+            so you proably want think to think about repeating the same path in absolute sense.
+            See also the module docstring, and in particular resolve_path()'s docstring
 
-            read_only is only enforced in this wrapper to give slightly more useful errors. (we also give SQLite a PRAGMA)
+            @param key_type:
+
+            @param value_type: 
+
+            @param read_only: is only enforced in this wrapper to give slightly more useful errors. (we also give SQLite a PRAGMA)
+
         '''
         self.path = path
         self.path = resolve_path(self.path)   # tries to centralize the absolute/relative path handling code logic
 
         self.read_only = read_only
+        #self.use_wal = use_wal
+
         self._open()
         # here in part to remind us that we _could_ be using converters  https://docs.python.org/3/library/sqlite3.html#sqlite3-converters
         if key_type not in (str, bytes, int, None):
@@ -125,12 +141,17 @@ class LocalKV:
 
         self.key_type = key_type
         self.value_type = value_type
+
         self._in_transaction = False
 
 
-    def _open(self, timeout=2.0):
+    def _open(self, timeout=3.0):
         ''' Open the path previously set by init.
             This function could probably be merged into init, it was separated mostly with the idea that we could keep it closed when not using it. 
+
+            timeout: how long wait on opening. 
+            Lowered from the default just to avoid a lot of waiting half a minte when it was usually just accidentally left locked.
+            (note that this is different from busy_timeout)
         '''
         #make_tables = (self.path==':memory:')  or  ( not os.path.exists( self.path ) )
         #    will be creating that file, or are using an in-memory database ?  Also how to combine with read_only?
@@ -141,23 +162,30 @@ class LocalKV:
                 self.conn.execute("PRAGMA query_only = true")   # https://www.sqlite.org/pragma.html#pragma_query_only
                 # if read-only, we assume you are opening something that was aleady created before, so we don't do...
             else:
-                # TODO: see that this pragma does what I think it does    https://www.sqlite.org/pragma.html#pragma_auto_vacuum
+                # TODO: see that the auto_vacuum pragma does what I think it does    https://www.sqlite.org/pragma.html#pragma_auto_vacuum
                 self.conn.execute("PRAGMA auto_vacuum = INCREMENTAL")
 
                 self.conn.execute("CREATE TABLE IF NOT EXISTS meta (key text unique NOT NULL, value text)")
                 self.conn.execute("CREATE TABLE IF NOT EXISTS kv   (key text unique NOT NULL, value text)")
 
+                # if self.use_wal:
+                #     self.conn.execute("pragma journal_mode=WAL")
+                #     # notes
+                #     # - if not possible (we know we can't get the necessary shm due to the VFS) this is effectively just ignroed
+                #     # - using use_wal once persists with a database, in that future opens will use it even if you don't ask for it
+                #     # - WAL requires sqlite >=3.7.0, but this seems fine because python's sqlite3 requires >=3.7.15
+
 
     def _checktype_key(self, val):
         ' checks a value according to the key_type you handed into the constructor '
         if self.key_type is not None  and  not isinstance(val, self.key_type): # None means don't check
-            raise TypeError('Only keys of type %s are allowed, you gave a %s'%(self.key_type.__name__, type(val).__name__))
+            raise TypeError('You specified that only keys of type %s are allowed, and now gave a %s'%(self.key_type.__name__, type(val).__name__))
 
 
     def _checktype_value(self, val):
         ' checks a value according to the value_type you handed into the constructor '
         if self.value_type is not None  and  not isinstance(val, self.value_type):
-            raise TypeError('Only values of type %s are allowed, you gave a %s'%(self.value_type.__name__, type(val).__name__))
+            raise TypeError('You specidied that only values of type %s are allowed, and now gave a %s'%(self.value_type.__name__, type(val).__name__))
 
 
     def get(self, key, missing_as_none:bool=False):
@@ -226,8 +254,11 @@ class LocalKV:
 
     def _get_meta(self, key:str, missing_as_none=False):
         ''' For internal use, preferably don't use.
+
             This is an extra str:str table in there that is intended to be separate, with some keys special to these classes.
             ...you could abuse this for your own needs if you wish, but try not to.
+
+            If the key is not present, raises an exception - unless missing_as_none is set, in which case in returns None.
         '''
         curs = self.conn.cursor()
         curs.execute("SELECT value FROM meta WHERE key=?", (key,) )
@@ -363,7 +394,7 @@ class LocalKV:
         return self.conn.execute('SELECT 1 FROM kv WHERE key = ?', (key,)).fetchone() is not None
 
 
-    ## Used as a context manager
+    ## Used as a context manager? do a close() at the end.
     def __enter__(self):
         return self
 
@@ -406,7 +437,7 @@ class LocalKV:
 
     def summary(self, get_num_items:bool=False):
         ''' Gives the byte size, and optionally the number of items and average size
-            @param get_num_bytes: Also fetch number of items, and calculate average size. Is slower. Adds entries like: ::
+            @param get_num_items: Also find the amount of items, and calculate average size. Is slower. Adds entries like: ::
                 'num_items':     856716,
                 'avgsize_bytes': 63585,
             @return: a dictionary like: ::
@@ -467,7 +498,10 @@ class LocalKV:
             Convenience function, because you can do this yourself in two or three lines - 
             while you can't random.choice/random.sample a view,
             to do it properly you basically have to materialize all keys (and probably not accidentally all values)
-            BUT assume this is slower than working on the keys yourself.
+            
+            BUT 
+                - assume this is slower than working on the keys yourself,
+                - assume this is is unnecessarily RAM intensive when you want a _lot_ of items.
         '''
         all_keys = list( self.keys() )
         chosen_keys = random.sample( all_keys, amount )
@@ -478,8 +512,8 @@ class LocalKV:
 
 class MsgpackKV(LocalKV):
     ''' Like localKV, but 
-        - typing fixed at str:bytes 
-        - put() stores using pickle, get() unpickles
+          - typing is fixed, to str:bytes 
+          - put() stores using msgpack, get() un-msgpacks
 
         Will be a bit slower because it's doing that on the fly, but lets you more transparently store things like nested python dicts
         ...but only of primitive types, and not e.g. datetime.
@@ -491,7 +525,7 @@ class MsgpackKV(LocalKV):
     def __init__(self, path, key_type=str, value_type=None, read_only=False):
         ''' value_type is ignored; I need to restructure this
         '''
-        super().__init__( path, key_type=str, value_type=None, read_only=read_only )
+        super().__init__( path, key_type=key_type, value_type=value_type, read_only=read_only )
 
         # this is meant to be able to detect/signal incorrect interpretation, not fully used yet
         if self._get_meta('valtype', missing_as_none=True) is None:
@@ -508,7 +542,7 @@ class MsgpackKV(LocalKV):
 
 
     def put(self, key:str, value, commit:bool=True):
-        " See LocalKV.put().   Unlike that, value is not checked for type, just pickled. Which can fail. "
+        " See LocalKV.put().   Unlike that, value is not checked for type, just serialized. Which can fail with an exception. "
         packed = msgpack.dumps(value)
         super().put( key, packed, commit )
 
@@ -527,13 +561,15 @@ class MsgpackKV(LocalKV):
 
 
 
-def cached_fetch(store:LocalKV, url:str, force_refetch:bool=False, sleep_sec:float=None) -> Tuple[bytes, bool]:
-    ''' Helper to use a LocalKV to cache URL fetch results -- assuming it's a str-to-bytes type.
-
-        In terms of behaviour:
-          - if URL is a key in the given store, fetch and return its value
-          - if URL is not a key in the store,   do wetsuite.helpers.net.download(url), 
-            store in store, and return its value
+def cached_fetch(store:LocalKV, url:str, force_refetch:bool=False, sleep_sec:float=None, commit:bool=True) -> Tuple[bytes, bool]:
+    ''' Helper to use a str-to-bytes LocalKV to back URL fetches:
+          - if URL is a key in the given store, 
+            fetch from the store and return its value
+          - if URL is not a key in the store,   
+            do wetsuite.helpers.net.download(url), 
+            store in store,
+            and return its value.
+            - note that it will do a commit, unless you tell it not to.
 
         Arguably belongs in a mixin or such, but for now its usefulness puts it here.
 
@@ -560,17 +596,17 @@ def cached_fetch(store:LocalKV, url:str, force_refetch:bool=False, sleep_sec:flo
     # yes, the following could be a few lines shorter, but this is arguably a little more readable
     if force_refetch is False:
         try: # use cache?
-            ret = store.get(url) 
+            ret = store.get(url)
             return ret, True
         except KeyError: # get() notices it's not there, so fetch it ourselves
             data = wetsuite.helpers.net.download( url ) # note that this can error out, which we don't handle
-            store.put( url, data )
+            store.put( url, data, commit=commit )
             if sleep_sec is not None:
                 time.sleep( sleep_sec )
             return data, False
     else: # force_refetch is True
         data = wetsuite.helpers.net.download( url )
-        store.put( url, data )
+        store.put( url, data, commit=commit )
         if sleep_sec is not None:
             time.sleep( sleep_sec )
         return data, False
