@@ -6,7 +6,6 @@
 import os
 import sys
 import glob
-import pprint
 import tempfile
 import json
 import lzma  # >= py3.3
@@ -16,29 +15,24 @@ import wetsuite.helpers.localdata
 import wetsuite.helpers.format
 
 
-# a local cache that avoids a bunch of repeated reading on unchanged uploads
-dataset_meta = wetsuite.helpers.localdata.MsgpackKV('dataset_meta.db')
-
-dataset_index = {} # this is headed for a json file to be served
-
-#dataset_meta.truncate()  # TODO: remove, this was a debug thing
-
 
 
 if __name__ == '__main__':
 
-    # hardcoded for now
-    
+    # a local cache that avoids a bunch of repeated reading on unchanged uploads
+    dataset_meta = wetsuite.helpers.localdata.MsgpackKV('dataset_meta.db')
+
 
     args = sys.argv[1:]
     if len(args) != 1:
         print("We want one argument, a directory to look for files in")
         sys.exit(-1)
 
-    in_dir           = args[0] 
+    in_dir           = args[0]
 
-    dataset_index_fn = os.path.join( in_dir, 'index.json' )
 
+    dataset_index    = {}                                    # this is headed for a json file to be served
+    dataset_index_fn = os.path.join( in_dir, 'index.json' )  # ...and where it will go
 
     fns = glob.glob( os.path.join( os.path.abspath(in_dir), '*') ) # *xz
     for fn in fns:
@@ -85,7 +79,7 @@ if __name__ == '__main__':
 
             print( "  uncompressing %s to get its real size, please wait"%ffn )
 
-            if filetype == 'xz':           # TODO: bz2, gz
+            if filetype == 'xz':        # CONSIDER: bz2, gz?
                 stored_dict['type'] = 'xz-sqlite3'
                 print( "DO XZ %r"%ffn)
 
@@ -93,7 +87,7 @@ if __name__ == '__main__':
                 uncompressed_data_size_bytes = 0
                 with tempfile.NamedTemporaryFile() as temp_file:
                     # the only reason we do this is description, maybe think of a more efficient way that doesn't rely on lots of storage being there
-                    print( "    into temporary file %r"%temp_file.name ) 
+                    print( "    into temporary file %r"%temp_file.name )
                     with lzma.open( ffn ) as compressed_file_object:
                         while True:
                             data = compressed_file_object.read( 2*1048576 )
@@ -119,7 +113,8 @@ if __name__ == '__main__':
                 #stored_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict['uncompressed_size'], kilo=1024 )
 
                 with wetsuite.helpers.localdata.LocalKV( ffn, None,None, read_only=True ) as tstore:
-                    stored_dict['description'] = tstore._get_meta('description', missing_as_none=True)
+                    stored_dict['description']       = tstore._get_meta('description', missing_as_none=True)
+                    stored_dict['description_short'] = tstore._get_meta('description_short', missing_as_none=True)
 
 
             elif filetype == 'json': # CONSIDER: remove need (we want downloads to be compressed always)
@@ -145,11 +140,11 @@ if __name__ == '__main__':
         dataset_item['name']                = dataset_name
         dataset_item['url']                 = 'https://wetsuite.knobs-dials.com/datasets/%s'%basename
         dataset_item['version']             = stored_dict.get('version', '(preliminary)')
-        dataset_item['type']                = stored_dict.get('type')
-        dataset_item['description_short']   = stored_dict.get('description_short')
-        dataset_item['description']         = stored_dict.get('description')
-        dataset_item['download_size']       = stored_dict.get('compressed_size')
-        dataset_item['real_size']           = stored_dict.get('uncompressed_size')
+        dataset_item['type']                = stored_dict.get('type',       'unknown')
+        dataset_item['description_short']   = stored_dict.get('description_short', '')
+        dataset_item['description']         = stored_dict.get('description',       '')
+        dataset_item['download_size']       = stored_dict.get('compressed_size',   -1)
+        dataset_item['real_size']           = stored_dict.get('uncompressed_size', -1)
         dataset_item['download_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict.get('compressed_size'), kilo=1024   )
         dataset_item['real_size_human']     = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict.get('uncompressed_size'), kilo=1024 )
 
