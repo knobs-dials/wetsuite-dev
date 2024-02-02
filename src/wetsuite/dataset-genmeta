@@ -35,26 +35,16 @@ if __name__ == '__main__':
     #fns = glob.glob( in_dir+'*xz' )
     for fn in fns:
         ffn = os.path.join( in_dir, fn )
-        print(fn, ffn )
         basename = os.path.basename(fn)
-        print(' ====== %r ====== '%basename)
+        #print(' ====== %r ====== '%basename)
 
         stob = os.stat(ffn)
 
-        if stob.st_size > 300000000:
+        if stob.st_size > 500000000:
             print("LARGE, skip during this debug")
             continue
 
-
         key = '__/__'.join( [ ffn, str( stob.st_size ), str( int(stob.st_mtime) ) ] )
-
-        print( key )
-
-        keys = list( dataset_meta.keys() )
-        pprint.pprint( keys )
-
-        print( key in keys )
-
 
         if key in dataset_meta:
             print( "SKIP, we know about %r"%ffn)
@@ -101,7 +91,7 @@ if __name__ == '__main__':
                             uncompressed_data_size_bytes += len( data )
                             print( "\r    decompressing... %3sB    "%(wetsuite.helpers.format.kmgtp( uncompressed_data_size_bytes, kilo=1024 ), ),
                                    end='', file=sys.stderr )
-
+                    print()
                     set_dict['uncompressed_size'] = uncompressed_data_size_bytes
                     set_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp(uncompressed_data_size_bytes)
 
