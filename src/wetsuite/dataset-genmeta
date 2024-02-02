@@ -142,12 +142,14 @@ if __name__ == '__main__':
         dataset_name = basename.split('.',1)[0]
 
         dataset_item = {}
-        dataset_item['name']           = dataset_name
-        dataset_item['url']           = 'https://wetsuite.knobs-dials.com/datasets/%s'%basename
-        dataset_item['version']       = stored_dict.get('version', '(preliminary)')
-        dataset_item['type']          = stored_dict.get('type')
-        dataset_item['download_size'] = stored_dict.get('compressed_size')
-        dataset_item['real_size']     = stored_dict.get('uncompressed_size')
+        dataset_item['name']                = dataset_name
+        dataset_item['url']                 = 'https://wetsuite.knobs-dials.com/datasets/%s'%basename
+        dataset_item['version']             = stored_dict.get('version', '(preliminary)')
+        dataset_item['type']                = stored_dict.get('type')
+        dataset_item['description_short']   = stored_dict.get('description_short')
+        dataset_item['description']         = stored_dict.get('description')
+        dataset_item['download_size']       = stored_dict.get('compressed_size')
+        dataset_item['real_size']           = stored_dict.get('uncompressed_size')
         dataset_item['download_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict.get('compressed_size'), kilo=1024   )
         dataset_item['real_size_human']     = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict.get('uncompressed_size'), kilo=1024 )
 
