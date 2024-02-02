@@ -7,7 +7,7 @@
 '''
 
 from functools import reduce
-import operator, re
+import operator
 from collections import defaultdict
 
 
@@ -20,8 +20,8 @@ class Collocation:
     ''' A basic collocation calculator class. '''
     def __init__(self, connectors=()):
         ''' connectors takes a list of words that, 
-              are removed from the _edge_ of an n-gram (for n>1),
-              but are left if they are inside (so for n>=3)
+              are removed when they appear at the _edge_ of an n-gram (for n > 1),
+              but are left if they are inside (so for n >= 3)
         '''
         self.connectors = connectors
         self.uni   = defaultdict(int)
@@ -29,7 +29,7 @@ class Collocation:
         self.saw_tokens = 0
 
 
-    def consume_tokens(self, token_list, gramlens=(2,3,4)): 
+    def consume_tokens(self, token_list, gramlens=(2,3,4)):
         """ Takes a list of string tokens.
             Counts unigram and n-gram from it, for given values of n. 
         """
@@ -88,7 +88,7 @@ class Collocation:
         ret = []
         for strtup, tup_count in self.grams.items():
 
-            # if you did a clean-unigrams, we should ignore anything involving the things that removed 
+            # if you did a clean-unigrams, we should ignore anything involving the things that removed
             # CONSIDER: unseen unigrams as min(available scores) or tiny percentile or such
             skip_entry = False
             for s in strtup:
@@ -99,8 +99,8 @@ class Collocation:
                 continue
 
             uni_counts = list( self.uni[s]  for s in strtup)
-            mul = product(uni_counts) 
-            
+            mul = product( uni_counts )
+
             # TODO: evaluate decent methods of collocation scoring. The ones I've seen so far seem statistically iffy.
             if method=='mik':
                 score = (float(tup_count)) / mul
@@ -123,47 +123,48 @@ class Collocation:
 
 
     def counts(self):
+        ' returns counts of tokens, unigrams, and n>2-grams '
         return {
     'from_tokens':self.saw_tokens,
             'uni':len(self.uni),
           'grams':len(self.grams),
         }
-        
 
 
 
 
-if __name__ == '__main__':
-    ''' when run as a script, it will take arguments it expects to be plain text files.    You probably want moderately large files ''' 
-    import sys
 
-    def simple_tokenize(s):
-        ' simple split into words ' 
-        l = re.split(r'[\s!@#$%^&*()"\':;/.,?\xab\xbb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a\u2358\u275b\u275c\u275d\u275e\u275f\u2760\u276e\u276f\u2e42\u301d\u301e\u301f\uff02\U0001f676\U0001f677\U0001f678-]+', s)
-        return list(e   for e in l  if len(e)>0)
+# if __name__ == '__main__':
+#     # when run as a script, it will take arguments it expects to be plain text files.    You probably want moderately large files
+#     import sys, re
+
+#     def simple_tokenize(s):
+#         ' simple split into words '
+#         l = re.split(r'[\s!@#$%^&*()"\':;/.,?\xab\xbb\u2018\u2019\u201a\u201b\u201c\u201d\u201e\u201f\u2039\u203a\u2358\u275b\u275c\u275d\u275e\u275f\u2760\u276e\u276f\u2e42\u301d\u301e\u301f\uff02\U0001f676\U0001f677\U0001f678-]+', s)
+#         return list(e   for e in l  if len(e)>0)
 
 
-    for filename in sys.argv[1:]:
-        coll = Collocation( 
-            connectors='de een het  dat die   van voor met in op bij om   en of   is   aan  ook   je ik we'.split() 
-        )
+#     for filename in sys.argv[1:]:
+#         coll = Collocation(
+#             connectors='de een het  dat die   van voor met in op bij om   en of   is   aan  ook   je ik we'.split()
+#         )
 
-        print( "Reading in data")
-        sents = open( filename ).readlines()#[:150000]
-        print( '  number of sentences: %d'%len(sents) )
+#         print( "Reading in data")
+#         with open(filename, encoding='utf-8') as f:
+#             sents = f.readlines() #[:150000]
+#         print( '  number of sentences: %d'%len(sents) )
 
-        print( "Counting")
-        for sent in sents:
-            coll.consume_text( simple_tokenize(sent.rstrip()) )
+#         print( "Counting")
+#         for sent in sents:
+#             coll.consume_text( simple_tokenize(sent.rstrip()) )
 
-        print( "Cleanup")
-        print( coll.counts() )
-        coll.cleanup_unigrams(mincount=3)
-        coll.cleanup_grams(mincount=8)
-        print( coll.counts() )
+#         print( "Cleanup")
+#         print( coll.counts() )
+#         coll.cleanup_unigrams(mincount=3)
+#         coll.cleanup_grams(mincount=8)
+#         print( coll.counts() )
 
-        print( "Scoring")
-        scores = coll.score_grams( method='mik2', sort=True )
-        for strtup, score,  tup_count, uni_counts in scores[-5000:]:
-            print(' %9.3f   %50s    %20s %20s=%d'%(score, ' '.join(strtup),   tup_count, uni_counts, product(uni_counts)) )
-
+#         print( "Scoring")
+#         scores = coll.score_grams( method='mik2', sort=True )
+#         for strtup, score,  tup_count, uni_counts in scores[-5000:]:
+#             print(' %9.3f   %50s    %20s %20s=%d'%(score, ' '.join(strtup),   tup_count, uni_counts, product(uni_counts)) )
