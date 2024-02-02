@@ -8,6 +8,7 @@ import sys
 import glob
 import pprint
 import tempfile
+import json
 import lzma  # >= py3.3
 
 #import wetsuite.helpers.util
@@ -15,27 +16,36 @@ import wetsuite.helpers.localdata
 import wetsuite.helpers.format
 
 
+# a local cache that avoids a bunch of repeated reading on unchanged uploads
 dataset_meta = wetsuite.helpers.localdata.MsgpackKV('dataset_meta.db')
 
-#pprint.pprint( dict( dataset_meta.items()) )
+dataset_index = {} # this is headed for a json file to be served
 
 #dataset_meta.truncate()  # TODO: remove, this was a debug thing
 
 
+
 if __name__ == '__main__':
+
+    # hardcoded for now
+    
 
     args = sys.argv[1:]
     if len(args) != 1:
         print("We want one argument, a directory to look for files in")
         sys.exit(-1)
 
-    in_dir = args[0] # '/var/www/wetsuite/datasets/'
+    in_dir           = args[0] 
 
-    fns = glob.glob( os.path.join( os.path.abspath(in_dir), '*') )
-    #fns = glob.glob( in_dir+'*xz' )
+    dataset_index_fn = os.path.join( in_dir, 'index.json' )
+
+
+    fns = glob.glob( os.path.join( os.path.abspath(in_dir), '*') ) # *xz
     for fn in fns:
         ffn = os.path.join( in_dir, fn )
         basename = os.path.basename(fn)
+        if basename == 'index.json':
+            continue
         #print(' ====== %r ====== '%basename)
 
         stob = os.stat(ffn)
@@ -46,11 +56,13 @@ if __name__ == '__main__':
 
         key = '__/__'.join( [ ffn, str( stob.st_size ), str( int(stob.st_mtime) ) ] )
 
+
         if key in dataset_meta:
-            print( "SKIP, we know about %r"%ffn)
+            print( "NOCALC, we know about %r"%ffn)
+            stored_dict = dataset_meta.get( key )
 
         else:  # key not in dataset_meta:
-            set_dict = {
+            stored_dict = {
                 'basename':             basename,
                 'compressed_size':      stob.st_size,
                 'compressed_size_human':'%sB'%wetsuite.helpers.format.kmgtp(stob.st_size),
@@ -74,7 +86,7 @@ if __name__ == '__main__':
             print( "  uncompressing %s to get its real size, please wait"%ffn )
 
             if filetype == 'xz':           # TODO: bz2, gz
-                set_dict['type'] = 'xz-sqlite3'
+                stored_dict['type'] = 'xz-sqlite3'
                 print( "DO XZ %r"%ffn)
 
                 print("\nDETERMINE uncompressed size of %r"%ffn)
@@ -92,30 +104,30 @@ if __name__ == '__main__':
                             print( "\r    decompressing... %3sB    "%(wetsuite.helpers.format.kmgtp( uncompressed_data_size_bytes, kilo=1024 ), ),
                                    end='', file=sys.stderr )
                     print()
-                    set_dict['uncompressed_size'] = uncompressed_data_size_bytes
-                    set_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp(uncompressed_data_size_bytes)
+                    stored_dict['uncompressed_size'] = uncompressed_data_size_bytes
+                    stored_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp(uncompressed_data_size_bytes)
 
                     with wetsuite.helpers.localdata.LocalKV( temp_file.name, None,None, read_only=True ) as tstore:
-                        set_dict['description'] = tstore._get_meta('description', missing_as_none=True)
+                        stored_dict['description'] = tstore._get_meta('description', missing_as_none=True)
 
 
             elif filetype == 'sqlite3': # TODO: remove need (we want downloads to be compressed always)
-                set_dict['type'] = 'sqlite3'
+                stored_dict['type'] = 'sqlite3'
                 print( "DO SQLITE3 %r"%ffn)
 
-                set_dict['uncompressed_size'] = set_dict['compressed_size']
-                set_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( set_dict['uncompressed_size'] )
+                stored_dict['uncompressed_size'] = stored_dict['compressed_size']
+                stored_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict['uncompressed_size'] )
 
                 with wetsuite.helpers.localdata.LocalKV( ffn, None,None, read_only=True ) as tstore:
-                    set_dict['description'] = tstore._get_meta('description', missing_as_none=True)
+                    stored_dict['description'] = tstore._get_meta('description', missing_as_none=True)
 
 
             elif filetype == 'json': # CONSIDER: remove need (we want downloads to be compressed always)
-                set_dict['type'] = 'json'
+                stored_dict['type'] = 'json'
                 print( "DO JSON %r"%ffn)
 
-                set_dict['uncompressed_size'] = set_dict['compressed_size']
-                set_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( set_dict['uncompressed_size'] )
+                stored_dict['uncompressed_size'] = stored_dict['compressed_size']
+                stored_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict['uncompressed_size'] )
 
 
             else:
@@ -123,4 +135,27 @@ if __name__ == '__main__':
                 continue
 
 
-            dataset_meta.put(key, set_dict)
+            dataset_meta.put(key, stored_dict)
+
+
+        ## Either way, describe the thing in the index
+        dataset_name = basename.split('.',1)[0]
+
+        dataset_item = {}
+        dataset_item['name']           = dataset_name
+        dataset_item['url']           = 'https://wetsuite.knobs-dials.com/datasets/%s'%basename
+        dataset_item['version']       = stored_dict.get('version', '(preliminary)')
+        dataset_item['type']          = stored_dict.get('type')
+        dataset_item['download_size'] = stored_dict.get('compressed_size')
+        dataset_item['real_size']     = stored_dict.get('uncompressed_size')
+        dataset_item['download_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict.get('compressed_size')   )
+        dataset_item['real_size_human']     = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict.get('uncompressed_size') )
+
+        dataset_index[dataset_name] = dataset_item
+
+
+
+print( "Writing %r"%dataset_index_fn )
+with open( dataset_index_fn, 'w', encoding='utf8') as wf:
+    wf.write( json.dumps( dataset_index ) )
+
