@@ -105,7 +105,7 @@ if __name__ == '__main__':
                                    end='', file=sys.stderr )
                     print()
                     stored_dict['uncompressed_size'] = uncompressed_data_size_bytes
-                    stored_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp(uncompressed_data_size_bytes)
+                    stored_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp(uncompressed_data_size_bytes, kilo=1024)
 
                     with wetsuite.helpers.localdata.LocalKV( temp_file.name, None,None, read_only=True ) as tstore:
                         stored_dict['description'] = tstore._get_meta('description', missing_as_none=True)
@@ -116,7 +116,7 @@ if __name__ == '__main__':
                 print( "DO SQLITE3 %r"%ffn)
 
                 stored_dict['uncompressed_size'] = stored_dict['compressed_size']
-                stored_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict['uncompressed_size'] )
+                stored_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict['uncompressed_size'], kilo=1024 )
 
                 with wetsuite.helpers.localdata.LocalKV( ffn, None,None, read_only=True ) as tstore:
                     stored_dict['description'] = tstore._get_meta('description', missing_as_none=True)
@@ -127,7 +127,7 @@ if __name__ == '__main__':
                 print( "DO JSON %r"%ffn)
 
                 stored_dict['uncompressed_size'] = stored_dict['compressed_size']
-                stored_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict['uncompressed_size'] )
+                stored_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict['uncompressed_size'], kilo=1024 )
 
 
             else:
