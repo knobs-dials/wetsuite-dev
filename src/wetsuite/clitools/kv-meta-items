@@ -29,7 +29,7 @@ def main():
 
         # the types are not actually used because we don't use put()
         store = wetsuite.helpers.localdata.LocalKV(path, None, None, read_only=True)
-        
+
         # CONSIDER: deal with msgpack more cleanly
         if store._get_meta('valtype', missing_as_none=True) == 'msgpack':
             #print(store.summary(True))
