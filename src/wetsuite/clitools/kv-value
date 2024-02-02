@@ -8,6 +8,7 @@ import os
 import pprint
 
 import wetsuite.helpers.localdata
+import wetsuite.helpers.etree
 
 def main():
     ' see module docstring '
@@ -36,14 +37,24 @@ def main():
 
         val = store.get( key )
         store.close()
+
         if isinstance(val, bytes):
-            sys.stdout.buffer.write( val )
+            # CONSIDER: that this is probably not safe
+            # CONSIDER: detecting and highlighting types like XML, PDF
+            # CONSIDER: only doing that if you specifically ask for it, so that it can be unambiguous we're changing it while we're printing
+            if b'<?xml' in val[:10]:
+                tree = wetsuite.helpers.etree.fromstring(val)
+                bytemsg = wetsuite.helpers.etree.debug_pretty(tree).encode('utf8')
+            else:
+                bytemsg = val
         elif isinstance(val, str):
-            sys.stdout.write( val )
+            bytemsg = wetsuite.helpers.shellcolor.magenta( val ).encode('utf8')
         elif isinstance(val, dict): # assumes msgpackkv used as such
-            sys.stdout.write( pprint.pformat(val) )
+            bytemsg = wetsuite.helpers.shellcolor.magenta( pprint.pformat(val )).encode('utf8')
         else:
-            sys.stdout.write( str(val) )
+            bytemsg = wetsuite.helpers.shellcolor.magenta( str(val) ).encode('utf8')
+
+        sys.stdout.buffer.write( bytemsg )
         sys.stdout.write( '\n' )
 
 
