@@ -163,6 +163,20 @@ def _date_from_date_datetime_or_parse( a_date ):
         raise ValueError("Do not understand date of type %s (%s)"%(type(a_date), a_date))
 
 
+# these are almost too simple, but used frequently enough in "fetch the last few weeks of updates" that they're quite convenient
+def date_today():
+    ''' @return: today, as a datetime.date '''
+    return datetime.date.today()
+
+def date_weeks_ago(amount=1):
+    ''' @return: A date some amount of months ago, as a datetime.date '''
+    return datetime.date.today() - datetime.timedelta(days=int(amount*7))
+
+def date_months_ago(amount=1):
+    ''' @return: A date some amount of months ago, as a datetime.date '''
+    return datetime.date.today() - datetime.timedelta(days= int(amount*30.6) )
+
+
 def days_in_range( from_date, to_date, strftime_format=None ):
     '''
     Given a start and end date, returns a list of all individual days in that range (including the last), as a datetime.date object.
