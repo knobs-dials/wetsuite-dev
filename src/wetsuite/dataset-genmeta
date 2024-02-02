@@ -1,0 +1,136 @@
+#!/usr/bin/python3
+'''
+    Takes a directory of downloadable files, 
+    generates the metadata used for the index.
+'''
+import os
+import sys
+import glob
+import pprint
+import tempfile
+import lzma  # >= py3.3
+
+#import wetsuite.helpers.util
+import wetsuite.helpers.localdata
+import wetsuite.helpers.format
+
+
+dataset_meta = wetsuite.helpers.localdata.MsgpackKV('dataset_meta.db')
+
+#pprint.pprint( dict( dataset_meta.items()) )
+
+#dataset_meta.truncate()  # TODO: remove, this was a debug thing
+
+
+if __name__ == '__main__':
+
+    args = sys.argv[1:]
+    if len(args) != 1:
+        print("We want one argument, a directory to look for files in")
+        sys.exit(-1)
+
+    in_dir = args[0] # '/var/www/wetsuite/datasets/'
+
+    fns = glob.glob( in_dir+'*' )
+    #fns = glob.glob( in_dir+'*xz' )
+    for fn in fns:
+        ffn = os.path.join( in_dir, fn )
+        print(fn, ffn )
+        basename = os.path.basename(fn)
+        print(' ====== %r ====== '%basename)
+
+        stob = os.stat(ffn)
+
+        if stob.st_size > 300000000:
+            print("LARGE, skip during this debug")
+            continue
+
+
+        key = '__/__'.join( [ ffn, str( stob.st_size ), str( int(stob.st_mtime) ) ] )
+
+        print( key )
+
+        keys = list( dataset_meta.keys() )
+        pprint.pprint( keys )
+
+        print( key in keys )
+
+
+        if key in dataset_meta:
+            print( "SKIP, we know about %r"%ffn)
+
+        else:  # key not in dataset_meta:
+            set_dict = {
+                'basename':             basename,
+                'compressed_size':      stob.st_size,
+                'compressed_size_human':'%sB'%wetsuite.helpers.format.kmgtp(stob.st_size),
+                'mtime':                int(stob.st_mtime),
+            }
+
+            filetype = None
+            if ffn.endswith('.xz'):
+                filetype = 'xz'
+
+            else:
+                with open(ffn, 'rb') as f:
+                    firstbytes = f.read(20)
+                if firstbytes[:7] == b'\xfd7zXZ\x00\x00':
+                    filetype='xz'
+                elif firstbytes[:15] == b'SQLite format 3': # shouldn't happen here, but we will probably end up sharing this logic elsewhere
+                    filetype='sqlite3'
+                elif firstbytes.lstrip().startswith(b'{'):
+                    filetype='json'
+
+            print( "  uncompressing %s to get its real size, please wait"%ffn )
+
+            if filetype == 'xz':           # TODO: bz2, gz
+                set_dict['type'] = 'xz-sqlite3'
+                print( "DO XZ %r"%ffn)
+
+                print("\nDETERMINE uncompressed size of %r"%ffn)
+                uncompressed_data_size_bytes = 0
+                with tempfile.NamedTemporaryFile() as temp_file:
+                    # the only reason we do this is description, maybe think of a more efficient way that doesn't rely on lots of storage being there
+                    print( "    into temporary file %r"%temp_file.name ) 
+                    with lzma.open( ffn ) as compressed_file_object:
+                        while True:
+                            data = compressed_file_object.read( 2*1048576 )
+                            if len(data) == 0:
+                                break
+                            temp_file.write(data)
+                            uncompressed_data_size_bytes += len( data )
+                            print( "\r    decompressing... %3sB    "%(wetsuite.helpers.format.kmgtp( uncompressed_data_size_bytes, kilo=1024 ), ),
+                                   end='', file=sys.stderr )
+
+                    set_dict['uncompressed_size'] = uncompressed_data_size_bytes
+                    set_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp(uncompressed_data_size_bytes)
+
+                    with wetsuite.helpers.localdata.LocalKV( temp_file.name, None,None, read_only=True ) as tstore:
+                        set_dict['description'] = tstore._get_meta('description', missing_as_none=True)
+
+
+            elif filetype == 'sqlite3': # TODO: remove need (we want downloads to be compressed always)
+                set_dict['type'] = 'sqlite3'
+                print( "DO SQLITE3 %r"%ffn)
+
+                set_dict['uncompressed_size'] = set_dict['compressed_size']
+                set_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( set_dict['uncompressed_size'] )
+
+                with wetsuite.helpers.localdata.LocalKV( ffn, None,None, read_only=True ) as tstore:
+                    set_dict['description'] = tstore._get_meta('description', missing_as_none=True)
+
+
+            elif filetype == 'json': # CONSIDER: remove need (we want downloads to be compressed always)
+                set_dict['type'] = 'json'
+                print( "DO JSON %r"%ffn)
+
+                set_dict['uncompressed_size'] = set_dict['compressed_size']
+                set_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( set_dict['uncompressed_size'] )
+
+
+            else:
+                print( "TODO: handle %s %r"%(filetype, ffn) )
+                continue
+
+
+            dataset_meta.put(key, set_dict)
