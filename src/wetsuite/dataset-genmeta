@@ -7,13 +7,13 @@ import os
 import sys
 import glob
 import tempfile
+import hashlib
 import json
 import lzma  # >= py3.3
 
 #import wetsuite.helpers.util
 import wetsuite.helpers.localdata
 import wetsuite.helpers.format
-
 
 
 
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     in_dir           = args[0]
 
 
-    dataset_index    = {}                                    # this is headed for a json file to be served
+    dataset_index    = {}                # this is headed for a json file to be served
     dataset_index_fn = os.path.join( in_dir, 'index.json' )  # ...and where it will go
 
     fns = glob.glob( os.path.join( os.path.abspath(in_dir), '*') ) # *xz
@@ -83,6 +83,8 @@ if __name__ == '__main__':
                 stored_dict['type'] = 'xz-sqlite3'
                 print( "DO XZ %r"%ffn)
 
+                s1h = hashlib.sha1()
+
                 print("\nDETERMINE uncompressed size of %r"%ffn)
                 uncompressed_data_size_bytes = 0
                 with tempfile.NamedTemporaryFile() as temp_file:
@@ -94,11 +96,14 @@ if __name__ == '__main__':
                             if len(data) == 0:
                                 break
                             temp_file.write(data)
+                            s1h.update(data)
                             uncompressed_data_size_bytes += len( data )
                             print( "\r    decompressing... %3sB    "%(wetsuite.helpers.format.kmgtp( uncompressed_data_size_bytes, kilo=1024 ), ),
                                    end='', file=sys.stderr )
                     print()
                     stored_dict['uncompressed_size'] = uncompressed_data_size_bytes
+                    stored_dict['uncompressed_sha1hex'] = s1h.hexdigest()
+                    
                     #stored_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp(uncompressed_data_size_bytes, kilo=1024)
 
                     with wetsuite.helpers.localdata.LocalKV( temp_file.name, None,None, read_only=True ) as tstore:
@@ -137,16 +142,17 @@ if __name__ == '__main__':
         dataset_name = basename.split('.',1)[0]
 
         dataset_item = {}
-        dataset_item['name']                = dataset_name
-        dataset_item['url']                 = 'https://wetsuite.knobs-dials.com/datasets/%s'%basename
-        dataset_item['version']             = stored_dict.get('version', '(preliminary)')
-        dataset_item['type']                = stored_dict.get('type',       'unknown')
-        dataset_item['description_short']   = stored_dict.get('description_short', '')
-        dataset_item['description']         = stored_dict.get('description',       '')
-        dataset_item['download_size']       = stored_dict.get('compressed_size',   -1)
-        dataset_item['real_size']           = stored_dict.get('uncompressed_size', -1)
-        dataset_item['download_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict.get('compressed_size'), kilo=1024   )
-        dataset_item['real_size_human']     = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict.get('uncompressed_size'), kilo=1024 )
+        dataset_item['name']                 = dataset_name
+        dataset_item['url']                  = 'https://wetsuite.knobs-dials.com/datasets/%s'%basename
+        dataset_item['version']              = stored_dict.get('version', '(preliminary)')
+        dataset_item['type']                 = stored_dict.get('type',       'unknown')
+        dataset_item['description_short']    = stored_dict.get('description_short', '')
+        dataset_item['description']          = stored_dict.get('description',       '')
+        dataset_item['download_size']        = stored_dict.get('compressed_size',   -1)
+        dataset_item['real_size']            = stored_dict.get('uncompressed_size', -1)
+        dataset_item['download_size_human']  = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict.get('compressed_size'), kilo=1024   )
+        dataset_item['real_size_human']      = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict.get('uncompressed_size'), kilo=1024 )
+        dataset_item['uncompressed_sha1hex'] = stored_dict.get('uncompressed_sha1hex', None)
 
         dataset_index[dataset_name] = dataset_item
 
