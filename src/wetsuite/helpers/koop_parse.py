@@ -63,8 +63,9 @@ def cvdr_meta(tree, flatten=False):
         @return: a dict containing owmskern, owmsmantel, and cvdripm's elements merged into a single dict.
         If it's a search result, it will also mention its enrichedData.
     '''
-    #if isinstance(tree, bytes):
-    #    tree = wetsuite.helpers.etree.fromstring( tree )
+    # allow people to be lazier - hand in the XML bytes without parsing it into etree
+    if isinstance(tree, bytes):
+        tree = wetsuite.helpers.etree.fromstring( tree )
 
     ret = {}
     tree = wetsuite.helpers.etree.strip_namespace(tree)
