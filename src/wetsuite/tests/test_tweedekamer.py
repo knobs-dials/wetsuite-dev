@@ -10,7 +10,7 @@ def test_fetch_all():
 
     merged_tree = wetsuite.datacollect.tweedekamer_nl.merge_etrees( etrees )
 
-    wetsuite.datacollect.tweedekamer_nl.entries( merged_tree )
+    wetsuite.datacollect.tweedekamer_nl.entry_dicts( merged_tree )
 
 
 # def test_fetch_resource():
