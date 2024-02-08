@@ -5,6 +5,11 @@ Fetch and load already-created datasets that we provide. (to see a list of actua
 As this is often structured data, each dataset may work a little differently, 
 so there is an describe() to get you started, that each dataset should fill out.
 
+CONSIDER:
+  - "treat collections of files as datasets?" or is that your own responsibility
+    ...i.e. more of a notebook "how to deal with pdf, odt, and make that a thing to iterate through"
+
+
 TODO: 
   - decide how often to re-fetch the index client-side. 
     Each interpreter (which is what it does right now)?   
@@ -22,6 +27,7 @@ import time
 import tempfile
 import bz2
 import fnmatch
+import lzma # standard library since py3.3, before that we could fall back to backports.lzma
 
 import wetsuite.helpers.util
 import wetsuite.helpers.net
@@ -70,8 +76,9 @@ def fetch_index():
     '''
     global _index_data, _index_data, _index_fetch_time, _index_fetch_no_more_often_than_sec
 
-    if _index_data is None  or   time.time() - _index_fetch_time > _index_fetch_no_more_often_than_sec:
-        print('FETCHING INDEX')
+    if (_index_data is None  or
+         time.time() - _index_fetch_time > _index_fetch_no_more_often_than_sec):
+        #print('FETCHING INDEX')
         try:
             _fetched_data = wetsuite.helpers.net.download( _INDEX_URL )
             _index_data = json.loads( _fetched_data )
@@ -84,36 +91,8 @@ def fetch_index():
     return _index_data
 
 
-    if 0: # HACK: the index is currently hardcoded, it should probably come from the same host that lets you download them
+    if 0: # TODO: REMOVE
         index_dict = {
-            'bwb-mostrecent-xml':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/bwb_latestonly_xml.db.xz',
-                'short_description':'Raw XML for the latest revision from each BWB-id',
-            },
-            'bwb-mostrecent-meta':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/bwb_latestonly_meta.db.xz',
-                'short_description':'Metadata for the latest revision from each BWB-id',
-            },
-            'bwb-mostrecent-text':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/bwb_latestonly_text.db.xz',
-                'short_description':'Plain text for the latest revision from each BWB-id',
-            },
-
-
-            'cvdr-mostrecent-xml':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/cvdr_latestonly_xml.db.xz',
-                'short_description':'Raw XML for the latest expression from each CVDR work',
-            },
-            'cvdr-mostrecent-meta':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/cvdr_latestonly_meta.db.xz',
-                'short_description':'Metadata for the latest expression from each CVDR work',
-            },
-            'cvdr-mostrecent-text':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/cvdr_latestonly_text.db.xz',
-                'short_description':'Text contents of the latest expression from each CVDR work',
-            },
-
-
             'rechtspraaknl-struc':{
                             'url':'https://wetsuite.knobs-dials.com/datasets/rechtspraaknl_extracted.db.xz',
                 'short_description':'Metadata and plain text for each uitspraak and conclusie that actually contains text',
@@ -136,7 +115,6 @@ def fetch_index():
             },
 
 
-
             'raadvanstate-adviezen-struc':{
                             'url':'https://wetsuite.knobs-dials.com/datasets/rvs_extracted.db.xz',
                 'short_description':'The advice under https://raadvanstate.nl/adviezen/ provided as plain text in a nested structure with metadata. ',  
@@ -151,37 +129,16 @@ def fetch_index():
 
 
 
-            # just metadata
             'gemeentes':{
                             'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes.json',    
                 'short_description':'List of municipalities, and some basic information about them.', 
             },
-            # 'gerechtcodes':{
-            #                 'url':'https://wetsuite.knobs-dials.com/datasets/gerechtcodes.json',
-            #             'version':'preliminary',
-            #     'short_description':'List of gerechtcodes as e.g. they appear in ECLI identifiers',
-            #         'download_size':0,
-            #             'real_size':0,
-            #                 'type':'application/json',
-            # },
-
 
             'wetnamen':{
                             'url':'https://wetsuite.knobs-dials.com/datasets/wetnamen.db',
                 'short_description':'Some more and less official name variants that are used to refer to laws.',
             },
-
-
-            'tweedekamer-fracties-struc':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/fracties.json',
-            },
-            'tweedekamer-fracties-membership-struc':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/fractie_membership.json',
-                            'type':'application/json',
-            },
         }
-
-
 
 
 
@@ -276,6 +233,9 @@ def _load_bare(dataset_name: str, verbose=None, force_refetch=False):
 
         Takes a dataset name (that you learned of from the index),
         Downloads it if necessary - after the first time it's cached in your home directory
+
+        If compressed, will uncompress. 
+        Does not think about the type of data
         
         @return: the filename we fetched to
     '''
@@ -336,7 +296,6 @@ def _load_bare(dataset_name: str, verbose=None, force_refetch=False):
                 print('', file=sys.stderr)
 
         if data_url.endswith('.xz'): # or file magic, b'\xfd7zXZ\x00\x00'
-            import lzma # standard library since py3.3, before that we could fall back to backports.lzma
             with lzma.open(tmp_path) as compressed_file_object:
                 with open(data_path,'wb') as write_file_object:
                     decompress_stream( compressed_file_object, write_file_object )
@@ -359,7 +318,10 @@ def _load_bare(dataset_name: str, verbose=None, force_refetch=False):
 
 
 def _path_to_data(data_path):
-    ' read from disk, return the data and description regardless of what it is '
+    ''' Given a filename,
+        return the data and description (based on contents)
+        regardless of what data type it is
+    '''
     f = open(data_path,'rb')
     first_bytes = f.read(15)
     f.seek(0)
@@ -368,23 +330,31 @@ def _path_to_data(data_path):
         f.close()
 
         # the type enforcement is irrelevant when opened read-only
-        data        = wetsuite.helpers.localdata.LocalKV( data_path, None, None, read_only=True )
+        data = wetsuite.helpers.localdata.LocalKV( data_path, None, None, read_only=True )
 
         description = data._get_meta('description', missing_as_none=True)
-        if data._get_meta('valtype', missing_as_none=True) == 'msgpack': # This is very hackish - TODO: avoid this
+        # This seems very hackish - TODO: avoid this
+        if data._get_meta('valtype', missing_as_none=True) == 'msgpack':
             data.close()
             data = wetsuite.helpers.localdata.MsgpackKV( data_path, None, None, read_only=True)
 
-    else: # Assume JSON - expected to be a dict with two main keys
+    elif first_bytes.strip().startswith(b'{'): # Assume that's a decent indicator of JSON
+        # expected to be a dict with two main keys, 'data' and 'description'
         loaded = json.loads( f.read() )
         f.close()
-        # TODO: remove the need for JSON, or at least make this alternative go away:
+
+        # TODO: remove the need for JSON, or at least make this alternative go away
+        #       by being more consistent in dataset generation
         if 'description' in loaded:
             data        = loaded.get('data')
             description = loaded.get('description')
         else:
-            data        = loaded
-            description = ''
+            raise ValueError("This JSON does not have the structure we expect.")
+    else:
+        f.close()
+        raise ValueError("Don't know how to deal with file called %r  that starts with %r"%(
+                         os.path.basename(data_path), first_bytes))
+
     return (data, description)
 
 
@@ -394,8 +364,9 @@ def load(dataset_name: str, verbose=None, force_refetch=False, augment=True):
 
         Returns a Dataset object - which is a container with little more than  
           - a .description string
-          - a .data member, some kind of iterable of iterms.   
-            The .description will mention what .data will contain and should give an example of how to use it.    
+          - a .data member, some kind of iterable of iterms.
+            The .description will mention what .data will contain 
+            and should give an example of how to use it.
 
         CONSIDER: have load('datasetname-*') automatically merge_datasets,
         one for each matched datasets, with an attribute named for the last bit of the dataset name.
@@ -404,7 +375,7 @@ def load(dataset_name: str, verbose=None, force_refetch=False, augment=True):
 
         @param verbose: tells you more about the download (on stderr)
         can be given True or False. By default, we try to detect whether we are in an interactive context.
-        
+
         @param force_refetch: whether to remove the current contents before fetching
         dataset naming should prevent the need for this (except if you're the wetsuite programmer)
     '''
@@ -444,69 +415,7 @@ def load(dataset_name: str, verbose=None, force_refetch=False, augment=True):
 
 
 
-
-
-
-
-# def merge_datasets(map): # maybe make this a @staticmethod on Dataset?
-#     ''' If you want to take related datasets and see them on one object, this 
-#         - takes a dict like::
-#             {
-#               dataset_object:'xml',
-#               dataset_object:'meta',
-#               dataset_object:'text'}
-#             }
-#         Returns a dataset object that has a .xml, .meta, and .text attribute that refers to those respective dataset objects.
-
-#         TODO: insteadh ave .data return DatasetItems with those attributes
-
-#         the main problem with this is that this probably has to be an iterable view,
-#         of iterable views, 
-#         because otherwise we _probably_ have to materialize data all data into memory somewhere,
-#         but will that always be a collections.abc.ValuesView ?
-#         (also, that will easily occupy the database from being writable but that's okay for datasts)
-#         ---
-
-#         The .data member be an iterable of DatasetItem objects, 
-#         which will contain at least a .raw (what comes out of the dataset file, which will often be a str, bytes, or nested python structure),
-#         if augment==False, just that. If augment==True, there may be some further interpretation of that.
-
-#         (the augmenting is, necessarily, somewhat nasty, because it is based on a hardcoded table of known datasets)
-#     '''
-#     namelist = ', '.join(ds.name for ds in map.keys())
-#     attrlist = ', '.join(map.values())
-#     ret = Dataset('joined dataset of %s. .data will be None but see attributes called %s'%( namelist, attrlist ), data=[])
-
-#     for dataset_object, attrib_name in map.items():
-#         setattr(ret, attrib_name, dataset_object.data)
-
-
-#     d = {
-#         '__doc__':"Bork %s"%namelist
-#         #"__init__": constructor,
-#         #"string_attribute": "Geeks 4 geeks !",
-#         #"int_attribute": 1706256,
-#         #"func_arg": displayMethod,
-#         #"class_func": classMethod
-#     }
-#     MyClass = type("Bork", (object, ), d)
-
-
-#     def iteritems(self):
-#         """ Returns a generator that yields all items """
-#         try: # TODO: figure out whether this is necessary
-
-#             for row in curs.execute('SELECT key, value FROM kv'):
-#                 yield row[0], row[1]
-#         finally:
-#             pass
-
-#     return ret
-
-
-
-
-#    @classmethod
+# @classmethod
 # def files_as_dataset(self, in_dir):
 #     ''' Notes that this does _nothing_ for you other than making it a little easier to iterate though the _contents_ of these files '''
 #     store = wetsuite.helpers.localdata.LocalKV( ':memory:', None, None )
@@ -520,46 +429,3 @@ def load(dataset_name: str, verbose=None, force_refetch=False, augment=True):
 #                     data=store,
 #                     name='filesystem-'+re.sub('[^A-Za-z0-9]+','-',in_dir)  )
 #     return ret
-
-
-
-
-
-# # This will probably go away again
-# class _DatasetItem:
-#     def __init__(self, **kwargs):
-#         #self.vars = []
-#         for var, val in kwargs.items():
-#             setattr(self, var, val)
-#             #self.vars.append( var )
-#         #self.__doc__ == '\n'.join( self.vars )
-
-# class DatasetItem:
-#     def __new__(cls, **kwargs):
-#         # Magic factory-like trickery to have something to say in a docstring.
-#         newcls = type('DatasetItem', (_DatasetItem, ),
-#                       {'__doc__': "Take a look at attributes: {}".format( ', '.join(list(kwargs.keys())))}
-#                      )
-#         return newcls(**kwargs)
-
-
-# class DatasetItems():
-#     def __init__(self, named_views_of_items):
-#         self.named_views_of_items = named_views_of_items
-
-#     def __iter__(self): # TODO: check
-#         " Using this object as an iterator yields its keys (equivalent to .iterkeys()) "
-#         return self.views_of_items[0].iterkeys() # assumes that's valid for all
-
-#     def __getitem__(self, key): # this one is here only really to support the ValuesView and Itemsview
-#         ret = self.get(key)
-#         if ret is None:
-#             raise KeyError()
-#         datas = list( view.get(key)  for view in views_of_items )
-#         return DatasetItem( )
-
-#     def items(self):
-#         """ Returns an iteralble of all items.    (a view with a len, rather than just a generator)  """
-#     #return collections.abc.ItemsView( self ) # this relies on __getitem__ which we didn't really want, maybe wrap a class to hide that?
-
-
