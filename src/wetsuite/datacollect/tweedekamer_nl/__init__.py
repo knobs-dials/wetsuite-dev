@@ -122,7 +122,7 @@ def merge_etrees( trees ):
 
 
 def entry_dict_from_node(entry_node):
-    ''' Helper for entries(). 
+    ''' Helper for L{entry_dicts}. 
         Given a single etree node (that came from an <entry>),
         returns the contained information in a dict. 
         This is mostly key-value (elem.tag, elem.value) but smooths over a few details.
@@ -158,7 +158,7 @@ def entry_dict_from_node(entry_node):
     return edict
 
 
-def entries(feed_etree):
+def entry_dicts( feed_etree ):
     ''' @param feed_etree: an etree object for a syncfeed list.
         ...mostly made for the output of L{merge_etrees}. 
 
