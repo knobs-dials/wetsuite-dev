@@ -21,6 +21,7 @@ if __name__ == '__main__':
 
     # a local cache that avoids a bunch of repeated reading on unchanged uploads
     dataset_meta = wetsuite.helpers.localdata.MsgpackKV('dataset_meta.db')
+    print("Reading data from %r"%dataset_meta.path)
 
 
     args = sys.argv[1:]
@@ -72,51 +73,61 @@ if __name__ == '__main__':
                     firstbytes = f.read(20)
                 if firstbytes[:7] == b'\xfd7zXZ\x00\x00':
                     filetype='xz'
-                elif firstbytes[:15] == b'SQLite format 3': # shouldn't happen here, but we will probably end up sharing this logic elsewhere
+                elif firstbytes[:15] == b'SQLite format 3': # ideally doesn't happen here, but we will probably end up sharing this logic elsewhere
                     filetype='sqlite3'
                 elif firstbytes.lstrip().startswith(b'{'):
                     filetype='json'
 
-            print( "  uncompressing %s to get its real size, please wait"%ffn )
+            #print( "  uncompressing %s to get its real size, please wait"%ffn )
 
             if filetype == 'xz':        # CONSIDER: bz2, gz?
                 stored_dict['type'] = 'xz-sqlite3'
-                print( "DO XZ %r"%ffn)
+                print( f"DO XZ {repr(ffn)}" )
 
                 s1h = hashlib.sha1()
 
                 print("\nDETERMINE uncompressed size of %r"%ffn)
                 uncompressed_data_size_bytes = 0
-                with tempfile.NamedTemporaryFile() as temp_file:
-                    # the only reason we do this is description, maybe think of a more efficient way that doesn't rely on lots of storage being there
-                    print( "    into temporary file %r"%temp_file.name )
-                    with lzma.open( ffn ) as compressed_file_object:
-                        while True:
-                            data = compressed_file_object.read( 2*1048576 )
-                            if len(data) == 0:
-                                break
-                            temp_file.write(data)
-                            s1h.update(data)
-                            uncompressed_data_size_bytes += len( data )
-                            print( "\r    decompressing... %3sB    "%(
-                                   wetsuite.helpers.format.kmgtp( uncompressed_data_size_bytes, kilo=1024 ), ),
-                                   end='', file=sys.stderr )
-                    print()
-                    stored_dict['uncompressed_size'] = uncompressed_data_size_bytes
-                    stored_dict['uncompressed_sha1hex'] = s1h.hexdigest()
-                    
-                    #stored_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp(uncompressed_data_size_bytes, kilo=1024)
+                with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                    try:
+                        # the main reason we do this is description, maybe think of a more efficient way that doesn't rely on lots of storage being there
+                        print( "    into temporary file %r"%temp_file.name )
+                        first100000_hash = None
+                        with lzma.open( ffn ) as compressed_file_object:
+                            while True:
+                                data = compressed_file_object.read( 2*1048576 )
+                                # a large-ish 2MB for decent speed, should be at least 100k for the next bit:
+                                if first100000_hash is None:
+                                    s1h1 = hashlib.sha1()
+                                    s1h1.update(data[:100000])
+                                    first100000_hash = s1h1.hexdigest()
 
-                    with wetsuite.helpers.localdata.LocalKV( temp_file.name, None,None, read_only=True ) as tstore:
-                        stored_dict['description'] = tstore._get_meta('description', missing_as_none=True)
-
+                                if len(data) == 0:
+                                    break
+                                temp_file.write(data) # write uncompressed data (here mostly to get size and description)
+                                s1h.update(data)      # make a hash of the whole thing
+                                uncompressed_data_size_bytes += len( data )
+                                #print( "\r    decompressing... %3sB    "%(
+                                #    wetsuite.helpers.format.kmgtp( uncompressed_data_size_bytes, kilo=1024 ), ),
+                                #    end='', file=sys.stderr )
+                        stored_dict['uncompressed_size'] = uncompressed_data_size_bytes
+                        stored_dict['uncompressed_sha1hex'] = s1h.hexdigest()
+                        stored_dict['first100000_sha1hex'] = first100000_hash
+                        
+                        with wetsuite.helpers.localdata.LocalKV( temp_file.name, None,None, read_only=True ) as tempstore:
+                            stored_dict['description']        = tempstore._get_meta('description', missing_as_none=True)
+                            stored_dict['description_shyort'] = tempstore._get_meta('description', missing_as_none=True)
+                    finally:
+                        # It looks like NamedTemporaryFile(delete=True) doesn't always honor that delete (presumably because we can pre-empty a gc-caused clean?)
+                        # try to ensure cleanup happend
+                        if os.path.exists( temp_file.name ):
+                            os.unlink( temp_file.name )
 
             elif filetype == 'sqlite3': # TODO: remove need (we want downloads to be compressed always)
                 stored_dict['type'] = 'sqlite3'
-                print( "DO SQLITE3 %r"%ffn)
+                print( "DO UNCOMPRESSED SQLITE3 %r"%ffn )
 
                 stored_dict['uncompressed_size'] = stored_dict['compressed_size']
-                #stored_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict['uncompressed_size'], kilo=1024 )
 
                 with wetsuite.helpers.localdata.LocalKV( ffn, None,None, read_only=True ) as tstore:
                     stored_dict['description']       = tstore._get_meta('description',       missing_as_none=True)
@@ -125,14 +136,13 @@ if __name__ == '__main__':
 
             elif filetype == 'json': # CONSIDER: remove need (we want downloads to be compressed always)
                 stored_dict['type'] = 'json'
-                print( "DO JSON %r"%ffn)
+                print( f"DO JSON {repr(ffn)}")
 
                 stored_dict['uncompressed_size'] = stored_dict['compressed_size']
-                #stored_dict['uncompressed_size_human'] = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict['uncompressed_size'], kilo=1024 )
 
 
             else:
-                print( "TODO: handle %s %r"%(filetype, ffn) )
+                print( f"TODO: handle {str(filetype)} {repr(ffn)}" )
                 continue
 
 
@@ -154,6 +164,7 @@ if __name__ == '__main__':
         dataset_item['download_size_human']  = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict.get('compressed_size'),   kilo=1024 )
         dataset_item['real_size_human']      = '%sB'%wetsuite.helpers.format.kmgtp( stored_dict.get('uncompressed_size'), kilo=1024 )
         dataset_item['uncompressed_sha1hex'] = stored_dict.get('uncompressed_sha1hex', None)
+        dataset_item['first100000_sha1hex']  = stored_dict.get('first100000_sha1hex',  None)
 
         dataset_index[dataset_name] = dataset_item
 
@@ -162,4 +173,3 @@ if __name__ == '__main__':
 print( "Writing %r"%dataset_index_fn )
 with open( dataset_index_fn, 'w', encoding='utf8') as wf:
     wf.write( json.dumps( dataset_index ) )
-
