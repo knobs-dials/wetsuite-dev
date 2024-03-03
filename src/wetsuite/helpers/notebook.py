@@ -179,29 +179,38 @@ class ProgressBar:
             - Unlike tqdm, we only work with something that has a length and is subscriptable,
               and has no fallback for 
             - unknown-length iterables                   
-              (such as generators)
+              (such as generators or enumerate)
             - known-length but unsubscriptable iterators 
               (such as dict_items, and set type - yould need to wrap a list() around it)
                 we could hardcode those to work, though...
 
         Yes, it's silly that we e.g. wrap tqdm in two layers of interfaces
-        to then present a poorer version of what it presents in the first place. 
-        We could try being cleverer, but for now it works.
+        to then present a poorer version of what it does in the first place. 
+        We should probably try being cleverer.
     '''
     def __init__(self, iterable, description=''):
         self.is_notebook = is_notebook()
+
+
+        if isinstance(iterable, enumerate):
+            # enumarate has no len, even if the iterable it was based on did.
+            # the following reads out all values from the enumeration and stores them.
+            # If it was a lazy generator for a reason, THIS IS NOT NECESSARILY A SMART THING TO DO!
+            iterable = list(iterable.__iter__()) 
 
         try:
             self._len = len( iterable )
         except TypeError as te:
             #if 'has no len' in str(te): # CONSIDER give a nicer answer
             raise te
+            #self._len = 0  # bad idea?  Except our code needs _something_.
+            pass
 
         # this may be a cleanish way to support things that are known-length but unsubscriptable,
         # like set or dict_items without materializing them entirely
         # (wraps an iterator around things that already are), but this needs reading up and testing
         if not hasattr(iterable, '__next__'): # assumes py3
-            # assumes you handed is iterable.  What do you expect of a progress bar otherwise?
+            # assumes what you handed in is iterable.  What do you expect of a progress bar otherwise?
             iterable = iter( iterable )
             #print( "making iterator over %s"%type(iterable) )
         #else:
@@ -219,14 +228,15 @@ class ProgressBar:
         return self
 
     def __next__(self):
-        self._cur +=1
+        self._cur += 1
 
-        if self._cur == self._len:
+        if self._cur == self._len: #
             raise StopIteration
 
-        # this is a hacky way to make it likelier a dynamic in-notebook progress bar gets updated -- I _think_
+        # this is a hacky way to make it somewhat likelier
+        #   that a dynamic in-notebook progress bar gets updated -- I _think_
         if self.is_notebook:
-            time.sleep(0.0000001) 
+            time.sleep(0.000001)
 
         self.pb.value = self._cur
         #return self._iterable[self._cur]
@@ -239,17 +249,20 @@ class etree_visualize_selection:
     ''' Produces a colorized representation of selection within an XML document.
         (works only within IPython/jupyter style notebooks,  via a HTML representation.) 
     '''
-    def __init__(self, tree, xpath_or_elements, reindent:bool=True, mark_text:bool=True, mark_tail:bool=False, mark_subtree:bool=False):
+    def __init__(self, tree, xpath_or_elements, reindent:bool=True, 
+                 mark_text:bool=True, mark_tail:bool=False, mark_subtree:bool=False):
         ''' Produces a colorized representation of selection within an XML document.
             (works only within IPython/jupyter style notebooks. works via a HTML representation.) 
 
             Given 
-              - a parsed tree    (or a bytes object, will be parsed, but you probably shouldn't do that)
+              - a parsed tree    
+                (or a bytes object, will be parsed, but you probably shouldn't do that)
               - either 
                 - a sequence of elements from a tree  (that you probably selected yourself)
                 - or a string, interpreted as xpath
             ...and optionally:
-              - reindent     display reindented copy of the tree (defaults True, this is debug function)
+              - reindent      display reindented copy of the tree 
+                              (defaults True, this is debug function)
               - mark_text:    mark initial text content of each matched element)
               - mark_tail:    mark tail-text after each matched element)
               - mark_subtree: mark entire tree under each matched element. Useful 
