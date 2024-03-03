@@ -25,13 +25,17 @@ def test_progress_console():
     pb.description = 'foo'
 
 
+
 def test_progress_iter():
-    ' test that it iterates over various things, including things that have a length but are not subscriptable '
+    ''' test that it iterates over various things,
+        including things that have a length but are not subscriptable,
+        and things have neither a length nor are subscribtable
+    '''
 
     for _ in ProgressBar( [1,2,3,4] ):
         time.sleep(0.001)
 
-    # set type
+
     for _ in ProgressBar( set([1,2,3,4]) ):
         time.sleep(0.001)
 
@@ -43,6 +47,11 @@ def test_progress_iter():
         time.sleep(0.001)
 
     for _ in ProgressBar( {1:2, 3:4}.values() ):
+        time.sleep(0.001)
+
+
+def test_progress_enum(): # TODO: figure out whether we want that
+    for _ in ProgressBar( enumerate([5,6,7]) ):
         time.sleep(0.001)
 
 
