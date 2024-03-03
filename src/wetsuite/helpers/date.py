@@ -176,6 +176,12 @@ def date_months_ago(amount=1):
     ''' @return: A date some amount of months ago, as a datetime.date '''
     return datetime.date.today() - datetime.timedelta(days= int(amount*30.6) )
 
+def date_first_day_in_year(yearnum):
+    ''' @return: January first of the given year, as a datetime.date '''
+    return datetime.date(year=yearnum, month=1, day=1)
+
+
+
 
 def days_in_range( from_date, to_date, strftime_format=None ):
     '''
