@@ -8,7 +8,8 @@ import bs4
 
 
 def fetch_by_resource_type(typ='JUDG'):
-    ''' Intends to query the SPARQL endpoint to ask for most CELEXes of a specific type, here court judgments, 
+    ''' Intends to query the SPARQL endpoint to ask for most CELEXes of a specific type, 
+        (defaulting to court judgments for no particular reason)
 
         TODO: fetch values e.g. at 
         https://github.com/SEMICeu/Excel-to-CPSVAP-RDF-transformation/blob/master/page-objects/utils/CPSVtemplateWithCodelists.json
@@ -23,7 +24,7 @@ def fetch_by_resource_type(typ='JUDG'):
 
         @return: a (possibly-many-item'd) nested structure (python structure, loaded from JSON)
 
-        The structure you get back looks like:  ( see also see also https://www.w3.org/TR/2013/REC-sparql11-results-json-20130321/ ) ::
+        The structure you get back looks like:  ( see also https://www.w3.org/TR/2013/REC-sparql11-results-json-20130321/ ) ::
             {
                 'head': {
                     'link': [], 'vars': ['work', 'type', 'celex', 'date', 'force']
@@ -94,7 +95,8 @@ def extract_html(htmlbytes):
         @param htmlbytes: the page, as a bytes object
         @return: a nested structure
     '''
-    # This code turned messier than it originally was, because the page turned out to be more flexible than I thought.
+    # This code turned messier than it originally was,
+    # because the page turned out to be more flexible
 
     def parse_datalist(under_dl_node):
         ' pick out the basic parts of a data list '
@@ -163,7 +165,7 @@ def extract_html(htmlbytes):
                     a = li.find('a')
                     if a is not None:
                         ret['proc'][k].append( a.text ) # TODO: consider actually figuring out the link
-                print( ret['proc'][k] )
+                #print( ret['proc'][k] )
                 #print( k, type(v), v )
 
             # print( dlitem )
@@ -317,6 +319,8 @@ def extract_html(htmlbytes):
                         'span',
                         'table',
                         'dl','dt','dd',
+
+                        'td' # TODO: think
                     ):
                         #print( node.name.upper(), node)
                         txtfrags = list(  frag  for frag in node.findAll(text=True) if len(frag.strip())>0)
