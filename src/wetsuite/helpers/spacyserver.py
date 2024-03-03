@@ -1,28 +1,30 @@
 ''' Functions to help access a running instance of extas/spacy_server.py
 '''
-import json, time
+import json
+import time
 
 import requests
 
 ######### Spacy-server-specific
 
 def http_api(q, ip='127.0.0.1', port=8282, want_svg=False, as_text=False, timeout=10):
-    """ Feed through a query (by default just text in q) to spacy_server
-        Return the data it gives us as a dict
+    """
+    Feed through a query (by default just text in q) to spacy_server
+    Return the data it gives us as a dict
 
-        Notes:
-          - We return our own data-only conception of the information tacked onto the spacy Document.
-            There was previously an experiment to serialize/pickle/docbin the spacy object
-            so that we might transparently one or more other hosts to do work for us,
-            the overheads of deserializing are high - that serialization seems only useful when storing significant work.
+    Notes:
+        - We return our own data-only conception of the information tacked onto the spacy Document.
+        There was previously an experiment to serialize/pickle/docbin the spacy object
+        so that we might transparently one or more other hosts to do work for us,
+        the overheads of deserializing are high - that serialization seems only useful when storing significant work.
 
-          - Is little more than a HTTP POST (because requests larger than ~4K aren't allowed),
-            and some JSON wrapping. 
+        - Is little more than a HTTP POST (because requests larger than ~4K aren't allowed),
+        and some JSON wrapping. 
 
-          - want_svg requests spacy_server to sump dependencies SVG in a value (yes, that's cheating encoding-wise).
-            Defaults to False because it's large, and there are various uses where you don't want it.
-            
-          - timeout mostly to avoid the possibility of hanging forever if you don't specify one
+        - want_svg requests spacy_server to sump dependencies SVG in a value (yes, that's cheating encoding-wise).
+        Defaults to False because it's large, and there are various uses where you don't want it.
+        
+        - timeout mostly to avoid the possibility of hanging forever if you don't specify one
     """
     if want_svg:
         want_svg = 'y'
@@ -41,18 +43,19 @@ def http_api(q, ip='127.0.0.1', port=8282, want_svg=False, as_text=False, timeou
 
 
 def parse(nlp, query_string, nlp_lock=None, want_svg=True, want_sims=False):
-    ''' 
-    Takes a spacy nlp object, and python string.
+    ''' Takes a spacy nlp object, and python string.
+            
+        Runs that model on that string 
         
-    Runs that model on that string extracts some useful stuff
+        Extracts some useful stuff to return in a dict, 
+        (only JSON-serializable objects, so that we can send it over a HTTP API)
         
-    Returns a dict, with just python(JSON-serializable) objects, so that we can send it over a HTTP API 
-    
-    Should probably be split up into more parts
+        Should probably be split up into more parts
 
-    CONSIDER: allow parameter to split on series of newlines, and nlp.pipe() it.
-    CONSIDER: add doc.to_bytes and doc.from_bytes 
-    '''
+        CONSIDER: allow parameter to split on series of newlines, and nlp.pipe() it? 
+                  (but: arguably the wrong place to do that splitting)
+        CONSIDER: add doc.to_bytes and doc.from_bytes 
+        '''
 
     import spacy
     from spacy import displacy
@@ -84,16 +87,18 @@ def parse(nlp, query_string, nlp_lock=None, want_svg=True, want_sims=False):
             'is_stop':token.is_stop,
             'is_oov':token.is_oov,
             'norm':'%.3f'%float(token.vector_norm),
-            #'vector':list(round(ve,3)  for ve in token.vector.tolist()),
+            #'vector':list(round(ve,3)  for ve in token.vector.tolist()), ## vector stuff is messy - more reading is required
         } )
 
     start_rest = time.time()
     ret['sentences'] = []
     sent_i = 0
     for sent in doc.sents:
-        # TODO: decide what exactly to do with spaces, and consistency between sentence_ranges and sents_svgs,
-        #       and duplication, and off-by-one mistakes I probably made,
-        #       and the easiest way for people to use this.
+        # TODO: decide what exactly to do with 
+        # spaces, 
+        # and consistency between sentence_ranges and sents_svgs,
+        # and duplication, and off-by-one mistakes I probably made,
+        # and the easiest way for people to use this.
         ss, se = sent.start, sent.end
 
         if doc[ss].pos_ in ('SPACE',):
@@ -116,15 +121,19 @@ def parse(nlp, query_string, nlp_lock=None, want_svg=True, want_sims=False):
             if want_svg:
                 svg_text = displacy.render(
                         doc[ss:se],
-                        style="dep",
-                        options={'compact':True, 'bg':'#ffffff00', 'distance':85, 'word_spacing':40, 'arrow_stroke':1}
+                        style   = "dep",
+                        options = {
+                            'compact':True, 'bg':'#ffffff00', 
+                            'distance':85, 'word_spacing':42, 'arrow_stroke':1,
+                        }
                     )
                 # hack to get 100%-width behaviour
                 #svg_w = re.search('width="([0-9]+)', svg_text).groups()[0]
                 #svg_h = re.search('height="([0-9]+)', svg_text).groups()[0]
                 #svg_text = re.sub('<svg ', '<svg viewbox="0 0 %s %s" '%(svg_w, svg_h), svg_text)
 
-                # hackiness to make the depname a link to its explanation on universaldependencies.org (except it's stanford, not udep?)
+                # hackiness to make the depname a link to its explanation on universaldependencies.org
+                #  (except it's stanford, not udep, I think, so this is hackish even if it is useful?)
                 if 1: # somewhat slower, but hey
                     import lxml.etree as ET
                     ET.register_namespace('svg',   "http://www.w3.org/2000/svg")
@@ -145,7 +154,7 @@ def parse(nlp, query_string, nlp_lock=None, want_svg=True, want_sims=False):
                             changes = { # these seem to come from stanford, not UD, so maybe make a linkable form from its PDF summary instead?
                                   'auxpass':'aux:pass',
                                 'nsubjpass':'nsubj:pass',
-                                # these don't have 1:1 between stannford and UD
+                                # these don't have 1:1 between stanford and UD
                                      'pobj':'obj', # arguably don't link these two?
                                      'dobj':'obj',
                                       'neg':'',
@@ -165,8 +174,10 @@ def parse(nlp, query_string, nlp_lock=None, want_svg=True, want_sims=False):
                             if depname in changes:
                                 depname = changes[depname]
                             if depname != '':
-                                a.set('href',   'https://universaldependencies.org/u/dep/%s.html'%(depname.replace(':','-')))
-                                a.set('target', '_blank')
+                                a.set('href',
+                                      'https://universaldependencies.org/u/dep/%s.html'%(depname.replace(':','-')) )
+                                a.set('target',
+                                      '_blank')
                                 a.append( g[1] )
                                 g.replace( g[1], a )
                                 g.append(h) # I have no idea why it disappears if I don't.
