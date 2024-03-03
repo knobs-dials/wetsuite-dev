@@ -8,7 +8,7 @@ import wetsuite.helpers.format
 for dataset_name, dataset_meta in wetsuite.datasets.fetch_index().items():
     print( '### %s'%dataset_name )
     print( '* Version:      %s'%(dataset_meta.get('version')))
-    print( '* Description: ', dataset_meta['short_description'])
+    print( '* Description: ', dataset_meta['description_short'])
     print( '* Size:         %s downloaded, %sB installed '%(
         wetsuite.helpers.format.kmgtp(dataset_meta.get('download_size',-1)),
         wetsuite.helpers.format.kmgtp(dataset_meta.get('real_size',-1))
