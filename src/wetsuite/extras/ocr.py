@@ -1,7 +1,11 @@
 ''' Extract text from images, mainy aimed at PDFs that contain pictures of documents
 
-    Largely a wrapper for OCR package, currently just EasyOCR; we are considering also adding tesseract.  
-    CONSIDER: ...and then unify the data format we hand around (particularly because of the helper functions)
+    Largely a wrapper for OCR package, currently just EasyOCR; we really should TODO: add tesseract
+    https://github.com/sirfz/tesserocr
+
+    And then, ideally, TODO: add an interface in front of both it an tesseract 
+    (and maybe, in terms of 'text fragment placed here', also pymudpdf)
+    so that the helper functions make equal sense
 '''
 import sys
 import re
@@ -25,7 +29,8 @@ def ocr_pdf_pages(pdfbytes, dpi=150):
 
     @return: a 2-tuple:
       - a list of the results that easyocr_text outputs
-      - a list of "all text on a page" string. Technically somewhat redundant with the last, but good enough for some uses and easier.
+      - a list of "all text on a page" string. 
+        Technically somewhat redundant with the first, but good enough for some uses and easier.
     '''
     results = []
     text    = []
@@ -56,9 +61,11 @@ def easyocr(image, pythontypes=True, use_gpu=True, languages=('nl','en')):
 
         @param use_gpu:
 
-        @param languages: what languages to detect. Defaults to 'nl','en'. You might occasionally wish to add 'fr'.
+        @param languages: what languages to detect. Defaults to 'nl','en'. 
+        You might occasionally wish to add 'fr'.
 
-        @return: a list of C{[[topleft, topright, botright, botleft], text, confidence]} (which are EasyOCR's results)
+        @return: a list of C{[[topleft, topright, botright, botleft], text, confidence]} 
+        (which are EasyOCR's results)
     '''
     import easyocr   # https://www.jaided.ai/easyocr/documentation/  https://www.jaided.ai/easyocr/
 
@@ -67,14 +74,16 @@ def easyocr(image, pythontypes=True, use_gpu=True, languages=('nl','en')):
         where = 'CPU'
         if use_gpu:
             where = 'GPU'
-        print("first use of ocr() - loading EasyOCR model (into %s)"%where, file=sys.stderr)
+        print(f"first use of ocr() - loading EasyOCR model (into {where})", file=sys.stderr)
         _eocr_reader = easyocr.Reader( languages, gpu=use_gpu)
 
     if image.getbands() != 'L': # grayscale
         image = image.convert('L')
 
     ary = numpy.asarray( image )
-    result = _eocr_reader.readtext( ary )   # note: you can hand this a filename, numpy array, or byte stream (PNG or JPG?)
+
+    # note: you can hand this a filename, numpy array, or byte stream (PNG or JPG?)
+    result = _eocr_reader.readtext( ary )
 
     if pythontypes:
         ret = []
@@ -99,8 +108,9 @@ def easyocr_text(results):
 
         There is some smarter code in kansspelautoriteit fetching script
         CONSIDER centralizing that and/or 'natural reading order' code
+        CONSIDER making this '\n\n',join( the pages function ) instead
     '''
-    #warnings.warn('Our easyocr_text() call is currently dumb, and should become better at its job later')
+    #warnings.warn('easyocr_text() is currently dumb, and should be made better at its job later')
     ret = []
     for (_, _, _, _), text, _ in results:
         ret.append(text)
@@ -127,13 +137,7 @@ def easyocr_draw_eval(image, ocr_results):
                       )
     return image
 
-#def tesseract():
-# #https://github.com/sirfz/tesserocr
 
-
-
-
-#
 # functions that help deal with Easy OCR-detected fragments,
 # when they are grouped into pages, then a collection of fragments
 #
@@ -210,7 +214,9 @@ def bbox_max_y(bbox):
 
 
 def page_allxy( page_ocr_fragments ):
-    ''' Given a page's worth of OCR results, return list of X, and list of Y coordinates, meant for e.g. statistics use.
+    ''' Given a page's worth of OCR results, return list of X, and list of Y coordinates,
+        meant for e.g. statistics use.
+        
         @param page_ocr_fragments: a bounding box, as a 4-tuple (tl,tr,br,bl)
         @return: ( all x list, all y list )
     '''
@@ -245,9 +251,11 @@ def page_extent( page_ocr_fragments, percentile_x=(1,99), percentile_y=(1,99) ):
 
 def doc_extent( list_of_page_ocr_fragments ):
     ''' Calls like page_extent(), but considering all pages at once,
-        mostly to not do weird things on a last half-filled page (though usually there's a footer to protect that)
+        mostly to not do weird things on a last half-filled page
+        (though usually there's a footer to protect that)
 
-        TODO: think about how percentile logic interacts - it may be more robust to use 0,100 to page_extent calls and do percentiles here.
+        TODO: think about how percentile logic interacts - 
+        it may be more robust to use 0,100 to page_extent calls and do percentiles here.
 
         @param list_of_page_ocr_fragments:
         @return: (page_min_x, page_min_y, page_max_x, page_max_y)
@@ -277,7 +285,8 @@ def page_fragment_filter( page_ocr_fragments,  textre=None,
             ...present within the page, by default 
             ...or the document, if you hand in the document extent via extent 
             (can make more sense to deal with first and last pages being half filled)
-          - otherwise assumed to be ints, absolute units (which are likely to be pixels and depend on the DPI),
+          - otherwise assumed to be ints, absolute units 
+            (which are likely to be pixels and depend on the DPI),
 
         @param page_ocr_fragments:
         @param textre:  include only fragments that match this regular expression
@@ -289,14 +298,17 @@ def page_fragment_filter( page_ocr_fragments,  textre=None,
         @param extent:  TODO: finish this documentation
         @param verbose: say what we're including/excluding and why
     '''
-    if extent is not None: # when first and last pages can be odd, it may be useful to pass in the documentation extent
+    # when first and last pages can be odd, it may be useful to pass in the documentation extent
+    if extent is not None: 
         _, _, page_max_x, page_max_y = extent
     else:
         _, _, page_max_x, page_max_y = page_extent( page_ocr_fragments )
 
     if isinstance(q_min_x, float): # assume it was a fraction
-        # times a fudge factor because we assume there is right margin that typically has no detected text,
-        #  and we want this to be a fraction to be of the whole page, not of the _use_ of the page
+        # times a fudge factor because we assume there is right margin 
+        #    that typically has no detected text,
+        #  and we want this to be a fraction to be of the whole page,
+        #    not of the _use_ of the page
         q_min_x = q_min_x * (1.15*page_max_x)
     if isinstance(q_max_x, float):
         q_max_x = q_max_x * (1.15*page_max_x)
