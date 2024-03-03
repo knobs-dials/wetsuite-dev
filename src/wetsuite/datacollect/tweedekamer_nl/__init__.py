@@ -17,19 +17,26 @@
     look to https://github.com/openkamer/openkamer
 
     
-    It is unclear how to do certain things with this interface, e.g. list the items in a kamerstukdossier.
+    It is unclear how to do certain things with this interface, 
+    e.g. list the items in a kamerstukdossier.
     (though we can get those via e.g. https://zoek.officielebekendmakingen.nl/dossier/36267)
 '''
 
 import wetsuite.helpers.net
 import wetsuite.helpers.etree
 
-resource_types = (
-    'Activiteit', 'ActiviteitActor', 'Agendapunt', 'Besluit', 'Commissie', 'CommissieContactinformatie', 'CommissieZetel', 
-    'CommissieZetelVastPersoon', 'CommissieZetelVastVacature', 'CommissieZetelVervangerPersoon', 'CommissieZetelVervangerVacature', 
-    'Document', 'DocumentActor', 'DocumentVersie', 'Fractie', 'FractieAanvullendGegeven', 'FractieZetel', 'FractieZetelPersoon', 
-    'FractieZetelVacature', 'Kamerstukdossier', 'Persoon', 'PersoonContactinformatie', 'PersoonGeschenk', 'PersoonLoopbaan', 
-    'PersoonNevenfunctie', 'PersoonNevenfunctieInkomsten', 'PersoonOnderwijs', 'PersoonReis', 'Reservering', 'Stemming', 
+resource_types = ( # copy. Presumably won't change.
+    'Activiteit', 'ActiviteitActor', 'Agendapunt', 'Besluit', 
+    'Commissie', 'CommissieContactinformatie', 'CommissieZetel', 
+    'CommissieZetelVastPersoon', 'CommissieZetelVastVacature', 
+    'CommissieZetelVervangerPersoon', 'CommissieZetelVervangerVacature', 
+    'Document', 'DocumentActor', 'DocumentVersie', 
+    'Fractie', 'FractieAanvullendGegeven', 'FractieZetel', 
+    'FractieZetelPersoon', 'FractieZetelVacature', 
+    'Kamerstukdossier',
+    'Persoon', 'PersoonContactinformatie', 'PersoonGeschenk', 'PersoonLoopbaan', 
+    'PersoonNevenfunctie', 'PersoonNevenfunctieInkomsten', 'PersoonOnderwijs', 'PersoonReis',
+    'Reservering', 'Stemming', 
     'Vergadering', 'Verslag', 'Zaak', 'ZaakActor', 'Zaal'
 )
 
@@ -74,10 +81,12 @@ def fetch_all(soort="Persoon", break_actually=False, timeout=60):
         @param break_actually: break after first fetch, mostly for faster debug and testing
 
         
-        @return: a list of etree objects, which are also stripped of namespaces (atom for the wrapper, tweedekamer for <content>).
+        @return: a list of etree objects, which are also stripped of namespaces 
+        (atom for the wrapper, tweedekamer for <content>).
 
         This is not immediately useful,
-        and you probably want to feed this into L{merge_etrees} to make a single large document  (some types are hundreds of MByte, though).
+        and you probably want to feed this into L{merge_etrees} to make a single large document
+        (some types are hundreds of MByte, though).
     '''
     url = f'{SYNCFEED_BASE}Feed?category=%s'%soort
     ret = []
@@ -91,7 +100,7 @@ def fetch_all(soort="Persoon", break_actually=False, timeout=60):
         links = tree.findall('link')
         for link in links:
             # we're looking for something like
-            #   <link rel="next" href="https://gegevensmagazijn.tweedekamer.nl/SyncFeed/2.0/Feed?category=Persoon&amp;skiptoken=11902974"/>
+            #  <link rel="next" href="https://gegevensmagazijn.tweedekamer.nl/SyncFeed/2.0/Feed?category=Persoon&amp;skiptoken=11902974"/>
             rel = link.get('rel')
             href = link.get('href')
             if rel == 'next':
@@ -110,51 +119,66 @@ def fetch_all(soort="Persoon", break_actually=False, timeout=60):
 
 
 def merge_etrees( trees ):
-    ''' Merges a list of documents (etree documents, as fetch_all gives you) into a single etree document.
+    ''' Merges a list of documents (etree documents, as fetch_all gives you) 
+        into a single etree document.
         Tries to pick up only the interesting data.
     '''
     ret = wetsuite.helpers.etree.Element('feed') # decide what to call that document
     for tree in trees:
-        tree = wetsuite.helpers.etree.strip_namespace( tree ) # redundant if you use fetch_all, here in case you're reading your own documents
+        # redundant if you use fetch_all, here in case you're reading your own documents
+        tree = wetsuite.helpers.etree.strip_namespace( tree )
+
         for entry in tree.findall('entry'):
             ret.append(entry)
     return ret
 
 
-def entry_dict_from_node(entry_node):
+def _entry_dict_from_node(entry_node):
     ''' Helper for L{entry_dicts}. 
+
         Given a single etree node (that came from an <entry>),
         returns the contained information in a dict. 
-        This is mostly key-value (elem.tag, elem.value) but smooths over a few details.
+        This is mostly key-value (elem.tag, elem.value) but flattens a few details.
     '''
+    #warnings.warn('Picking up ddetails from a ')
     edict = {}
     edict['title']    = entry_node.findtext('title')  #which seems the be the GUID, not a title?
-    #edict['author']  = entry.findtext('author/name')
 
     edict['updated']  = entry_node.findtext('updated')
     edict['category'] = entry_node.find('category').get('term')
-    content = entry_node.find('content')
-    item = content[0]
-    for elem in item:
-        #print( wetsuite.helpers.etree.debug_pretty(elem))
-        if elem.attrib.get('nil','false') == 'true':
-            edict[ elem.tag ] = None  # .text should be anyway, but this is at least clearer
-            continue
 
-        if len(elem.attrib)==0:
-            edict[ elem.tag ] = elem.text
-            continue
+    #I believe this is always "Tweede Kamer der Staten-Generaal" which is not very useful
+    #if entry_node.find('author') is not None:
+    #    edict['author/name']  = entry_node.findtext('author/name')
 
-        refval = elem.attrib.get('ref', None)
-        if refval is not None:
-            edict[ elem.tag ] = ('ref', refval)
-            continue
+    # try to simplify wat <content> is doing
+    content_elem = entry_node.find('content')
+    if content_elem is not None:
+        edict['content'] = []
+        # assumption that there is just one - TODO: check that's true
+        content_content = list(content_elem)[0]
+        #print( wetsuite.helpers.etree.debug_pretty(conte))
+        cd = {'refs':{}}
+        # flatten attribs and sub-elements for now - TODO: check this assumption makes sense
+        cd['tagname'] = content_content.tag # probably won't clash
+        for name, val in content_content.attrib.items():
+            cd[name] = val
+        for ccsubelem in list(content_content):
+            # assumption: either a reference to another id,  or a kv-style node with just text
+            ref = ccsubelem.attrib.get('ref')
+            if ref is not None:
+                cd['refs'][ccsubelem.tag] = ref
+            else:
+                cd[ ccsubelem.tag ] = ccsubelem.text
 
-        raise ValueError( "ERROR: programmer didn't think of case like %r"%wetsuite.helpers.etree.tostring(elem) )
 
-    edict['id'] = item.get('id') # it's in three places and should aways be identical,
-                                    # but this seems the most sensible place, should it ever change
+        #edict['content'].append( cd )
+        edict['content'] = cd
 
+    # it's in three places and should aways be identical,
+    # but this seems the most sensible place, should it ever change
+    edict['id'] = entry_node.find('id').text
+    #edict['id'] = entry_node.get('id')
     return edict
 
 
@@ -167,33 +191,5 @@ def entry_dicts( feed_etree ):
     '''
     ret = []
     for entry_node in feed_etree.findall('entry'):
-        ret.append( entry_dict_from_node( entry_node ) )
+        ret.append( _entry_dict_from_node( entry_node ) )
     return ret
-
-
-
-
-
-## Other interface: OData
-
-ODATA_BASE = 'https://gegevensmagazijn.tweedekamer.nl/OData/v4/2.0/'
-
-
-# TODO: figure out and provide more of interface
-
-# list all items of soort:
-# url = f'{odata_base}/{%s}'%(soort,)
-
-# list metadata for specific item:
-# url = f'{odata_base}/{%s}(%s)'%(soort, id)
-
-# document for specific item (if present):
-# url = f'{odata_base}/{%s}(%s)/resource'%(soort, id)
-
-
-# Searches are done with a filter function, often added to the query for a specific soort
-# url = f'{odata_base}/{%s}?$filter=$s'%(
-#   'Persoon',
-#   escape_uri('Verwijderd eq false and (Functie eq 'Eerste Kamerlid' or Functie eq 'Tweede Kamerlid')')
-# )
-# /Persoon?$filter=Verwijderd%20eq%20false%20and%20(Functie%20eq%20%27Eerste%20Kamerlid%27%20or%20Functie%20eq%20%27Tweede%20Kamerlid%27)
