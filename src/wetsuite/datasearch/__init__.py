@@ -92,10 +92,10 @@ if 0:
                 this should tell you URL(s) you can find that at.
 
                 Note that 
-                - you do not need to do this if you _came_ from a search, 
-                    its hits already contains these URLs -- if we know it.
-                - this can be less reliable than search, in that 
-                    if you didn't normalize it quite like we did it may not return a result.
+                    - you do not need to do this if you _came_ from a search, 
+                        its hits already contains these URLs -- if we know it.
+                    - this can be less reliable than search, in that 
+                        if you didn't normalize it quite like we did it may not return a result.
             '''
             #if ident.startswith('BWB'):
             #if ident.startswith('CVDR'):
@@ -123,7 +123,6 @@ if 0:
                     ret['web_urls'].append( _source['web_url'] )
                 if 'xml_url' in _source:
                     ret['xml_urls'].append( _source['xml_url'] )
-
 
             return ret
 
