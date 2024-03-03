@@ -7,12 +7,13 @@ so this (thin) wrapper module exists largely to separate out the counting,
     - to introduce some flexibility in how we count in a wordcloud.
     - and to make those counting functions usable for other things
 '''
-import collections, re
+import collections
+import re
 from typing import List
 
 
 # The wordcloud module imports matplotlib so we might need to ensure a non-graphical backend
-#   TODO: read up, it's probably good to do this conditionally -- and lazily?
+#   TODO: read up, IIRC it's good to do this conditionally and lazily?
 import matplotlib
 matplotlib.use('Agg')
 
@@ -22,7 +23,7 @@ import wordcloud  #  if not installed, do  pip3 install wordcloud       also thi
 
 
 # the wordcloud module loads some english stopwords by default.
-# The functions added below requires you to be more explicit, 
+# The functions added below requires you to be more explicit,
 #   in which case some prepared lists are handy:
 stopwords_en = [ # wordcloud.STOPWORDS loads:
     "a", "about", "above", "after", "again", "against", "all", "also", "am", "an", "and", "any", 
@@ -44,17 +45,22 @@ stopwords_en = [ # wordcloud.STOPWORDS loads:
     "why", "why's", "with", "won't", "would", "wouldn't", "www", "you", "you'd", "you'll", 
     "you're", "you've", "your", "yours", "yourself", "yourselves" 
 ]
-' Some English stopwords  '
+' some English stopwords  '
 
 stopwords_nl = (
     'de','het', 'een', 'en','of', 'die','van', 'op','aan','door','voor','tot','bij', 'kan','wordt',
     'in', 'deze', 'dan', 'is', 'dat'
 )
-' Some Dutch stopwords  '
+' some Dutch stopwords  '
 
 
-def wordcloud_from_freqs(freqs: dict, 
-                         width:int=1200, height:int=300, background_color='white', min_font_size=10, **kwargs):
+
+def wordcloud_from_freqs(freqs: dict,
+                         width:int=1200,
+                         height:int=300,
+                         background_color='white',
+                         min_font_size=10,
+                         **kwargs):
     ''' Takes a {string: count} dict, returns a PIL image object.
 
         That image will look a bunch cleaner when you have cleaned up the string:count,
@@ -68,7 +74,12 @@ def wordcloud_from_freqs(freqs: dict,
 
 
 
-def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  normalize_func=None, stopwords=(), stopwords_i=() ):
+def count_normalized(strings: List[str],
+                     min_count:int=1,
+                     min_word_length=0,
+                     normalize_func=None,
+                     stopwords=(),
+                     stopwords_i=() ):
     ''' Takes a list of strings, returns a string:count dict, with some extra processing
 
         Parameters beyond normalize_func are mostly about removing things you would probably call, 
@@ -84,13 +95,15 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
         CONSIDER: separating out different parts of these behaviours
 
         @param normalize_func: half the point of this function. Should be a str->str function. 
-          - We group things by what is equal after this function is applied, but we report the most common case before it is. 
+          - We group things by what is equal after this function is applied, 
+            but we report the most common case before it is. 
             For example, to _count_ blind to case, but report just one (the most common case) ::
                 count_normalized( "a A A a A A a B b b B b".split(),  normalize_func=lambda s:s.lower() ) 
             would give ::
                 {"A":7, "b":5}
-          - Could be used for other things.  For example, 
-            if you make normalize_func map a word to its lemma, then you unify all inflections, and get reported the most common one.
+          - Could be used for other things.  
+            For example, if you make normalize_func map a word to its lemma, then you unify all inflections, 
+            and get reported the most common one.
        
         @param  min_word_length:
           - strings shorter than this are removed.
@@ -129,7 +142,7 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
             continue
 
         norm_string = string
-        if normalize_func is not None: 
+        if normalize_func is not None:
             norm_string = normalize_func(string)
 
         if len(norm_string) < min_word_length:
@@ -161,33 +174,47 @@ def count_normalized(strings: List[str],  min_count:int=1,  min_word_length=0,  
 
 def count_case_insensitive(strings: List[str],  min_count=1,  min_word_length=0,  stopwords=()):
     ''' Calls count_normalized()  with  normalize_func=lambda s:s.lower() 
-        which means it is case insensitive in counting strings, but it reports the most common capitalisation.
+        which means it is case insensitive in counting strings, 
+        but it reports the most common capitalisation.
 
-        Explicitly writing a function for such singular use is almost pointless, yet this seems like a common case and saves some typing.
+        Explicitly writing a function for such singular use is almost pointless,
+        yet this seems like a common case and saves some typing.
+        
         @param strings:         
         @param min_count:       
         @param min_word_length: 
         @param stopwords:       
         @return: 
     '''
-    return count_normalized( strings, min_count=min_count, min_word_length=min_word_length, normalize_func=lambda s:s.lower(), stopwords=stopwords )
+    return count_normalized(
+        strings,
+        min_count=min_count,
+        min_word_length=min_word_length,
+        normalize_func=lambda s:s.lower(),
+        stopwords=stopwords
+    )
 
 
-def count_from_spacy_document(doc_or_sequence_of_docs, remove_stop=True, restrict_to_tags=('NOUN', 'PROPN', 'ADJ', 'ADV', 'VERB'), 
-                              add_ents=True, add_ncs=True,
+def count_from_spacy_document(doc_or_sequence_of_docs,
+                              remove_stop=True,
+                              restrict_to_tags=('NOUN', 'PROPN', 'ADJ', 'ADV', 'VERB'),
+                              add_ents=True,
+                              add_ncs=True,
                               weigh_deps={'nsubj':5, 'obj':3} ):
     ''' Takes a spacy document, returns a string->count dict 
         
         Does a lot of fairly specific things (a bit too specific to smush into one function, really)
         to be smart about removing low-content words, and focusing on terms.
         
-        @param restrict_to_tags:  removes if not in this POS list - which defaults to nouns, adjectives, adverbs, and verbs (and removes a lot of fillter words)
+        @param restrict_to_tags:  removes if not in this POS list - which defaults to nouns, adjectives, adverbs, 
+                                  and verbs (and removes a lot of fillter words)
         @param remove_stop:       removes according to Token.is_stop
 
         @param add_ents:          whether to add phrases from Doc.ents
         @param add_ncs:           whether to add phrases from Doc.noun_chunks
  
-        @param weigh_deps:        exists to weigh words/ent/ncs stronger when they are/involve the sentence's subject or object
+        @param weigh_deps:        exists to weigh words/ent/ncs stronger 
+                                  when they are/involve the sentence's subject or object
 
         CONSIDER: make this a filter instead, so we can feed the result to count_normalized()
         CONSIDER: whether half of that can be part of some topic-modeling filtering.  And how filters might work around spacy.
@@ -208,7 +235,7 @@ def count_from_spacy_document(doc_or_sequence_of_docs, remove_stop=True, restric
             if restrict_to_tags is not None  and  token.pos_ not in restrict_to_tags:
                 #print( "SKIP %r - based on tag %s"%(token.text, token.pos_))
                 continue
-                
+
             counts[ token.text  ] += 1
 
             # TODO: take dict of weighs
@@ -248,7 +275,7 @@ def simple_tokenize(text: str):
 # if __name__ == '__main__':
 #     # quick and dirty tests from text files handed in
 #     import sys
-# 
+#
 #     for fn in sys.argv[1:]:
 #         with open(fn) as f:
 #             filedata = f.read()
