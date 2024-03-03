@@ -105,6 +105,7 @@ def find_identifier_references( text,
             match['details'] = wetsuite.helpers.meta.parse_celex( rematch.group(0) )
             ret.append( match )
 
+    # TODO: figure out what variations there are (to the degree there is standardization at all)
     _RE_EUOJ = re.compile(r'(OJ|Official Journal)[\s]?(C|CA|CI|CE|L|LI|LA|LM|A|P) [0-9]+([\s]?[A-Z]|/[0-9])*(, p. [0-9](\s*[\u2013-]\s*[0-9]+)*|, [0-9]{1,2}[./][0-9]{1,2}[./][0-9][0-9]{2,4})'.replace(' ',r'[\s\n]+'),
                           flags=re.M)
 
@@ -139,6 +140,37 @@ def find_identifier_references( text,
 
     ret.sort( key=lambda m: m['start'] )
 
+    return ret
+
+
+
+# Ideally, replace the above Kamerstukken matcher with this more flexible variant -- assuming it's noticeably better
+_RE_KST = re.compile(r'([Kkamerstukken]{3,13}) (I|II|1|2) ((?:19|20)[0-9][0-9]/(?:19|20)?[0-9][0-9][\s,]+)+\s*([0-9][0-9]\s?[0-9][0-9][0-9][,]?\s?)(\snr[.]?[\s]?[0-9]+)')
+#_RE_HDL = re.compile(r'([Hhandeingen]{4,12}) (I|II|1|2) ((?:19|20)[0-9][0-9]/(?:19|20)?[0-9][0-9][\s,]+)+\s*([0-9][0-9]\s?[0-9][0-9][0-9][,]?\s?)(\snr[.]?[\s]?[0-9]+)')
+
+def find_semistructured_references(text):
+    '''
+        e.g. from https://zoek.officielebekendmakingen.nl/stb-2001-580.html
+            Kamerstukken II 2015/16, 34442, nr. 3, p. 7.
+            Kamerstukken I 1995/96, 23700, nr. 188b, p. 3.
+            Kamerstukken I 2014/15, 33802, C, p. 3.
+            Kamerstukken II 1999/2000, 2000/2001, 2001/2002, 26 855.
+            Kamerstukken I 2000/2001, 26 855 (250, 250a); 2001/2002, 26 855 (16, 16a, 16b, 16c).
+
+        Leidraad voor juridische auteurs
+    '''
+    ret = []
+
+    for rematch in _RE_KST.finditer( text ):
+        match = {}
+        match['type']  = 'kst'
+        match['start'] = rematch.start()
+        match['end']   = rematch.end()
+        match['text']  = rematch.group( 0 )
+        match['groups']  = rematch.groups( ) # TODO: deal with nested grouping
+        ret.append( match )
+
+    ret.sort( key=lambda m: m['start'] )
     return ret
 
 
@@ -255,7 +287,11 @@ def find_nonidentifier_references(text, context_amt=60, debug=False):    # TODO:
             range_was_widened = False
 
             if debug:
-                s_art_context = '%s[%s]%s'%( text[wider_start:overallmatch_st], text[overallmatch_st:overallmatch_en].upper(), text[overallmatch_en:wider_end] )
+                s_art_context = '%s[%s]%s'%(
+                    text[wider_start:overallmatch_st],
+                    text[overallmatch_st:overallmatch_en].upper(),
+                    text[overallmatch_en:wider_end]
+                )
                 print( 'SOFAR',  '\n'.join( textwrap.wrap(s_art_context.strip(), width=70, initial_indent='     ', subsequent_indent='     ') ) )
 
             for rng_st, rng_en, where in (    (wider_start, overallmatch_st, 'before'),    (overallmatch_en, wider_end,   'after'),    ):
@@ -270,7 +306,9 @@ def find_nonidentifier_references(text, context_amt=60, debug=False):    # TODO:
                     for now_mo in re.compile(find_re).finditer(text, pos=rng_st, endpos=rng_en): # TODO: check whether inclusive or exclusive
                         #now_size = now_mo.end() - now_mo.start()
 
-                        if incl_excl == 'E': # recognizing a string that we want _not_ to include (not all that different from just not seeing something)
+                        if incl_excl == 'E':
+                            # recognizing a string that we want _not_ to include
+                            #   (not all that different from just not seeing something)
                             #print( 'NMATCH', find_name )
                             pass
                         elif incl_excl == 'I':
@@ -306,7 +344,11 @@ def find_nonidentifier_references(text, context_amt=60, debug=False):    # TODO:
                 #if changed:
                 #    break # break before/after
 
-        s_art_context = '%s[%s]%s'%( text[wider_start:overallmatch_st], text[overallmatch_st:overallmatch_en].upper(), text[overallmatch_en:wider_end] )
+        s_art_context = '%s[%s]%s'%(
+            text[wider_start:overallmatch_st],
+            text[overallmatch_st:overallmatch_en].upper(),
+            text[overallmatch_en:wider_end]
+        )
         #print( 'SETTLED ON')
         #print( '\n'.join( textwrap.wrap(s_art_context.strip(),
         #               width=70, initial_indent='     ', subsequent_indent='     ') ) )
@@ -405,7 +447,9 @@ def abbrev_find(text: str):
     # look for bracketed letters, check against context
     for tok_offset, tok in enumerate(toks):
         match = re.match(r'[(]([A-Za-z][.]?){2,}[)]', tok) # does this look like a bracketed abbreviation?
-        if match:   # (we over-accept some things, because we'll be checking them against contxt anyway.   We could probably require that more than one capital should be involved)
+        if match:   
+            # (we over-accept some things, because we'll be checking them against contxt anyway.
+            # We could probably require that more than one capital should be involved)
             abbrev = match.group().strip('()')
             letters_lower = abbrev.replace('.','').lower()
 
@@ -438,7 +482,8 @@ def abbrev_find(text: str):
 
     ### Patterns where the explanation is bracketed
     # Look for the expanded form based on the brackets, make that into an abbreviation
-    # this is a little more awkward given the above tokenization.  We could consider putting brackets into separate tokens.  TODO: check how spacy tokenizes brackets
+    # this is a little more awkward given the above tokenization.
+    # We could consider putting brackets into separate tokens.  TODO: check how spacy tokenizes brackets
     for start_offset, tok in enumerate(toks):
         expansion = []
         if tok.startswith('(') and not tok.endswith(')'): # start of bracketed explanation (or parenthetical or other)
@@ -450,7 +495,8 @@ def abbrev_find(text: str):
                 end_offset += 1
 
         if len(expansion) > 1: # really >0, but >1 helps at end of the list
-            expansion = list( w.strip('()')  for w in expansion if len(w.lstrip('()'))>0) # our tokenization leaves brackets on words (rather than being seprate tokens)
+            # our tokenization leaves brackets on words (rather than being seprate tokens)
+            expansion = list( w.strip('()')  for w in expansion  if len(w.lstrip('()'))>0 )
             expected_abbrev_noperiods = ''.join(w[0]        for w   in expansion)
             expected_abbrev_periods   = ''.join('%s.'%let   for let in expected_abbrev_noperiods)
             if start_offset >= 1        and  toks_lower[start_offset-1] in (expected_abbrev_noperiods.lower(), expected_abbrev_periods.lower()):
