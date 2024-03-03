@@ -264,13 +264,13 @@ def parse_content(tree):
 
     conclusie = tree.find('conclusie')
     if conclusie is not None:
-        ret['conclusie'] = re.sub(  '[\n]{2,}','\n\n',   '\n'.join( _para_text( conclusie ) )  )
+        ret['bodytext'] = re.sub(  '[\n]{2,}','\n\n',   '\n'.join( _para_text( conclusie ) )  )
         #_, t = _para_text( uitspraak )
         #ret['conclusie'] = ' '.join(t)
 
     uitspraak = tree.find('uitspraak')
     if uitspraak is not None:
-        ret['uitspraak'] = re.sub(  '[\n]{2,}','\n\n',   '\n'.join( _para_text( uitspraak ) )  )
+        ret['bodytext'] = re.sub(  '[\n]{2,}','\n\n',   '\n'.join( _para_text( uitspraak ) )  )
         #_, t = _para_text( uitspraak )
         #ret['uitspraak'] = ' '.join(t)
 
