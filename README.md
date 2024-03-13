@@ -41,7 +41,7 @@ Plans and extras
 ### More detailed examples as notebooks
 
 
-Our related [wetsuite-notebooks](https://github.com/knobsdials/wetsuite-notebooks) repository has python notebooks that lets us demonstrate code,
+Our related [wetsuite-notebooks](https://github.com/knobs-dials/wetsuite-notebooks) repository has python notebooks that lets us demonstrate code,
 with annotation, and some easier visualisation.  
 <!--
 * [notebooks/intro](notebooks/intro) should be a gentler introduction, including demonstrations of how to use datasets
