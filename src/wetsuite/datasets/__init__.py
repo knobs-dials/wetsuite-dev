@@ -84,62 +84,11 @@ def fetch_index():
             _index_data = json.loads( _fetched_data )
             #print("Fetched index")
             _index_fetch_time = time.time()
-        except:
+        except Exception as e:
             raise
     #else:
     #    print('CACHED INDEX')
     return _index_data
-
-
-    if 0: # TODO: REMOVE
-        index_dict = {
-            'rechtspraaknl-struc':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/rechtspraaknl_extracted.db.xz',
-                'short_description':'Metadata and plain text for each uitspraak and conclusie that actually contains text',
-            },
-
-
-            'woo-besluiten-meta':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/woo_besluiten_meta.db',
-                'short_description':'',
-            },
-            'woo-besluiten-text':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/woo_besluiten_docs_text.db.xz',
-                'short_description':'',
-            },
-
-
-            'kamervragen-struc':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/kamervragen.json.bz2',             
-                'short_description':'Questions from ministers to the government. Provided as a nested data structure.',    
-            },
-
-
-            'raadvanstate-adviezen-struc':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/rvs_extracted.db.xz',
-                'short_description':'The advice under https://raadvanstate.nl/adviezen/ provided as plain text in a nested structure with metadata. ',  
-            },
-
-
-            # TODO: meta as well
-            'kansspelautoriteit-sancties-struc':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/kansspelautoriteit_plain.json.bz2', 
-                'short_description':'Sanction decisions, in plain text, extracted from from the case PDFs under https://kansspelautoriteit.nl/aanpak-misstanden/sanctiebesluiten/',
-            },
-
-
-
-            'gemeentes':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/gemeentes.json',    
-                'short_description':'List of municipalities, and some basic information about them.', 
-            },
-
-            'wetnamen':{
-                            'url':'https://wetsuite.knobs-dials.com/datasets/wetnamen.db',
-                'short_description':'Some more and less official name variants that are used to refer to laws.',
-            },
-        }
-
 
 
 
