@@ -40,8 +40,10 @@ Plans and extras
 
 ### More detailed examples as notebooks
 
-[notebooks/](notebooks/) has python notebooks that lets us demonstrate code, with annotation, and some easier visualisation.  
 
+Our related [wetsuite-notebooks](https://github.com/knobsdials/wetsuite-notebooks) repository has python notebooks that lets us demonstrate code,
+with annotation, and some easier visualisation.  
+<!--
 * [notebooks/intro](notebooks/intro) should be a gentler introduction, including demonstrations of how to use datasets
   - including some introductory fragments in [some minimal examples](notebooks/intro/wetsuite_minimal_examples.ipynb)
  
@@ -49,7 +51,7 @@ Plans and extras
 
 * [notebooks/extras](notebooks/extras) are not core funcionality, and instead are experiments, some cases of showing our work 
   (e.g. some polishing  tuning necessary to create datasets), but not centrally important
-
+-->
 
 
 # Experiment or install?
