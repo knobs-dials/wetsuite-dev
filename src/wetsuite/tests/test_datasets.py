@@ -21,24 +21,23 @@ def test_dataset_class_basics( tmp_path ):
     str(ds)
 
 
-def test_dataset_class_save( tmp_path ):
+def test_dataset_class_export( tmp_path ):
     ds = wetsuite.datasets.Dataset(
         description = 'descr',
         data  = {'a':'b', 'c':'d'}, 
         name  = 'name')
-    ds.save_files( tmp_path )
+    ds.export_files( tmp_path )
 
     ds = wetsuite.datasets.Dataset(
         description = 'descr',
         data  = {'a':b'b', 'c':b'd'}, 
         name  = 'name')
-    ds.save_files( tmp_path )
+    ds.export_files( tmp_path )
 
     ds = wetsuite.datasets.Dataset(
         description = 'descr',
         data  = {'a':{1:2}, 'c':{3:4}}, 
         name  = 'name')
-    ds.save_files( tmp_path )
+    ds.export_files( tmp_path )
 
-
-# TODO: more        
+    # TODO: more        

@@ -122,7 +122,7 @@ class Dataset:
         return '<wetsuite.datasets.Dataset name=%r num_items=%r>'%(self.name, self.num_items)
 
 
-    def save_files(self, in_dir, overwrite=False):
+    def export_files(self, in_dir, overwrite=False):
         ''' This is primarily for people who want to see their data in file form.
 
             It also only makes sense when the dataset values are bytes objects
