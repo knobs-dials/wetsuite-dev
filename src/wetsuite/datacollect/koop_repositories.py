@@ -17,7 +17,8 @@ import wetsuite.datacollect.sru
 class BWB(wetsuite.datacollect.sru.SRUBase):
     ''' SRU endpoint for the Basis Wetten Bestand repository
 
-        See a description in https://www.overheid.nl/sites/default/files/wetten/Gebruikersdocumentatie%20BWB%20-%20Zoeken%20binnen%20het%20basiswettenbestand%20v1.3.1.pdf
+        See a description in 
+        https://www.overheid.nl/sites/default/files/wetten/Gebruikersdocumentatie%20BWB%20-%20Zoeken%20binnen%20het%20basiswettenbestand%20v1.3.1.pdf
     '''
     def __init__(self, verbose=False):
         wetsuite.datacollect.sru.SRUBase.__init__(self,
@@ -71,17 +72,17 @@ class SamenwerkendeCatalogi(wetsuite.datacollect.sru.SRUBase):
 class LokaleBekendmakingen(wetsuite.datacollect.sru.SRUBase):
     " SRU endpoint for bekendmakingen repository "
     def __init__(self, verbose=False):
-        wetsuite.datacollect.sru.SRUBase.__init__(self, 
+        wetsuite.datacollect.sru.SRUBase.__init__(self,
                                                   base_url='http://repository.overheid.nl/sru',
-                                                  x_connection='lokalebekendmakingen', 
-                                                  extra_query='c.product-area==lokalebekendmakingen', 
+                                                  x_connection='lokalebekendmakingen',
+                                                  extra_query='c.product-area==lokalebekendmakingen',
                                                   verbose=verbose)
 
 
 class StatenGeneraalDigitaal(wetsuite.datacollect.sru.SRUBase):
     ''' SRU endpoint for Staten-Generaal Digitaal repository '''
     def __init__(self, verbose=False):
-        wetsuite.datacollect.sru.SRUBase.__init__(self, 
+        wetsuite.datacollect.sru.SRUBase.__init__(self,
                                                   base_url='https://repository.overheid.nl/sru',
                                                   x_connection='sgd',
                                                   extra_query='c.product-area==sgd',
@@ -95,9 +96,9 @@ class Belastingrecht(wetsuite.datacollect.sru.SRUBase):
     ''' test: SRU endpoint for Basis Wetten Bestand, restricted to a specific rechtsgebied (via silent insertion into query)
     '''
     def __init__(self):
-        wetsuite.datacollect.sru.SRUBase.__init__(self, 
+        wetsuite.datacollect.sru.SRUBase.__init__(self,
                                                   base_url='http://zoekservice.overheid.nl/sru',
-                                                  x_connection='BWB', 
+                                                  x_connection='BWB',
                                                   extra_query='overheidbwb.rechtsgebied == belastingrecht')
 
 
@@ -107,9 +108,9 @@ class TuchtRecht(wetsuite.datacollect.sru.SRUBase):
         https://tuchtrecht.overheid.nl/
     '''
     def __init__(self, verbose=False):
-        wetsuite.datacollect.sru.SRUBase.__init__(self, 
+        wetsuite.datacollect.sru.SRUBase.__init__(self,
                                                   base_url='http://repository.overheid.nl/sru/Search',
-                                                  x_connection='tuchtrecht', 
+                                                  x_connection='tuchtrecht',
                                                   extra_query='c.product-area==tuchtrecht',
                                                   verbose=verbose)
 
@@ -151,9 +152,9 @@ class PLOOI(wetsuite.datacollect.sru.SRUBase):
         Note: Broken/untested
     '''
     def __init__(self, verbose=False):
-        wetsuite.datacollect.sru.SRUBase.__init__(self, 
-                                                  base_url='http://zoekservice.overheid.nl/sru/Search', 
-                                                  x_connection='plooi', 
+        wetsuite.datacollect.sru.SRUBase.__init__(self,
+                                                  base_url='http://zoekservice.overheid.nl/sru/Search',
+                                                  x_connection='plooi',
                                                   verbose=verbose)
         #wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://repository.overheid.nl/sru', x_connection='plooi', verbose=verbose)
 
@@ -169,7 +170,10 @@ class PUCOpenData(wetsuite.datacollect.sru.SRUBase):
                                                   base_url='http://repository.overheid.nl/sru',
                                                   x_connection='pod', #extra_query='c.product-area==pod',
                                                   verbose=verbose)
-        #wetsuite.datacollect.sru.SRUBase.__init__(self, base_url='http://zoekservice.overheid.nl/sru/Search', x_connection='pod', extra_query='c.product-area==pod', verbose=verbose)
+        #wetsuite.datacollect.sru.SRUBase.__init__(
+        #   self,
+        #   base_url='http://zoekservice.overheid.nl/sru/Search',
+        #   x_connection='pod', extra_query='c.product-area==pod', verbose=verbose)
 
 
 class EuropeseRichtlijnen(wetsuite.datacollect.sru.SRUBase):

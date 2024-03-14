@@ -122,7 +122,7 @@ def _para_text(treenode):
 
         if isinstance(ch, (wetsuite.helpers.etree._Comment, wetsuite.helpers.etree._ProcessingInstruction)):
             continue
-        
+
         if ch.tag in ('para', 'title', 'bridgehead', 'nr',
                       'footnote', 'blockquote'):
             if len( ch.getchildren() )>0:
