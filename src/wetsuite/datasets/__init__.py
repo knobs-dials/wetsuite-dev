@@ -28,6 +28,7 @@ import tempfile
 import bz2
 import fnmatch
 import lzma # standard library since py3.3, before that we could fall back to backports.lzma
+import zipfile
 
 import wetsuite.helpers.util
 import wetsuite.helpers.net
@@ -122,26 +123,33 @@ class Dataset:
         return '<wetsuite.datasets.Dataset name=%r num_items=%r>'%(self.name, self.num_items)
 
 
-    def export_files(self, in_dir, overwrite=False):
+    def export_files(self, in_dir_path=None, to_zipfile_path=None):
         ''' This is primarily for people who want to see their data in file form.
 
             It also only makes sense when the dataset values are bytes objects
         '''
 
-        if not os.path.exists(in_dir):
-            os.mkdir(in_dir)
+        if to_zipfile_path is not None:
+
+            if os.path.exists(to_zipfile_path):
+                raise RuntimeError("Target ZIP file (%r) exists, playing safe and refusing. If you wanted a new export, rename or remove it."%to_zipfile_path)
+            zob = zipfile.ZipFile(to_zipfile_path, 'a', compression=zipfile.ZIP_DEFLATED, allowZip64=True)
+
+        if in_dir_path is not None:
+            if not os.path.exists(in_dir_path):
+                os.mkdir(in_dir_path)
+
+        if in_dir_path is None and to_zipfile_path is None:
+            raise ValueError("Specify either in_dir_path to dump a lot of files to that directory, or to_zipfile_path to dump all into a single ZIP file")
+
 
         i=0
         for key, value in self.data.items():
             i += 1
-            if i > 100:
-                break
+            #if i > 200:
+            #    break
 
-            #typ = self.name.rsplit('-')[-1]  # if nothing better
-            #
-            # decide on
-            # - vvalue, which should be bytes after
-            # - typ, used in the filename
+            ## figure out bytes to store,    also estimate decent file extension from the content
             if isinstance(value, bytes):
                 if b'<?xml' in value[:50]:
                     typ   = 'xml'
@@ -156,23 +164,33 @@ class Dataset:
             else:
                 raise ValueError("Do not know what to do with %r"%type(value))
 
-            safe_fn = '%08d_%s_%s.%s'%(
-                i,    wetsuite.helpers.util.hash_hex(key)[:12],  # likely to make it unique
-                re.sub('[^A-Za-z0-9_-]','', re.sub('[.:/]+','-',key))[:220],  # primarily aimed at URLs
+
+            safe_fn = '%08d_%s__%s.%s'%(
+                i,                                                            # for uniqueness
+                wetsuite.helpers.util.hash_hex(key)[:12],                     # likely to make it unique even without that counter
+                re.sub('[^A-Za-z0-9_-]','', re.sub('[.:/]+','-',key))[:220],  # not for uniqueness, but for some indication of what this is. Primarily aimed at URLs
                 typ[:5],
             )[:254]
 
-            ffn = os.path.join( in_dir, safe_fn )
 
-            if os.path.exists(ffn):
-                if not overwrite:
-                    continue
-            # implied else: either it doesn't exist, or overwrite==True
+            ## write out
+            if in_dir_path is not None:
+                ffn = os.path.join( in_dir_path, safe_fn )
 
-            with open(ffn, 'wb') as f:
-                f.write( value )
+                if os.path.exists(ffn):
+                    raise IOError("You probably did not mean to overwrite %r, please remove anything existing before retrying. "%ffn)
+                # implied else: either it doesn't exist, or overwrite==True
 
-        # TODO: see if we can restructure this to iterating and calling DatasetItem.save, if it makes sense to do DatasetItems
+                with open(ffn, 'wb') as f:
+                    f.write( value )
+
+            if to_zipfile_path is not None:
+                # note: for content you know won't compress well, you can save some time with , you can compress_type=zipfile.ZIP_STORED
+                zob.writestr( safe_fn , value )
+
+        if to_zipfile_path is not None:
+            zob.close()
+
 
 
 
