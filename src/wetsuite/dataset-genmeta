@@ -90,7 +90,8 @@ if __name__ == '__main__':
                 uncompressed_data_size_bytes = 0
                 with tempfile.NamedTemporaryFile(delete=False) as temp_file:
                     try:
-                        # the main reason we do this is description, maybe think of a more efficient way that doesn't rely on lots of storage being there
+                        # the main reason we do this is description,
+                        # maybe think of a more efficient way that doesn't rely on lots of storage being there
                         print( "    into temporary file %r"%temp_file.name )
                         first100000_hash = None
                         with lzma.open( ffn ) as compressed_file_object:
@@ -112,13 +113,14 @@ if __name__ == '__main__':
                                 #    end='', file=sys.stderr )
                         stored_dict['uncompressed_size'] = uncompressed_data_size_bytes
                         stored_dict['uncompressed_sha1hex'] = s1h.hexdigest()
-                        stored_dict['first100000_sha1hex'] = first100000_hash
-                        
+                        stored_dict['uncompressed_first100000_sha1hex'] = first100000_hash
+
                         with wetsuite.helpers.localdata.LocalKV( temp_file.name, None,None, read_only=True ) as tempstore:
-                            stored_dict['description']        = tempstore._get_meta('description', missing_as_none=True)
-                            stored_dict['description_shyort'] = tempstore._get_meta('description', missing_as_none=True)
+                            stored_dict['description']       = tempstore._get_meta('description',       missing_as_none=True)
+                            stored_dict['description_short'] = tempstore._get_meta('description_short', missing_as_none=True)
                     finally:
-                        # It looks like NamedTemporaryFile(delete=True) doesn't always honor that delete (presumably because we can pre-empty a gc-caused clean?)
+                        # It looks like NamedTemporaryFile(delete=True) doesn't always honor that delete
+                        # (presumably because we can pre-empty a gc-caused clean?)
                         # try to ensure cleanup happend
                         if os.path.exists( temp_file.name ):
                             os.unlink( temp_file.name )
