@@ -20,7 +20,8 @@ CONSIDER:
 
   - We may want to effectively create a 2-stage search, 
   - the first a predetermined set of fields from a remote server that determines what we fetch
-    - cannot change much in that even if it's not an API change, it's a change in e.g. fields that the code has to assume are there (unless maybe we reinvent SRU)
+    - cannot change much in that even if it's not an API change, 
+      it's a change in e.g. fields that the code has to assume are there (unless maybe we reinvent SRU)
   - the second a more flexible way of sifting through what you have downloaded
 
   - Same API to search in a downloaded dataset
@@ -65,7 +66,6 @@ def document_url_by_identifier(ident, type_hint=None):
 
 
 if 0:
-        
     class _SearchBase:
         ''' The communication part, so we can share it '''
         def __init__(self, base_url='https://labs.scarfboy.com/wet/search-api?reload=y'):
@@ -294,7 +294,9 @@ if 0:
 
     # class BWBDocument(_LazyDoc):
     #     ''' A class that tries to present documents a little nicer than "here is some XML, good luck" '''
-    #     def __init__(self, toestand_bytestring): # maybe also the wti and metadata?  Maybe separate laziness because they would probably be used less?
+    #     def __init__(self, toestand_bytestring):
+    #         # maybe also the wti and metadata?
+    #         # Maybe separate laziness because they would probably be used less?
     #         self.toestand_bytestring = toestand_bytestring
     #         self.etree = None
 
