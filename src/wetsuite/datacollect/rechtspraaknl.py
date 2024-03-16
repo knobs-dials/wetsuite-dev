@@ -403,61 +403,69 @@ def parse_nietnederlandseuitspraken():
     return modified, ret
 
 
-def website_zoek(term, start=0, amt=10, timeout=10):
-    ''' Experiment that searches in the API at https://uitspraken.rechtspraak.nl/api/zoek
+# def website_zoek(term, start=0, amt=10, timeout=10, verbose=False):
+#     ''' Experiment that searches in the API at https://uitspraken.rechtspraak.nl/api/zoek
 
-        ...which is NOT the public-facing API as as detailed by the documentation at https://www.rechtspraak.nl/Uitspraken/paginas/open-data.aspx
-        but the one that is behind the current webpage search at https://uitspraken.rechtspraak.nl/
+#         ...which is NOT the public-facing API as as detailed by the documentation at https://www.rechtspraak.nl/Uitspraken/paginas/open-data.aspx
+#         but the one that is behind the current webpage search at https://uitspraken.rechtspraak.nl/
     
-        Result items look something like::
-            {                   'Titel': 'Gerecht in Eerste Aanleg van Aruba, 06-04-2021, UA202000260',
-                        'TitelEmphasis': 'ECLI:NL:OGEAA:2021:125',
-              'GerechtelijkProductType': 'uitspraak',
-                   'UitspraakdatumType': 'uitspraak',
-                       'Uitspraakdatum': '06-04-2021',
-                     'Publicatiestatus': 'gepubliceerd',
-                      'Publicatiedatum': '13-04-2021',
-                  'PublicatiedatumDate': '2021-04-13T09:37:29+02:00',
-                     'Proceduresoorten': ['Eerste aanleg - enkelvoudig', 'Beschikking'],  # interface calls this 'Bijzondere kenmerken'
-                       'Rechtsgebieden': ['Civiel recht; Arbeidsrecht'],
-              'InformatieNietGepubliceerdMessage': 'De publicatie van de uitspraak staat gepland op 13-04-2021 om 09:37 uur',
-                           'InterneUrl': 'https://uitspraken.rechtspraak.nl/#!/details?id=ECLI:NL:OGEAA:2021:125&showbutton=true&keyword=test',
-                          'DeeplinkUrl': 'https://deeplink.rechtspraak.nl/uitspraak?id=ECLI:NL:OGEAA:2021:125',
-                           'IsInactief': False,
-                  'RelatieVerwijzingen': [],
-                        'Tekstfragment': 'Arbeid. Ontslag nietig. De stap van een niet '
-                                        'afgenomen test, die gelijk wordt gesteld met '
-                                        'een geweigerde test kan naar het oordeel van '
-                                        'het Gerecht niet zonder meer worden genomen, '
-                                        'waarbij het Gerecht de situatie van een niet '
-                                        'afgenomen test niet ziet als een niet '
-                                        'afgenomen test maar een niet voltooide test.',
-                         'Vindplaatsen': [{'Vindplaats': 'Rechtspraak.nl',
-                                         'VindplaatsAnnotator': '',
-                                         'VindplaatsUrl': ''}]
-            },
-    '''
+#         Result items look something like::
+#             {                   'Titel': 'Gerecht in Eerste Aanleg van Aruba, 06-04-2021, UA202000260',
+#                         'TitelEmphasis': 'ECLI:NL:OGEAA:2021:125',
+#               'GerechtelijkProductType': 'uitspraak',
+#                    'UitspraakdatumType': 'uitspraak',
+#                        'Uitspraakdatum': '06-04-2021',
+#                      'Publicatiestatus': 'gepubliceerd',
+#                       'Publicatiedatum': '13-04-2021',
+#                   'PublicatiedatumDate': '2021-04-13T09:37:29+02:00',
+#                      'Proceduresoorten': ['Eerste aanleg - enkelvoudig', 'Beschikking'],  # interface calls this 'Bijzondere kenmerken'
+#                        'Rechtsgebieden': ['Civiel recht; Arbeidsrecht'],
+#               'InformatieNietGepubliceerdMessage': 'De publicatie van de uitspraak staat gepland op 13-04-2021 om 09:37 uur',
+#                            'InterneUrl': 'https://uitspraken.rechtspraak.nl/#!/details?id=ECLI:NL:OGEAA:2021:125&showbutton=true&keyword=test',
+#                           'DeeplinkUrl': 'https://deeplink.rechtspraak.nl/uitspraak?id=ECLI:NL:OGEAA:2021:125',
+#                            'IsInactief': False,
+#                   'RelatieVerwijzingen': [],
+#                         'Tekstfragment': 'Arbeid. Ontslag nietig. De stap van een niet '
+#                                         'afgenomen test, die gelijk wordt gesteld met '
+#                                         'een geweigerde test kan naar het oordeel van '
+#                                         'het Gerecht niet zonder meer worden genomen, '
+#                                         'waarbij het Gerecht de situatie van een niet '
+#                                         'afgenomen test niet ziet als een niet '
+#                                         'afgenomen test maar een niet voltooide test.',
+#                          'Vindplaatsen': [{'Vindplaats': 'Rechtspraak.nl',
+#                                          'VindplaatsAnnotator': '',
+#                                          'VindplaatsUrl': ''}]
+#             },
+#     '''
 
-    req_d = {
-        "StartRow":start,
-        "PageSize":amt,
-        "ShouldReturnHighlights":False,
-        "ShouldCountFacets":False,
-        "SortOrder":"Relevance",
-        #"SortOrder":"UitspraakDatumDesc",
-        "SearchTerms":[ {"Term":term, "Field":"AlleVelden"}, ],
-        "Contentsoorten":[],
-        "Proceduresoorten":[],
-        "Rechtsgebieden":[],
-        "Instanties":[],
-        "DatumPublicatie":[],
-        "DatumUitspraak":[],
-        "Advanced":{"PublicatieStatus":"AlleenGepubliceerd"},
-    }
-    req_json = json.dumps( req_d )
-    response = requests.post(
-        'https://uitspraken.rechtspraak.nl/api/zoek', 
-        data=req_json,
-        headers={'Content-type': 'application/json'},
-        timeout=timeout)
-    return response.json()
+#     req_d = {
+#         "Advanced":{"PublicatieStatus":"AlleenGepubliceerd"},
+#         "Contentsoorten":[],
+#         "DatumPublicatie":[],
+#         "DatumUitspraak":[],
+#         "Instanties":[],
+#         "PageSize":amt,
+#         "Proceduresoorten":[],
+#         "Rechtsgebieden":[],
+#         "SearchTerms":[ {"Term":term, "Field":"AlleVelden"}, ],
+#         "ShouldReturnHighlights":False,
+#         "ShouldCountFacets":False,
+#         #"SortOrder":"Relevance",
+#         "SortOrder":"UitspraakDatumDesc",
+#         "StartRow":start,
+#     }
+#     req_json = json.dumps( req_d )
+#     if verbose:
+#         print('REQ', req_json)
+#     response = requests.post(
+#         'https://uitspraken.rechtspraak.nl/api/zoek', 
+#         data=req_json,
+#         headers={
+#             'Content-type': 'application/json',
+#             'Accept': 'application/json, text/plain, */*',
+#             },
+#         timeout=timeout)
+
+#     print('RESP', response.text)    
+
+#     return response.json()
