@@ -73,13 +73,17 @@ def test_moreapi():
 
     repr( kv )
 
-    # we can't really know what the testing account has, so this is less deterministic, and the second may take a while
-    wetsuite.helpers.localdata.list_stores()
-    wetsuite.helpers.localdata.list_stores(get_num_items=True)
-
     kv.random_choice()
 
     kv.random_sample(1)
+
+def test_list():
+    " we can't really know what the testing account has, so this wouldn't be deterministic, just check that it doesn't fail "
+    wetsuite.helpers.localdata.list_stores()
+    wetsuite.helpers.localdata.list_stores(look_under='/tmp/')
+    
+    # may take a while:
+    #wetsuite.helpers.localdata.list_stores(get_num_items=True)
 
 
 def test_doublecommit():
