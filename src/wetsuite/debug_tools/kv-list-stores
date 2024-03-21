@@ -9,7 +9,7 @@ import wetsuite.helpers.format
 
 def main():
     ' see module docstring '
-    for item in wetsuite.helpers.localdata.list_stores( skip_table_check=True, get_num_items=True ):
+    for item in wetsuite.helpers.localdata.list_stores( look_under=None, skip_table_check=True, get_num_items=True ):
         bytesize = item.pop('size_bytes')
         num_items = item.pop('num_items', None)
 
