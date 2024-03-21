@@ -14,15 +14,16 @@ BASIC USE: ::
 
 Notes:
     - on the path/name argument:
-        - just a name ( without os.sep, that is, / or \\ ) will be resolved to a path where wetsuite keeps various stores
+        - just a name ( without os.sep, that is, / or \\ ) will be resolved to a path 
+          where wetsuite keeps various stores
       - an absolute path will be passed through             
-          ...but this isn't very portable until you do things like   os.path.join( myproject_data_dir, 'docstore.db')
+          ...but this isn't very portable until you do things like `os.path.join( myproject_data_dir, 'docstore.db')`
         - a relative path with os.sep will be passed through  
           ...which is only as portable as the cwd is predictable)
         - ':memory:' is in-memory only                        
           See also resolve_path() for more details
 
-    - by default, each write is committed individually, (because SQlite3's driver defaults to autocommit)
+    - by default, each write is committed individually (because SQlite3's driver defaults to autocommit)
       If you want more performant bulk writes, 
       use put() with commit=False, and
       do an explicit commit() afterwards
@@ -67,33 +68,39 @@ class LocalKV:
     Notes:
       - On typing:        
           - SQLite will just store what it gets, which makes it easy to store mixed types.
-            To allow programmers to enforce some runtime checking, you can specify key_type and value_type.
+            To allow programmers to enforce some runtime checking,
+            you can specify key_type and value_type.
 
           - This class won't do conversions for you, 
             it only enforces the values that go in are of the type you said you would put in.
 
-          - This should make things more consistent, but is not a strict guaranteem, and you can subvert this easily.
-
+          - This should make things more consistent, 
+            but is not a strict guaranteem, and you can subvert this easily.
                 
           - Some uses may wish for a specific key and value type.
-            You could change both key and value types - e.g. the cached_fetch function expects a str:bytes store
+            You could change both key and value types,
+            e.g. the cached_fetch function expects a str:bytes store
 
-      - It is a good idea to open the store with the same typing each  or you will still confuse yourself.
+      - It is a good idea to open the store with the same typing each
+        or you will still confuse yourself.
         CONSIDER: storing typing in the file in the meta table
 
       - doing it via functions is a little more typing yet also exposes some sqlite things 
         (using transactions, vacuum) for when you know how to use them.
         and is arguably clearer than 'this particular dict-like happens to get stored magically'
 
-      - On concurrency: As per basic sqlite behaviour, multiple processes can read the same database,
+      - On concurrency: As per basic sqlite behaviour, 
+        multiple processes can read the same database,
         but only one can write and writing is exclusive with reading. 
         So 
         - when you leave a writer with uncommited data for nontrivial amounts of time, readers are likely to time out
           - If you leave it on autocommit this should be a little rarer
         - and a very slow read through the database might time out a write.
 
-      - It wouldn't be hard to also make it act largely like a dict,   implementing __getitem__, __setitem__, and __delitem__
-        but this muddies the waters as to its semantics, in particularly when things you set are actually saved. 
+      - It wouldn't be hard to also make it act largely like a dict,
+        implementing __getitem__, __setitem__, and __delitem__
+        but this muddies the waters as to its semantics,
+        in particular when things you set are actually saved. 
 
         So we try to avoid a leaky abstraction, by making you write out all the altering operatiopns, 
         and actually all of them, e.g.  get(), put(),  keys(), values(), and items(),
@@ -112,7 +119,8 @@ class LocalKV:
     def __init__(self, path, key_type, value_type, read_only=False):
         ''' Specify the path to the database file to open. 
 
-            key_type and value_type do not have defaults, so that you think about how you are using these,
+            key_type and value_type do not have defaults, 
+            so that you think about how you are using these,
             but we often use   str,str  and  str,bytes
 
             @param path: database name/pat. File will be created if it does not yet exist, 
@@ -255,10 +263,12 @@ class LocalKV:
     def _get_meta(self, key:str, missing_as_none=False):
         ''' For internal use, preferably don't use.
 
-            This is an extra str:str table in there that is intended to be separate, with some keys special to these classes.
+            This is an extra str:str table in there that is intended to be separate,
+            with some keys special to these classes.
             ...you could abuse this for your own needs if you wish, but try not to.
 
-            If the key is not present, raises an exception - unless missing_as_none is set, in which case in returns None.
+            If the key is not present, raises an exception - unless missing_as_none is set,
+            in which case in returns None.
         '''
         curs = self.conn.cursor()
         curs.execute("SELECT value FROM meta WHERE key=?", (key,) )
@@ -447,13 +457,15 @@ class LocalKV:
         ret={}
         bytesize = self.bytesize()
         ret['size_bytes'] = bytesize
-        ret['size_readable'] = wetsuite.helpers.format.kmgtp( bytesize )
+        ret['size_readable'] = wetsuite.helpers.format.kmgtp( bytesize, kilo=1024 )+'B'
         if get_num_items:
             ret['num_items'] = len( self )
             if ret['num_items'] == 0:
                 ret['avgsize_bytes'] = 0
             else:
                 ret['avgsize_bytes'] = round( float(bytesize) / ret['num_items'] )
+            ret['avgsize_readable'] = wetsuite.helpers.format.kmgtp(ret['avgsize_bytes'], kilo=1024)+'B'
+
         return ret
 
 
@@ -515,10 +527,12 @@ class MsgpackKV(LocalKV):
           - typing is fixed, to str:bytes 
           - put() stores using msgpack, get() un-msgpacks
 
-        Will be a bit slower because it's doing that on the fly, but lets you more transparently store things like nested python dicts
+        Will be a bit slower because it's doing that on the fly, 
+        but lets you more transparently store things like nested python dicts
         ...but only of primitive types, and not e.g. datetime.
 
-        msgpack is used as a somewhat faster alternative to json and pickle (though that barely matters for smaller values)
+        msgpack is used as a somewhat faster alternative to json and pickle
+        (though that barely matters for smaller values)
     
         Note that this does _not_ change how the meta table works.
     '''
@@ -532,11 +546,21 @@ class MsgpackKV(LocalKV):
             self._put_meta('valtype','msgpack')
 
 
-    def get(self, key:str):
+    def get(self, key:str, missing_as_none=False):
         ''' Note that unpickling could fail 
-            TODO: clarify the missing missing_as_none
+            
+            Note also that you may wish to never explicitly store just None, 
+            and/or never use missing_as_none,
+            unless you like ambiguity.
         '''
-        value = super().get( key )
+        if missing_as_none:
+            value = super().get( key, missing_as_none=True )
+            if value is None:
+                return None
+            # else value is a still-packed value
+        else:
+            value = super().get( key, missing_as_none=False ) # may raise
+
         unpacked = msgpack.loads(value)
         return unpacked
 
@@ -692,22 +716,39 @@ def resolve_path( name:str ):
 #     return ret
 
 
-def list_stores( skip_table_check:bool=True, get_num_items:bool=False ):
-    ''' Look in the directory that (everything that uses) resolve_path() puts things in,
-        check which ones seem to be stores (does IO to do so).
+def list_stores( skip_table_check:bool=True, get_num_items:bool=False, look_under=None ):
+    ''' Checks a directory for files that seem to be our stores (does filesystem access and IO reading to do so),
+        also lists some basic details about it.
+    
+        By default look in the directory that (everything that uses) resolve_path() puts things in,
+        you can give it another directory to look in.
 
-        @return: a dict with details for each store
+        Will only look at direct contents of that directory.
 
         @param skip_table_check: if true, only tests whether it's a sqlite file, not whether it contains the table we expect.
         because when it's in the stores directory, chances are we put it there, and we can avoid IO and locking.
         
         @param get_num_items: does not by default get the number of items, because that can need a bunch of IO, and locking.
+
+        @param look_under: a dict with details for each store
+ 
+        @return: a dict with details for each store, like::
+            {
+                'path': '/home/example/.wetsuite/stores/thing.db',
+                'basename': 'thing.db',
+                'size_bytes': 40980480,
+                'size_readable': '41M',
+                'description': None
+            },
     '''
-    dirs = wetsuite.helpers.util.wetsuite_dir()
-    stores_dir = dirs['stores_dir']
     ret = []
-    for basename in os.listdir( stores_dir ):
-        abspath = os.path.join( stores_dir, basename )
+
+    if look_under is None:
+        dirs = wetsuite.helpers.util.wetsuite_dir()
+        look_under = dirs['stores_dir']
+
+    for basename in os.listdir( look_under ):
+        abspath = os.path.join( look_under, basename )
         if os.path.isfile( abspath ):
             if is_file_a_store( abspath, skip_table_check=skip_table_check ):
                 kv = LocalKV(abspath, key_type=None, value_type=None, read_only=True)
