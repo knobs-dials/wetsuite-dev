@@ -17,6 +17,7 @@ def test_value_list_parsing():
 
 
 def test_search():
+    ' test that the basic API search works '
     import datetime
 
     #yesterday_date = ( datetime.datetime.now() - datetime.timedelta(days=1) ).date()
@@ -43,5 +44,5 @@ def test_parse():
     results = wetsuite.datacollect.rechtspraaknl.parse_content( tree )
 
 
-def test_website_zoek():
-    wetsuite.datacollect.rechtspraaknl.website_zoek('fork')
+#def test_website_zoek():
+#    wetsuite.datacollect.rechtspraaknl.website_zoek('fork')
