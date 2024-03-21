@@ -132,7 +132,7 @@ class Dataset:
         if to_zipfile_path is not None:
 
             if os.path.exists(to_zipfile_path):
-                raise RuntimeError("Target ZIP file (%r) exists, playing safe and refusing. If you wanted a new export, rename or remove it."%to_zipfile_path)
+                raise RuntimeError("Target ZIP file (%r) already exists. Please rename or remove it."%to_zipfile_path)
             zob = zipfile.ZipFile(to_zipfile_path, 'a', compression=zipfile.ZIP_DEFLATED, allowZip64=True)
 
         if in_dir_path is not None:
@@ -140,7 +140,7 @@ class Dataset:
                 os.mkdir(in_dir_path)
 
         if in_dir_path is None and to_zipfile_path is None:
-            raise ValueError("Specify either in_dir_path to dump a lot of files to that directory, or to_zipfile_path to dump all into a single ZIP file")
+            raise ValueError("Specify either in_dir_path or to_zipfile_path.")
 
 
         i=0
@@ -185,7 +185,8 @@ class Dataset:
                     f.write( value )
 
             if to_zipfile_path is not None:
-                # note: for content you know won't compress well, you can save some time with , you can compress_type=zipfile.ZIP_STORED
+                # note: for content you know won't compress well,
+                # you can save some time with compress_type=zipfile.ZIP_STORED
                 zob.writestr( safe_fn , value )
 
         if to_zipfile_path is not None:
@@ -335,6 +336,7 @@ def load(dataset_name: str, verbose=None, force_refetch=False, augment=True):
             The .description will mention what .data will contain 
             and should give an example of how to use it.
 
+        
         CONSIDER: have load('datasetname-*') automatically merge_datasets,
         one for each matched datasets, with an attribute named for the last bit of the dataset name.
         However, this only makes sense if dataset convention _and_ dataset naming convention are always considered,
@@ -358,6 +360,7 @@ def load(dataset_name: str, verbose=None, force_refetch=False, augment=True):
         raise ValueError("Your dataset name/pattern %r matched none of %s"%(dataset_name, ', '.join(all_dataset_names)))
 
     elif len(dataname_matches) == 1:
+        # TODO: huh?
         data_path = _load_bare( dataname_matches[0] )
         data, description = _path_to_data( data_path )
         data_path = _load_bare( dataset_name=dataname_matches[0], verbose=verbose, force_refetch=force_refetch )
@@ -377,7 +380,7 @@ def load(dataset_name: str, verbose=None, force_refetch=False, augment=True):
         #     data_path = _load_bare( dataset_name=dataname_match, verbose=verbose, force_refetch=force_refetch )
         #     datasets[ Dataset( data=data, description=description, name=dataname_match ) ] = dataname_match.rsplit('-')[-1]
         # print( datasets)
-    
+
         # return merge_datasets( datasets )
 
 
